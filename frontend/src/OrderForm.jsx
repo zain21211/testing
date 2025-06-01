@@ -225,7 +225,7 @@ const OrderForm = () => {
   //   const responce
   // }
   // --- Effects ---
-
+const handlePrint =()=>{}
   // Effect to fetch customer balance and overdue based on selected customer and date
   useEffect(() => {
     const fetchCustomerFinancials = async () => {

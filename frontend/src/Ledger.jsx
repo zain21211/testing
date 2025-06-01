@@ -246,7 +246,7 @@ const Ledger = () => {
           const debit = Number(item.Debit || 0);
           const credit = Number(item.Credit || 0);
 
-          balance += credit - debit; // Running balance updates (Credit adds, Debit subtracts)
+          balance += debit - credit; // Running balance updates (Credit adds, Debit subtracts)
 
           totalDebit += debit; // Accumulate total debit
           totalCredit += credit; // Accumulate total credit
@@ -263,7 +263,7 @@ const Ledger = () => {
         });
 
         // Calculate net balance from accumulated totals
-        const netBalance = totalCredit - totalDebit;
+        const netBalance = totalDebit - totalCredit;
 
         const newSummary = {
           totalDebit,
@@ -272,15 +272,15 @@ const Ledger = () => {
         };
 
         setSummary(newSummary); // Set the summary state
-        setRows(processedData); // Set the processed rows state (including running balance in "Total")
         console.log("Fetched and processed ledger data:", processedData);
-        console.log("Calculated summary:", newSummary);
 
 
         // Save to localStorage for *any* successful fetch, regardless of params source
         localStorage.setItem("ledgerRows", JSON.stringify(processedData));
         localStorage.setItem("ledgerSummary", JSON.stringify(newSummary));
         localStorage.setItem("ledgerSearchAttempted", "true"); // Indicate a search was attempted and successful
+
+        setRows(processedData)
 
       } else {
         setRows([]); // Clear rows if data format is unexpected

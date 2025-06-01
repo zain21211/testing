@@ -257,7 +257,7 @@ const handleChange = (event) => {
           >
             {" "}
             {/* text-3xl font-bold text-gray-800 */}
-            Login
+            Login.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {" "}
@@ -391,21 +391,20 @@ const handleChange = (event) => {
         </Box>
 
         {/* Sign Up Link */}
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          align="center"
-          sx={{ mt: 4 }}
-        >
-          {" "}
-          {/* mt-8 text-center text-sm text-gray-600 */}
-          Don't have an account?{" "}
-          <MuiLink href="#" variant="body2" color="primary" underline="hover">
-            {" "}
-            {/* font-medium text-indigo-600 hover:text-indigo-500 */}
-            Sign up
-          </MuiLink>
-        </Typography>
+        {/*
+<Typography
+  variant="body2"
+  color="text.secondary"
+  align="center"
+  sx={{ mt: 4 }}
+>
+  Don't have an account?{" "}
+  <MuiLink href="#" variant="body2" color="primary" underline="hover">
+    Sign up
+  </MuiLink>
+</Typography>
+*/}
+
       </Paper>
     </Box>
   );

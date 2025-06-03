@@ -2,11 +2,11 @@ const sql = require("mssql");
 const dbConnection = require("../database/connection");
 
 const paymentModes = {
-  cash: { type: 'CRV', debitAcid: 1, narrationPrefix: 'Cash Recd. by' },
-  jazzcash: { type: 'BRV', debitAcid: 1983, narrationPrefix: 'JazzCash Recd. by' },
-  easypaisa: { type: 'BRV', debitAcid: 1982, narrationPrefix: 'EasyPaisa Recd. by' },
-  mbl: { type: 'BRV', debitAcid: 326, narrationPrefix: 'OnLine Recd. by' },
-  crownone: { type: 'BRV', debitAcid: 1946, narrationPrefix: 'Lifan Wallet Amount Recd. by' },
+  cash: { type: 'CRV', debitAcid: 1, narrationPrefix: 'pending:Cash Recd. by' },
+  jazzcash: { type: 'BRV', debitAcid: 1983, narrationPrefix: 'pending: JazzCash Recd. by' },
+  easypaisa: { type: 'BRV', debitAcid: 1982, narrationPrefix: 'pending: EasyPaisa Recd. by' },
+  mbl: { type: 'BRV', debitAcid: 326, narrationPrefix: 'pending: OnLine Recd. by' },
+  crownone: { type: 'BRV', debitAcid: 1946, narrationPrefix: 'pending: Lifan Wallet Amount Recd. by' },
 };
 
 const CashEntryController = {
@@ -24,7 +24,7 @@ const hours = pad(date.getHours());     // 24-hour format
 const minutes = pad(date.getMinutes());
 const seconds = pad(date.getSeconds());
 
-const formattedDateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+const formattedDateTime = `${year}-${month}-${day} ${hours}:${minutes}`;
 
 console.log(formattedDateTime)
     

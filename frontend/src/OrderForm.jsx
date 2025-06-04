@@ -116,6 +116,7 @@ const OrderForm = () => {
   const [token] = useState(localStorage.getItem("authToken"));
   const productInputRef = useRef(null);
   const customerInputRef = useRef(null);
+  const [perAmount, setPerAmount] = useState(0)
   const companyInputRef = useRef(null);
   const [overDue, setOverDue] = useState(null);
   const [balance, setBalance] = useState(null);
@@ -274,7 +275,7 @@ const BigTextField = styled(TextField)({
         });
         const { nextDoc, date, total } = response.data;
         setDoc(nextDoc);
-        setTotalAmount(Math.round(total))
+        setPerAmount(Math.round(total))
         setViewDate(date);
       } catch (error) {
         console.error(error);
@@ -285,6 +286,15 @@ const BigTextField = styled(TextField)({
       getDoc();
     }
   }, [selectedCustomer]);  
+
+  useEffect(() => {
+    // Whenever totalAmount changes, log or perform any side effect here
+
+const amount = totalAmount + perAmount;
+setTotalAmount(Math.round(amount))
+      console.log("Total amount changed (perAmount + totalamount):", totalAmount);
+
+  }, [totalAmount]);
   
   // for fetch the Cost
   useEffect(() => {
@@ -848,6 +858,8 @@ const BigTextField = styled(TextField)({
     selectedProduct?.StockQty,
   ]); // Added dependencies
 
+  const thisAmount = totalAmount
+
   const handleRemoveProduct = useCallback((indexToRemove) => {
     console.log("handleRemoveProduct at index:", indexToRemove);
     setOrderItems((prev) => prev.filter((_, i) => i !== indexToRemove));
@@ -878,6 +890,7 @@ const BigTextField = styled(TextField)({
       console.log("this the item profit ", item.profit)
     })
     try {
+      console.log("amount in payload ", totalAmount, thisAmount)
       const payload = {
         doc,
         products: orderItems.map((item) => ({

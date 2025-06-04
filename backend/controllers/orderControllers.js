@@ -6,7 +6,6 @@ const orderControllers = {
   postOrder: async (req, res) => {
     const { products, totalAmount, doc } = req.body;
 
-    console.log("the doc # ", doc);
 
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(" ")[1];
@@ -50,9 +49,11 @@ const orderControllers = {
         nextDoc = doc;
       }
 
-      const maxDoc = await pool.request().query(`
+      const maxDocR = await pool.request().query(`
           SELECT DOC FROM DocNumber WHERE TYPE='SALE'
         `);
+
+        const maxDoc = maxDocR.recordset[0].Doc || 1;
 
       if (nextDoc === maxDoc) {
         const newDocValue = nextDoc + 1;
@@ -142,6 +143,7 @@ const orderControllers = {
       // const { date } = products[0]; // Use orderDate defined at the top
       let totalOrderAmount = totalAmount;
 
+
       await pool
         .request()
         .input("Doc", sql.Int, nextDoc)
@@ -198,7 +200,8 @@ const orderControllers = {
       // 6. Insert Debit entry into ledgers (Customer Account is Debited)
       // The amount debited should be the final net amount payable by the customer.
       // For simplicity, using totalOrderAmount. Adjust if there are further discounts/charges.
-      const debitNarration = `Sales INV # ${nextDoc}`;
+
+      const debitNarration = `Estimate`;
       await pool
         .request()
         .input("acid", sql.VarChar, customerAcid) // Customer's account ID
@@ -247,6 +250,7 @@ const orderControllers = {
         message: "Order created successfully and ledger entries posted!",
         invoiceNumber: nextDoc,
         invoiceData: invoiceData,
+        totalAmount: totalAmount,
       });
     } catch (err) {
       console.error("Error inserting order:", err);

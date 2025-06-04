@@ -287,14 +287,7 @@ const BigTextField = styled(TextField)({
     }
   }, [selectedCustomer]);  
 
-  useEffect(() => {
-    // Whenever totalAmount changes, log or perform any side effect here
 
-const amount = totalAmount + perAmount;
-setTotalAmount(Math.round(amount))
-      console.log("Total amount changed (perAmount + totalamount):", totalAmount);
-
-  }, [totalAmount]);
   
   // for fetch the Cost
   useEffect(() => {
@@ -333,13 +326,12 @@ setTotalAmount(Math.round(amount))
   return isNaN(number) ? 0 : number;
 }
 
-    // Only calculate if all required values are present and valid
-    if (true) {
+    // Only calculate if all required values are present and valid 
+    if (cost && orderQuantity) {
       console.log("calculatedAmount:", calculatedAmount, "quantity:", quantity, "cost:", cost);
-      console.log("calculatedAmount / quantity:",((calculatedAmount ||0) / (quantity || 0)) , "amount - cost: ",(((calculatedAmount ||0) / (quantity || 0)) - cost.cost ) , quantity, "cost:", cost);
       const net_profit = (((calculatedAmount ||0) / (quantity || 0)) - cost.cost ) * (quantity || 0);
       setProfit(Math.round(net_profit));
-      console.log(net_profit)
+      console.log("cost profit = ", net_profit)
     } else {
       setProfit(0);
     }
@@ -382,7 +374,6 @@ setTotalAmount(Math.round(amount))
           }
         );
 
-        console.log("Customer overdue response:", responseOver.data);
         const { overDue } = responseOver.data;
         setOverDue(formatCurrency(Math.round(overDue)));
       } catch (err) {
@@ -413,7 +404,7 @@ setTotalAmount(Math.round(amount))
       if (
         !selectedProduct &&
         !selectedCustomer ||
-        !selectedCustomer.acid ||
+        !selectedCustomer?.acid ||
         !selectedProduct?.Company
       ) {
 
@@ -513,7 +504,6 @@ setTotalAmount(Math.round(amount))
           },
           headers: { Authorization: `Bearer ${token}` }, // Add token
         });
-        console.log("Scheme piece calculation response:", response.data);
 
         const { SchOn, SchPc: calculatedSchPc } = response.data; // Renamed SchPc to avoid conflict
         let pcs = 0;
@@ -588,7 +578,6 @@ setTotalAmount(Math.round(amount))
           headers,
         });
 
-        console.log("Products response raw:", prodResponse);
         const allProducts = prodResponse.data || [];
         const cleanedProducts = allProducts
           .map((p) => ({
@@ -713,7 +702,6 @@ setTotalAmount(Math.round(amount))
 
   // Handler for when a customer is selected from LedgerSearchForm
   const handleSelectCustomer = useCallback((customer) => {
-    console.log("OrderForm received selected customer:", customer);
     // Store the selected customer object in OrderForm state (and LS)
     setSelectedCustomer(customer);
     // If a customer is selected, attempt to focus the company input or product input
@@ -890,7 +878,6 @@ setTotalAmount(Math.round(amount))
       console.log("this the item profit ", item.profit)
     })
     try {
-      console.log("amount in payload ", totalAmount, thisAmount)
       const payload = {
         doc,
         products: orderItems.map((item) => ({
@@ -920,7 +907,7 @@ setTotalAmount(Math.round(amount))
         customerAcid: String(selectedCustomer.acid),
         userId: user?.UserID, // Assuming user object has UserID// Use coords if location hook was active
         // Add any other required fields like total amount, total quantity etc.
-        totalAmount: Number(totalAmount),
+        totalAmount: Number(totalAmount + perAmount),
         totalQuantity: Number(orderItemsTotalQuantity),
       };
 
@@ -979,7 +966,6 @@ setTotalAmount(Math.round(amount))
   };
 
   useEffect(() => {
-    console.log("the resetted cutomer: ", selectedCustomer);
     if (selectedCustomer !== ("" || undefined || null)) {
       companyInputRef.current?.focus();
     }
@@ -1877,7 +1863,7 @@ setTotalAmount(Math.round(amount))
               <Typography variant="h5">
                 {" "}
                 {/* Use variant h5 for total */}
-                <b>Total Amount: </b> {formatCurrency(totalAmount)}{" "}
+                <b>Total Amount: </b> {formatCurrency(totalAmount + perAmount)}{" "}
                 {/* Display formatted total */}
               </Typography>
             </Box>

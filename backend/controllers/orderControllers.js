@@ -23,7 +23,7 @@ const orderControllers = {
 
     const { username } = decoded; // User performing the action
 
-    let nextDoc;
+    let nextDoc ;
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "No products provided" });
     }
@@ -53,7 +53,7 @@ const orderControllers = {
           SELECT DOC FROM DocNumber WHERE TYPE='SALE'
         `);
 
-        const maxDoc = maxDocR.recordset[0].Doc || 1;
+        const maxDoc = maxDocR.recordset[0].DOC || 1;
 
       if (nextDoc === maxDoc) {
         const newDocValue = nextDoc + 1;
@@ -143,6 +143,12 @@ const orderControllers = {
       // const { date } = products[0]; // Use orderDate defined at the top
       let totalOrderAmount = totalAmount;
 
+       const result = await pool.request()
+      .input("doc", sql.Int, doc)
+      .query(`SELECT ISNULL(SUM(profit), 0) AS GrossProfit FROM PsProduct WHERE type = 'sale' AND doc = @doc`);
+
+    const GrossProfit = result.recordset[0].GrossProfit;
+
 
       await pool
         .request()
@@ -167,7 +173,7 @@ const orderControllers = {
         .input("PriceList", sql.VarChar, "A")
         .input("BuiltyPath", sql.VarChar, "")
         .input("remarks", sql.VarChar, "") // Could add order remarks here
-        .input("GrossProfit", sql.Decimal(18, 2), 0) // This might need calculation
+        .input("GrossProfit", sql.Decimal(18, 2), GrossProfit) // This might need calculation
         .input("Status", sql.VarChar, "ESTIMATE")
         .input("CTN", sql.VarChar, "P")
         .input("Shopper", sql.VarChar, "P").query(`
@@ -186,6 +192,9 @@ const orderControllers = {
             @CTN, @Shopper
           )
         `);
+
+
+        
 
       // --- START: ADDED LEDGER QUERIES ---
 

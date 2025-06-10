@@ -144,7 +144,7 @@ const orderControllers = {
       let totalOrderAmount = totalAmount;
 
        const result = await pool.request()
-      .input("doc", sql.Int, doc)
+      .input("doc", sql.Int, nextDoc)
       .query(`SELECT ISNULL(SUM(profit), 0) AS GrossProfit FROM PsProduct WHERE type = 'sale' AND doc = @doc`);
 
     const GrossProfit = result.recordset[0].GrossProfit;

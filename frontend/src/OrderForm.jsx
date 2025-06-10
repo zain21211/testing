@@ -329,7 +329,7 @@ const BigTextField = styled(TextField)({
     // Only calculate if all required values are present and valid 
     if (cost && orderQuantity) {
       console.log("calculatedAmount:", calculatedAmount, "quantity:", quantity, "cost:", cost);
-      const net_profit = (((calculatedAmount ||0) / (quantity || 0)) - cost.cost ) * (quantity || 0);
+      const net_profit = (((calculatedAmount ||0) / (quantity || 0)) - cost ) * (quantity || 0);
       setProfit(Math.round(net_profit));
       console.log("cost profit = ", net_profit)
     } else {
@@ -907,7 +907,7 @@ const BigTextField = styled(TextField)({
         customerAcid: String(selectedCustomer.acid),
         userId: user?.UserID, // Assuming user object has UserID// Use coords if location hook was active
         // Add any other required fields like total amount, total quantity etc.
-        totalAmount: Number(totalAmount + perAmount),
+        totalAmount: doc ? Number(totalAmount + perAmount) : totalAmount,
         totalQuantity: Number(orderItemsTotalQuantity),
       };
 
@@ -1863,7 +1863,7 @@ const BigTextField = styled(TextField)({
               <Typography variant="h5">
                 {" "}
                 {/* Use variant h5 for total */}
-                <b>Total Amount: </b> {formatCurrency(totalAmount + perAmount)}{" "}
+                <b>Total Amount: </b> {doc ? formatCurrency(totalAmount + perAmount): totalAmount}{" "}
                 {/* Display formatted total */}
               </Typography>
             </Box>

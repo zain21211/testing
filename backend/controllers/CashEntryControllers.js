@@ -30,40 +30,40 @@ const paymentModes = {
 // For dynamic debitAcid based on userType, debitAcid can be a function
 const expenseMethods = {
   petrol: {
-    type: "CRV",
+    type: "CPV",
     getDebitAcid: (userTypeString) => {
       const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
       return typeLower.includes("sr") ? 685 : 845;
     },
-    narrationPrefix: "pending:  PETROL",
+    narrationPrefix: "PETROL",
   },
   entertainment: {
-    type: "CRV",
+    type: "CPV",
     getDebitAcid: () => 696, // No userType dependency
-    narrationPrefix: "pending: ENTERTAINMENT",
+    narrationPrefix: "ENTERTAINMENT",
   },
   bilty: {
-    type: "CRV",
+    type: "CPV",
     getDebitAcid: () => 641,
-    narrationPrefix: "pending: BILTY",
+    narrationPrefix: "BILTY",
   },
   toll: {
-    type: "CRV",
+    type: "CPV",
     getDebitAcid: (userTypeString) => {
       const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
       return typeLower.includes("sr") ? 685 : typeLower.includes("kr") ? 845 : "";
     },
-    narrationPrefix: "pending: TOLL",
+    narrationPrefix: "TOLL",
   },
   repair: {
-    type: "CRV",
+    type: "CPV",
     getDebitAcid: (userTypeString) => {
       const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
       if (typeLower.includes("sr")) return 686;
       if (typeLower.includes("operator")) return 695;
       return 2123;
     },
-    narrationPrefix: "pending: REPAIR",
+    narrationPrefix: "REPAIR",
   },
 };
 

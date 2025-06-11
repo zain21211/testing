@@ -31,6 +31,9 @@ const orderControllers = {
     // Assume all products have the same acid & date for this order:
     const customerAcid = products[0].acid; // Customer's account ID
     const orderDate = products[0].date; // Date of the order
+    console.log("ORDER DATE = ", orderDate)
+    console.log("new DATE = ", new Date().toISOString());
+
 
     try {
       const pool = await dbConnection(); // ✅ Correct usage

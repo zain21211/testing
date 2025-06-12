@@ -32,7 +32,7 @@ const orderControllers = {
     const customerAcid = products[0].acid; // Customer's account ID
     const orderDate = products[0].date; // Date of the order
     console.log("ORDER DATE = ", orderDate)
-    console.log("new DATE = ", new Date().toISOString());
+    console.log("new DATE = ", new Date().toISOString().split("T")[0]);
 
 
     try {

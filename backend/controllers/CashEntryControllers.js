@@ -35,17 +35,17 @@ const expenseMethods = {
       const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
       return typeLower.includes("sr") ? 685 : 845;
     },
-    narrationPrefix: "PETROL",
+    narrationPrefix: "PETROL: CASH RECED. BY",
   },
   entertainment: {
     type: "CPV",
     getDebitAcid: () => 696, // No userType dependency
-    narrationPrefix: "ENTERTAINMENT",
+    narrationPrefix: "ENTERTAINMENT: CASH RECED. BY",
   },
   bilty: {
     type: "CPV",
     getDebitAcid: () => 641,
-    narrationPrefix: "BILTY",
+    narrationPrefix: "BILTY: CASH RECED. BY",
   },
   toll: {
     type: "CPV",
@@ -53,7 +53,7 @@ const expenseMethods = {
       const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
       return typeLower.includes("sr") ? 685 : typeLower.includes("kr") ? 845 : "";
     },
-    narrationPrefix: "TOLL",
+    narrationPrefix: "TOLL: CASH RECED. BY",
   },
   repair: {
     type: "CPV",
@@ -63,9 +63,23 @@ const expenseMethods = {
       if (typeLower.includes("operator")) return 695;
       return 2123;
     },
-    narrationPrefix: "REPAIR",
+    narrationPrefix: "REPAIR: CASH RECED. BY",
   },
 };
+
+function getPakistanDate() {
+  return new Date().toLocaleString("en-PK", {
+    timeZone: "Asia/Karachi",
+    hour12: true, // Set to false if you want 24-hour format
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 
 const CashEntryController = {
   insertEntry: async (req, res) => {
@@ -79,9 +93,9 @@ const CashEntryController = {
     } = req.body;
 
     // Effective date of the transaction
-    const effectiveDate = req.body.date ? new Date(req.body.date) : new Date();
+    const effectiveDate = getPakistanDate();
     // Timestamp for when the entry is recorded in the system
-    const systemTimestamp = new Date();
+    const systemTimestamp = getPakistanDate();
 
     if (!paymentMethod || !custId || !receivedAmount || !userName) {
       return res.status(400).json({ error: "PaymentMethod, custId, receivedAmount, and userName are required.", paymentMethod, custId, receivedAmount, userName });

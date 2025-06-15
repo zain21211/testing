@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useRef,
+  forwardRef 
 } from "react";
 import {
   TextField,
@@ -25,6 +26,8 @@ import {
   ListItemText,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import Storage from "use-local-storage-state";
+
 import EventIcon from "@mui/icons-material/Event";
 import PersonIcon from "@mui/icons-material/Person";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
@@ -33,6 +36,7 @@ import axios from "axios";
 import { useLocalStorageState } from "./hooks/LocalStorage"; // Assuming this path is correct
 import { FixedSizeList } from "react-window";
 import debounce from "lodash.debounce";
+import {useLocation} from "react-router-dom"; // Assuming you're using react-router for navigation
 
 // Helper function to format date for input fields
 const formatDateForInput = (date) => {
@@ -86,7 +90,7 @@ const allowedDateRangeOptions = dateRangeOptions.filter(
 );
 
 const wildcardToRegex = (pattern) => {
-  return pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*");
+  return pattern?.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*");
 };
 
 const ITEM_SIZE = 48;
@@ -170,9 +174,11 @@ const LedgerSearchForm = React.memo(
     onReset,
     route,
     disabled,
-    ID = null,
+    onCustomerInputChange,
+    // ID = null,
     ledgerLoading = false,
     name = "",
+    ref = null, // Added ref for forwardRef support
   }) => {
     const [masterCustomerList, setMasterCustomerList] = useState([]);
     const [allCustomerOptions, setAllCustomerOptions] = useState([]);
@@ -199,8 +205,14 @@ const LedgerSearchForm = React.memo(
     const searchButtonRef = useRef(null);
     const [popperOpen, setPopperOpen] = useState(false);
     const listRef = useRef(null);
+    const acidInputRef = useRef(null);
+    const [acidInput, setAcidInput] = useState("");
     const prevNameProp = useRef(name);
-
+    const [isCustomer, setIsCustomer] = useLocalStorageState("isCustomer", false);
+    const location = useLocation(); // Get current route
+    const routePath = location.pathname; // Get the current path
+    const storageKey = `accountID-${routePath}`; // Unique key based on route
+    const [ID, setID] = Storage(storageKey, null); // Use state for ID to allow updates
     const initialDates = useMemo(() => {
       const today = new Date();
       const start = new Date(today);
@@ -213,6 +225,47 @@ const LedgerSearchForm = React.memo(
     }, []);
     const [dates, setDates] = useState(initialDates);
     const [dateRangeType, setDateRangeType] = useState("3-Months");
+
+    useEffect(() => {
+      if (!ID) {
+        setIsCustomer(false);
+        setSelectedCustomer(null);
+        setCustomerInput(null);
+      }
+    }, [ID]);
+
+    useEffect(() => {
+      setAcidInput(ID); // Sync visual input when accountID changes (e.g. from search)
+    }, [ID]);
+
+    useEffect(() => {
+      setIsCustomer(true); // Update isCustomer based on acidInput
+    }, [acidInput]);
+
+    const handleFetchData = useCallback(
+      (customer) => {
+        setSelectedCustomer(customer);
+        setID(customer ? customer.acid : ""); // This triggers other effects
+        setCustomerName(customer ? customer.name : ""); // Set name immediately for display
+        if (customer) {
+          cashInputRef.current?.focus();
+        } else {
+          // If customer is null (e.g. search found nothing or reset)
+          setBalance("");
+          setRemainingBalance("");
+        }
+      },
+      [setID]
+    );
+
+    useEffect(() => {
+      const timeout = setTimeout(() => {
+        if (acidInput !== ID) {
+          setID(acidInput); // Update internal accountID from manual input (triggers customer search)
+        }
+      }, 900);
+      return () => clearTimeout(timeout);
+    }, [acidInput, ID, setID]);
 
     useEffect(() => {
       if (
@@ -237,6 +290,12 @@ const LedgerSearchForm = React.memo(
 
     useEffect(() => {
       if (selectedCustomer) setPopperOpen(false);
+      if (onCustomerInputChange ){
+if(customerInput)
+         onCustomerInputChange(selectedCustomer);
+      else onCustomerInputChange(null);
+      } 
+
     }, [selectedCustomer]);
 
     useEffect(() => {
@@ -588,9 +647,8 @@ const LedgerSearchForm = React.memo(
             if (usage === "ledger") handleTriggerFetch();
             else if (onSelect) onSelect(selectedCustomer);
           } else if (customerInput && count > 0 && customerSuggestions[0])
-            handleSuggestionClick(
-              customerSuggestions[0]
-            ); // Should not happen if auto-select works
+            handleSuggestionClick(customerSuggestions[0]);
+          // Should not happen if auto-select works
           else if (customerInput && usage === "ledger")
             setCustomerError("Please select a valid customer.");
         } else if (
@@ -641,6 +699,8 @@ const LedgerSearchForm = React.memo(
       setCustomerInput("");
       setCustomerSuggestions([]);
       setPopperOpen(false);
+      setAcidInput("");
+      setID(null);
       setHighlightedIndex(-1);
       setCustomerError(null);
       setDateRangeType("3-Months");
@@ -672,17 +732,45 @@ const LedgerSearchForm = React.memo(
           maxWidth={"xl"}
           sx={{ width: "100%" }}
         >
-          <Grid item xs={12} sx={{ width: "100%" }}>
+          <Grid sx={{ width: "100%" }}>
             <ClickAwayListener onClickAway={handleClickAway}>
-              <Box sx={{ position: "relative", width: "100%" }}>
+              <Box
+                sx={{
+                  position: "relative",
+                  width: "100%",
+                  textAlign: "center",
+                  display: "grid",
+                  gridTemplateColumns: { xs: "repeat(4, 1fr)", sm: "repeat(4, 1fr)" },
+                  gap: 2,
+                  alignItems: "center",
+                }}
+              >
+
+              {/* for customer id */}
+                <TextField
+                  label="Account ID"
+                  variant="outlined"
+                  fullWidth
+                  inputref={ref}
+                  disabled={disabled}
+                  // inputRef={acidInputRef}
+                  onFocus={(e) => e.target.select()}
+                  value={acidInput ?? ""}
+                  onChange={(e) => setAcidInput(e.target.value)}
+                  // onKeyDown={handleEnterOnAcid}
+                  inputProps={{ inputMode: "numeric" }}
+                />
+
+                {/* for customer name */}
                 <TextField
                   fullWidth
                   variant="outlined"
                   placeholder="Customer"
-                  value={customerInput ?? ''}
+                  value={customerInput ?? ""}
                   onChange={handleCustomerInputChange}
                   inputRef={customerInputRef}
                   onFocus={handleInputFocus}
+                  sx={{gridColumn: "span 3"}}
                   onBlur={() => {
                     setTimeout(() => {
                       if (
@@ -791,6 +879,33 @@ const LedgerSearchForm = React.memo(
                 </Typography>
               )}
           </Grid>
+            {/* FOR URDU NAME */}
+          {selectedCustomer && (
+          <TextField
+            value={
+              ` ${selectedCustomer?.UrduName}` ||
+              ""
+            }
+            fullWidth
+            disabled
+            sx={{
+              gridColumn: { xs: "span 4", sm: "span 2", md: "span 4" },
+              "& .MuiInputBase-root.Mui-disabled": {
+                fontWeight: "bold",
+                color: "black",
+                fontSize: "1rem", // Adjust font size for better readability
+              },
+              "& .MuiInputBase-input.Mui-disabled": {
+                fontWeight: "bold",
+                color: "black",
+                textAlign: "center", // Center text
+                WebkitTextFillColor: "black !important", // Ensure text color remains black
+                fontSize: "2rem", // Adjust font size for better readability
+              },
+            }}
+          />
+          )}
+
           {usage === "ledger" && (
             <Grid container item xs={12} spacing={2} alignItems="stretch">
               <Grid

@@ -31,7 +31,8 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.3",
     "react-syntax-highlighter": "^15.6.1",
-    "react-window": "^1.8.11"
+    "react-window": "^1.8.11",
+    "use-local-storage-state": "^19.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

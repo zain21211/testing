@@ -5,13 +5,14 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Fade from "@mui/material/Fade";
 import { styled } from "@mui/material/styles";
 import axios from "axios";
 // import useLocation from "./hooks/geolocation"; // Removed unused hook
 import { useLocalStorageState } from "./hooks/LocalStorage"; // Assuming this hook exists
 import debounce from "lodash.debounce"; // Import debounce utility
+import Storage from "use-local-storage-state";
 
 import {
   Container,
@@ -115,9 +116,12 @@ const OrderForm = () => {
   const [success, setSuccess] = useState(null);
   const [token] = useState(localStorage.getItem("authToken"));
   const productInputRef = useRef(null);
+  const productIDInputRef = useRef(null); // Ref for product ID input
   const customerInputRef = useRef(null);
-  const [perAmount, setPerAmount] = useState(0)
+  const [perAmount, setPerAmount] = useState(0);
   const companyInputRef = useRef(null);
+  const [schPCS, setSchPCS] = useState(0)
+  const [schPrice, setSchPrice] = useState(0); // Scheme price
   const [overDue, setOverDue] = useState(null);
   const [balance, setBalance] = useState(null);
   const quantityInputRef = useRef(null);
@@ -126,8 +130,11 @@ const OrderForm = () => {
   const [productInputValue, setProductInputValue] = useState("");
   const [viewDate, setViewDate] = useState(null);
   const user = JSON.parse(localStorage.getItem("user"));
-  const [cost, setCost] = useState(0)
-  const [profit, setProfit] = useState(0)
+  const [cost, setCost] = useState(0);
+  // const [isCustomer, setIsCustomer] = Storage('isCustomer', false); // Track if a customer is selected
+  const [profit, setProfit] = useState(0);
+
+
 
   // STATES MANAGED IN OrderForm (and localStorage)
   // Use a specific key for the selected customer OBJECT
@@ -155,8 +162,8 @@ const OrderForm = () => {
 
   const [customerInput, setCustomerInput] = useLocalStorageState(
     "orderFormCustomerInput",
-    ''
-  );// For customer search input
+    ""
+  ); // For customer search input
   const [orderItems, setOrderItems] = useLocalStorageState(
     "orderFormOrderItems",
     []
@@ -178,11 +185,18 @@ const OrderForm = () => {
     "orderFormDiscount2",
     0
   );
+
+  const [schOn,setSchOn] = useState(0)
+
+  const location = useLocation(); // Get current location for unique product ID key
+  const [productID, setProductID] = Storage(`prid${location.pathname}`); // Product ID for the current item
+  const [productIDInput, setProductIDInput] = Storage(
+    `pridInput${location.pathname}`
+  ); // Input for product ID
   // Store numeric price and calculate/store numeric amount
   const [price, setPrice] = useState(0); // Selected product's sale rate
   const [calculatedAmount, setCalculatedAmount] = useState(0); // Numeric amount for the current item
   const [vest, setVest] = useState(0); // Numeric vest value for the current item
-
 
   const [schPc, setSchPc] = useState(0); // Scheme pieces for current item
   const [scheme, setScheme] = useState(""); // Scheme text for current item
@@ -202,6 +216,9 @@ const OrderForm = () => {
     "orderFormSelectedDate",
     new Date().toISOString().split("T")[0] // Store as YYYY-MM-DD
   );
+
+  const isCustomer = !!customerInput; // Check if a customer is selected based on acid
+  const isAllowed = user.userType.toLowerCase().includes("sm") || user.userType.toLowerCase().includes("admin"); // Check if user is allowed to create orders
 
   // Calculate min and max dates (7 days before and after today)
   const today = useMemo(() => new Date(), []);
@@ -236,39 +253,41 @@ const OrderForm = () => {
     []
   );
 
-const BigTextField = styled(TextField)({
-  "& .MuiInputBase-root": {
-    fontSize: "1.4rem",
-    width: "auto",
-    minWidth: "150px",
-
-  },
-  "& .MuiInputBase-input": {
-    fontWeight: "bold",         // Input text
-    textAlign: "center",   
+  const BigTextField = styled(TextField)({
+    "& .MuiInputBase-root": {
+      fontSize: "1.4rem",
+      width: "auto",
+      minWidth: "150px",
+    },
+    "& .MuiInputBase-input": {
+      fontWeight: "bold", // Input text
+      textAlign: "center",
       letterSpacing: "1.5px", // 👈 adjust this value as needed     // Input text center
-  },
-  "& label": {
-    fontSize: "1rem",
-    fontWeight: "bold",         // Label normal
-  },
-  "& label.Mui-focused": {
-    fontSize: "1.1rem",
-    fontWeight: "bold",         // Label when focused
-  },
-  "& .MuiInputLabel-root": {
-    transformOrigin: "top left",
-  },
-});
+    },
+    "& label": {
+      fontSize: "1rem",
+      fontWeight: "bold", // Label normal
+    },
+    "& label.Mui-focused": {
+      fontSize: "1.1rem",
+      fontWeight: "bold", // Label when focused
+    },
+    "& .MuiInputLabel-root": {
+      transformOrigin: "top left",
+    },
+  });
 
-
-  // const handlePrint = async(){
-  //   const responce
-  // }
   // --- Effects ---
   const handlePrint = () => {
     window.print;
   };
+
+  useEffect(() => {
+    if (!isCustomer) {
+      // If customerInput is empty but selectedCustomer is set, update input to match
+      setSelectedCustomer(null);
+    }
+  }, [isCustomer]);
 
   useEffect(() => {
     const getDoc = async () => {
@@ -280,20 +299,18 @@ const BigTextField = styled(TextField)({
         });
         const { nextDoc, date, total } = response.data;
         setDoc(nextDoc);
-        setPerAmount(Math.round(total))
+        setPerAmount(Math.round(total));
         setViewDate(date);
       } catch (error) {
         console.error(error);
       }
     };
 
-    if(selectedCustomer){
+    if (selectedCustomer) {
       getDoc();
     }
-  }, [selectedCustomer]);  
+  }, [selectedCustomer]);
 
-
-  
   // for fetch the Cost
   useEffect(() => {
     const getCost = async () => {
@@ -304,39 +321,38 @@ const BigTextField = styled(TextField)({
           },
         });
         const cost = response.data;
-        setCost(cost)
+        setCost(cost);
       } catch (error) {
         console.error(error);
       }
     };
 
-
-    if(selectedProduct){
+    if (selectedProduct) {
       getCost();
     }
   }, [selectedProduct, API_BASE_URL]);
 
+  const handleCustomer = (value) => {
+    setCustomerInput(value);
+  };
+
   useEffect(() => {
-    console.log("calculating profit")
     function parseAmountString(amountStr) {
-      console.log("the tyrpe ", typeof amountStr)
-  if (typeof amountStr !== "string") return 0;
+      console.log("the tyrpe ", typeof amountStr);
+      if (typeof amountStr !== "string") return 0;
 
-  // Remove all commas and parse as number
-  const cleaned = amountStr.replace(/,/g, "");
-  const number = parseFloat(cleaned);
+      // Remove all commas and parse as number
+      const cleaned = amountStr.replace(/,/g, "");
+      const number = parseFloat(cleaned);
 
-  console.log("the number ", amountStr)
-  console.log("new ", number)
-  return isNaN(number) ? 0 : number;
-}
+      return isNaN(number) ? 0 : number;
+    }
 
-    // Only calculate if all required values are present and valid 
+    // Only calculate if all required values are present and valid
     if (cost && orderQuantity) {
-      console.log("calculatedAmount:", calculatedAmount, "quantity:", quantity, "cost:", cost);
-      const net_profit = (((calculatedAmount ||0) / (quantity || 0)) - cost ) * (quantity || 0);
+      const net_profit =
+        ((calculatedAmount || 0) / (quantity || 0) - cost) * (quantity || 0);
       setProfit(Math.round(net_profit));
-      console.log("cost profit = ", net_profit)
     } else {
       setProfit(0);
     }
@@ -346,7 +362,6 @@ const BigTextField = styled(TextField)({
   useEffect(() => {
     const fetchCustomerFinancials = async () => {
       if (!selectedCustomer || !selectedCustomer.acid) {
-        console.log("No customer selected for financial fetch.");
         setBalance(null);
         setOverDue(null);
         return;
@@ -404,15 +419,11 @@ const BigTextField = styled(TextField)({
   // Effect to fetch discount based on selected customer and product company
   useEffect(() => {
     const fetchDiscount = async () => {
-
-
       if (
-        !selectedProduct &&
-        !selectedCustomer ||
+        (!selectedProduct && !selectedCustomer) ||
         !selectedCustomer?.acid ||
         !selectedProduct?.Company
       ) {
-
         setDiscount1(0);
         setDiscount2(0);
         return;
@@ -438,10 +449,20 @@ const BigTextField = styled(TextField)({
         setDiscount1(0);
         setDiscount2(0);
       }
-  }
+    };
     // Fetch whenever selectedProduct, selectedCustomer, or API_BASE_URL changes
     fetchDiscount();
   }, [selectedProduct, selectedCustomer, API_BASE_URL, token]); // Added dependencies
+
+  // for prid and productIDInput
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (productIDInput !== productID) {
+        setProductID(productIDInput); // Update internal accountID from manual input (triggers customer search)
+      }
+    }, 900);
+    return () => clearTimeout(timeout);
+  }, [productID, productIDInput]);
 
   // Effect to fetch scheme slabs for the selected product
   useEffect(() => {
@@ -461,7 +482,9 @@ const BigTextField = styled(TextField)({
 
         const sch = response.data; // Assuming response.data is the scheme object
 
-        const schemeText = `${sch.SchOn} + ${sch.SchPc}`;
+        const schemeText = `${sch.SchOn}+${sch.SchPc}`;
+        setSchPCS(sch.SchPc)
+        setSchOn(sch.SchOn)
         setScheme(schemeText);
         // if (Array.isArray(response.data) && response.data.length > 0) {
         //   // Format all applicable schemes into a readable string
@@ -512,6 +535,7 @@ const BigTextField = styled(TextField)({
 
         const { SchOn, SchPc: calculatedSchPc } = response.data; // Renamed SchPc to avoid conflict
         let pcs = 0;
+        setSchOn(SchOn)
         if (SchOn > 0) {
           // Ensure SchOn is positive to avoid division by zero
           pcs =
@@ -556,7 +580,6 @@ const BigTextField = styled(TextField)({
     const finalAmount = calculatedVest - discountAmount;
 
     setCalculatedAmount(finalAmount); // Store numeric calculated amount
-
   }, [orderQuantity, selectedProduct, discount1, discount2]); // Recalculate when these change
 
   // Effect to fetch initial product and company data
@@ -633,6 +656,12 @@ const BigTextField = styled(TextField)({
     fetchInitialData();
   }, [token, API_BASE_URL]); // Added dependencies
 
+  useEffect(() => {  
+    const amount = ((Number(price) || 0) * (schOn || 0)) / ((schPCS + schOn) || 0) ; // Ensure numeric
+
+    setSchPrice(Math.round(amount))
+   }, [schPCS, schOn, price]); // Re-fetch doc when selectedCustomer changes
+
   // Effect to recalculate total amount and total quantity whenever orderItems changes
   useEffect(() => {
     const newTotalAmount = orderItems.reduce((sum, item) => {
@@ -679,7 +708,7 @@ const BigTextField = styled(TextField)({
     }
 
     // Filter by product name typed in autocomplete
-    if (productInputValue.trim()) {
+    if (productInputValue.trim() && !productID) {
       const nameRegex = makeWildcardRegex(productInputValue);
       if (nameRegex) {
         filtered = filtered.filter(
@@ -688,8 +717,16 @@ const BigTextField = styled(TextField)({
       } else {
         return []; // Invalid pattern
       }
+    } else {
+      // If no input value, return all products that match filters
+      filtered = products.filter((p) => String(p.ID) === String(productID));
+      setSelectedProduct(filtered[0] || null); // Set selected product if foun
+      quantityInputRef?.current?.focus;
     }
 
+    console.log("Filtered products based on prid:", filtered);
+    console.log("Product ID input:", productID);
+    console.log("Selected product:", selectedProduct);
     return filtered;
     // Memoize based on products, filters, and input value
   }, [
@@ -698,13 +735,23 @@ const BigTextField = styled(TextField)({
     categoryFilter,
     productInputValue,
     initialDataLoading,
+    productID,
   ]);
 
   // --- Event Handlers ---
-  useEffect(() => {
-    console.log("Profit changed:", profit);
-  }, [profit]);
 
+  useEffect(() => {
+    if (productID) {
+      setProductID(null);
+      setProductIDInput(null); // Update input when productID changes
+    }
+  }, [productInputValue]);
+  useEffect(() => {
+    if (selectedProduct && !productID) {
+      setProductID(selectedProduct.ID); // Set productID when a product is selected
+      setProductIDInput(selectedProduct.ID); // Update input when a product is selected
+    }
+  }, [selectedProduct, productID]);
   // Handler for when a customer is selected from LedgerSearchForm
   const handleSelectCustomer = useCallback((customer) => {
     // Store the selected customer object in OrderForm state (and LS)
@@ -784,7 +831,7 @@ const BigTextField = styled(TextField)({
       return;
     }
 
-    console.log("this si the profit ", profit)
+    console.log("this si the profit ", profit);
 
     // Add the product to orderItems
     const newItem = {
@@ -804,11 +851,11 @@ const BigTextField = styled(TextField)({
       amount: Number(calculatedAmount) || 0, // Final calculated numeric amount for the item
       isClaim: isClaim,
       Sch: Sch,
-       profit: profit,
+      profit: profit,
       remakes: productRemakes.trim(), // Add remakes
     };
 
-    console.log("this is order item ", orderItems)
+    console.log("this is order item ", orderItems);
     setOrderItems((prev) => [...prev, newItem]);
 
     // Reset item-specific states after adding
@@ -825,10 +872,15 @@ const BigTextField = styled(TextField)({
     setIsClaim(false); // Reset claim checkbox
     setSch(true); // Reset scheme checkbox
     setProductRemakes(""); // Reset remakes
+    setProductID(null); // ✅ Add this
+    setProductIDInput("");
 
     // Maybe refocus product input after adding
     // Using a timeout because state updates might cause re-renders that steal focus
     setTimeout(() => {
+      if(user.userType.toLowerCase().includes("operator") ) 
+        productIDInputRef.current?.focus();
+      else 
       productInputRef.current?.focus();
     }, 50);
   }, [
@@ -837,6 +889,8 @@ const BigTextField = styled(TextField)({
     orderQuantity,
     orderItems,
     schPc,
+    productID,
+    productIDInput,
     quantity,
     discount1,
     discount2,
@@ -851,7 +905,14 @@ const BigTextField = styled(TextField)({
     selectedProduct?.StockQty,
   ]); // Added dependencies
 
-  const thisAmount = totalAmount
+  const thisAmount = totalAmount;
+
+  // useEffect(() => {
+  //   if(productIDInput?.length === 1 || productID?.length === 1) {
+  //     setCompanyFilter("");
+  //     setCategoryFilter("");
+  //   }
+  // }, [productID, productIDInput]);
 
   const handleRemoveProduct = useCallback((indexToRemove) => {
     console.log("handleRemoveProduct at index:", indexToRemove);
@@ -859,7 +920,6 @@ const BigTextField = styled(TextField)({
   }, []); // No dependencies needed
 
   const handlePostOrder = async () => {
- 
     setError(null); // Clear previous errors
     setSuccess(null); // Clear previous success messages
 
@@ -878,10 +938,9 @@ const BigTextField = styled(TextField)({
 
     setLoading(true); // Set general loading for this operation
 
-    orderItems.map(item =>{
-
-      console.log("this the item profit ", item.profit)
-    })
+    orderItems.map((item) => {
+      console.log("this the item profit ", item.profit);
+    });
     try {
       const payload = {
         doc,
@@ -956,6 +1015,9 @@ const BigTextField = styled(TextField)({
       setTotalAmount(0); // Clear derived totals (updates LS)
       setOrderItemsTotalQuantity(0); // Clear derived totals (updates LS)
       setCustomerInput(null); // Clear customer input text
+      // setCustomerName(""); // Clear customer name
+      setProductID(null); // Clear product ID
+      setProductIDInput(null); // Clear product ID input text
     } catch (err) {
       console.error(
         "Order creation failed:",
@@ -972,10 +1034,10 @@ const BigTextField = styled(TextField)({
   };
 
   useEffect(() => {
-    if (selectedCustomer !== ("" || undefined || null)) {
-      companyInputRef.current?.focus();
-    }
-  }, [selectedCustomer]);
+    console.log("Selected customer changed:", selectedCustomer);
+    console.log("productID changed:", productID);
+    console.log("productIDInput changed:", productIDInput);
+  }, [productID, productIDInput, selectedCustomer]);
 
   // Handle date change - store the YYYY-MM-DD string value
   const handleDateInputChange = (e) => {
@@ -1057,11 +1119,9 @@ const BigTextField = styled(TextField)({
         >
           <LedgerSearchForm
             usage="orderForm"
-            // Pass the handler to receive the selected customer OBJECT
             onSelect={handleSelectCustomer}
-            // Pass the name of the selected customer object for initial display sync
+            onCustomerInputChange={handleCustomer}
             name={selectedCustomer?.name || ""}
-            // Indicate general loading state from OrderForm
             loading={loading || initialDataLoading}
             inputRef={customerInputRef}
             disabled={orderItems.length > 0} // Disable if items already added
@@ -1215,17 +1275,17 @@ const BigTextField = styled(TextField)({
 
           {/* for doc */}
           {doc !== null && ( // Only render if overdue is not null
-          <BigTextField
-            label=" ESTIMATE #"
-            value={doc}
-            InputProps={{
+            <BigTextField
+              label=" ESTIMATE #"
+              value={doc}
+              InputProps={{
                 sx: {
-                    color:
-                      doc !== "0.00" ? "white" : "black !important", // Text color based on value
+                  color: doc !== "0.00" ? "white" : "black !important", // Text color based on value
                 },
               }}
-            InputLabelProps={{ shrink: true,
-              sx: {
+              InputLabelProps={{
+                shrink: true,
+                sx: {
                   color: "black !important", // label color
                   fontWeight: "bold !important", // bold label
                   backgroundColor: "white !important",
@@ -1234,11 +1294,11 @@ const BigTextField = styled(TextField)({
                   borderRadius: "4px",
                   fontSize: "1rem", // optional: change size
                 },
-             }}
-            variant="outlined"
-            onChange={e => setDoc(e.target.value)}
-            onFocus={(e) => e.target.select()}
-            sx={{
+              }}
+              variant="outlined"
+              onChange={(e) => setDoc(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              sx={{
                 width: { xs: "100%", md: "150px" }, // Control width
                 "& .MuiOutlinedInput-root": {
                   backgroundColor: overDue !== "0.00" ? "green" : "transparent", // Background color based on value
@@ -1256,8 +1316,8 @@ const BigTextField = styled(TextField)({
                   fontWeight: "bold",
                 },
               }}
-          />
-)}
+            />
+          )}
           {/* Add Past Payment field here if needed */}
         </Box>
       )}
@@ -1284,72 +1344,95 @@ const BigTextField = styled(TextField)({
             alignItems: "center",
           }}
         >
-          {/* FOR COMPANY */}
-          <Autocomplete
-            freeSolo
-            options={companies || []}
-            inputRef={companyInputRef}
-            getOptionLabel={(option) => option || ""}
-            value={companyFilter} // Controlled by debounced filter state
-            inputValue={companyInputValue} // For immediate input text display
-            onInputChange={(event, newInputValue, reason) => {
-              setCompanyInputValue(newInputValue);
-              if (reason === "input") {
-                debouncedSetCompanyFilter(newInputValue); // Update filter state after debounce
-              } else if (reason === "clear") {
-                debouncedSetCompanyFilter(""); // Clear filter immediately on clear
-                setCompanyInputValue(""); // Clear input immediately
-              }
-              // If reason is 'reset' or 'blur', value/inputvalue sync happens automatically
+          <Box
+            sx={{
+              gridColumn: { xs: "span 4" }, // Adjust grid span
+              minWidth: "150px", // Give minimum width
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 2, // Two columns for input and quantity
             }}
-            onChange={(event, newValue) => {
-              console.log("Company Autocomplete onChange, newValue:", newValue);
-              // When an option is selected or entered, update filter and input immediately
-              setCompanyFilter(newValue || "");
-              setCompanyInputValue(newValue || "");
-              setSelectedProduct(null); // Clear selected product
-            }}
-            renderInput={(params) => (
-              <TextField {...params} label="Company" variant="outlined" />
-            )}
-            sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "auto" } }} // Adjust grid span
-            disabled={loading || initialDataLoading}
-            loading={initialDataLoading && !companies.length}
-          />
+          >
+            {/* {for product id} */}
+            <TextField
+              label="Product ID"
+              variant="outlined"
+              inputRef={productIDInputRef}
+              value={productIDInput ?? ""}
+              sx={{ gridColumn: "span 1", width: "100%" }}
+              onFocus={(e) => e.target.select()}
+              inputProps={{
+                inputMode: "numeric", // Numeric input mode for ID
+              }}
+              onChange={(e) => {
+                setProductIDInput(e.target.value);
+                setTimeout(() => {
+                  quantityInputRef.current?.focus();
+                }, 2000); // Delay to allow input value to update
+              }}
+            />
 
-          {/* FOR MODEL (Category) */}
-          <Autocomplete
-            freeSolo
-            options={categories || []}
-            getOptionLabel={(option) => option || ""}
-            value={categoryFilter}
-            inputValue={categoryInputValue}
-            onInputChange={(event, newInputValue, reason) => {
-              setCategoryInputValue(newInputValue);
-              if (reason === "input") {
-                debouncedSetCategoryFilter(newInputValue);
-              } else if (reason === "clear") {
-                debouncedSetCategoryFilter("");
-                setCategoryInputValue("");
-              }
-            }}
-            onChange={(event, newValue) => {
-              console.log(
-                "Category Autocomplete onChange, newValue:",
-                newValue
-              );
-              setCategoryFilter(newValue || "");
-              setCategoryInputValue(newValue || "");
-              setSelectedProduct(null);
-            }}
-            renderInput={(params) => (
-              <TextField {...params} label="Model" variant="outlined" />
-            )}
-            sx={{ gridColumn: { xs: "span 2", sm: "span 1", md: "auto" } }} // Adjust grid span
-            disabled={loading || initialDataLoading}
-            loading={initialDataLoading && !categories.length}
-          />
+            {/* FOR COMPANY */}
+            <Autocomplete
+              freeSolo
+              options={companies || []}
+              inputref={companyInputRef}
+              getOptionLabel={(option) => option || ""}
+              value={companyFilter} // Controlled by debounced filter state
+              inputValue={companyInputValue} // For immediate input text display
+              onInputChange={(event, newInputValue, reason) => {
+                setCompanyInputValue(newInputValue);
+                if (reason === "input") {
+                  debouncedSetCompanyFilter(newInputValue); // Update filter state after debounce
+                } else if (reason === "clear") {
+                  debouncedSetCompanyFilter(""); // Clear filter immediately on clear
+                  setCompanyInputValue(""); // Clear input immediately
+                }
+                // If reason is 'reset' or 'blur', value/inputvalue sync happens automatically
+              }}
+              onChange={(event, newValue) => {
+                // When an option is selected or entered, update filter and input immediately
+                setCompanyFilter(newValue || "");
+                setCompanyInputValue(newValue || "");
+                setSelectedProduct(null); // Clear selected product
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Company" variant="outlined" />
+              )}
+              sx={{ gridColumn: { xs: "span 1", sm: "span 1", md: "auto" } }} // Adjust grid span
+              disabled={loading || initialDataLoading}
+              loading={initialDataLoading && !companies.length}
+            />
 
+            {/* FOR MODEL (Category) */}
+            <Autocomplete
+              freeSolo
+              options={categories || []}
+              getOptionLabel={(option) => option || ""}
+              value={categoryFilter}
+              inputValue={categoryInputValue}
+              onInputChange={(event, newInputValue, reason) => {
+                setCategoryInputValue(newInputValue);
+                if (reason === "input") {
+                  debouncedSetCategoryFilter(newInputValue);
+                } else if (reason === "clear") {
+                  debouncedSetCategoryFilter("");
+                  setCategoryInputValue("");
+                }
+              }}
+              onChange={(event, newValue) => {
+                setCategoryFilter(newValue || "");
+                setCategoryInputValue(newValue || "");
+                setSelectedProduct(null);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Model" variant="outlined" />
+              )}
+              sx={{ gridColumn: { xs: "span 1", sm: "span 1", md: "auto" } }} // Adjust grid span
+              disabled={loading || initialDataLoading}
+              loading={initialDataLoading && !categories.length}
+            />
+          </Box>
           {/* Scheme/Claim Checkboxes - Grouped */}
           <Box
             sx={{
@@ -1505,6 +1588,34 @@ const BigTextField = styled(TextField)({
             noOptionsText={getNoOptionsText()}
           />
 
+          {/* FOR PRODUCT URDU NAME */}
+          {selectedProduct && (
+          <TextField
+            value={
+              ` ${selectedProduct?.Company} - ${selectedProduct?.Category} - ${selectedProduct?.UrduName}` ||
+              ""
+            }
+            fullWidth
+            disabled
+            sx={{
+              gridColumn: { xs: "span 4", sm: "span 2", md: "span 4" },
+              "& .MuiInputBase-root.Mui-disabled": {
+                fontWeight: "bold",
+                color: "black",
+                fontSize: "1.5rem", // Adjust font size for better readability
+              },
+              "& .MuiInputBase-input.Mui-disabled": {
+                fontWeight: "bold",
+                color: "black",
+                textAlign: "center", // Center text
+                WebkitTextFillColor: "black !important", // Ensure text color remains black
+                fontSize: "1.5rem", // Adjust font size for better readability
+              },
+            }}
+          />
+          )}
+
+
           {/* FOR orderQty (Ordered Quantity) */}
           <TextField
             label="Qty"
@@ -1523,6 +1634,7 @@ const BigTextField = styled(TextField)({
               width: { xs: "100%", md: "100px" },
               "& .MuiOutlinedInput-root": {
                 "& fieldset": {
+                  
                   // Apply border color based on stock check only when input is not disabled and product is selected
                   borderColor:
                     !isClaim && selectedProduct
@@ -1552,7 +1664,9 @@ const BigTextField = styled(TextField)({
               // Ensure text color remains black even when border is colored
               "& input": {
                 color: "black !important",
+                textAlign: "center", // Align text to the right
               },
+
             }}
             disabled={loading || initialDataLoading || !selectedProduct} // Disable if no product selected
             inputProps={{ min: 0 }} // Ensure minimum is 0
@@ -1568,6 +1682,7 @@ const BigTextField = styled(TextField)({
               gridColumn: { xs: "span 1", sm: "span 1", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "100px" },
               "& .Mui-disabled": {
+                textAlign: "center", // Align text to the right
                 fontWeight: "bold",
                 WebkitTextFillColor: "black !important",
               },
@@ -1584,6 +1699,8 @@ const BigTextField = styled(TextField)({
               gridColumn: { xs: "span 1", sm: "span 1", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "100px" },
               "& .Mui-disabled": {
+                textAlign: "center", // Align text to the right
+                fontWeight: "bold",
                 WebkitTextFillColor: "black !important",
               },
             }}
@@ -1594,7 +1711,7 @@ const BigTextField = styled(TextField)({
             label="Scheme"
             type="text"
             disabled
-            value={scheme || "N/A"} // Show N/A if no scheme
+            value={`${scheme} (${schPrice || 0})` || "N/A"} // Show N/A if no scheme
             sx={{
               gridColumn: { xs: "span 1", sm: "span 2", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "150px" },
@@ -1617,10 +1734,12 @@ const BigTextField = styled(TextField)({
           <TextField
             label="Price"
             type="number"
-            disabled // Assuming base price from product data is disabled
+            disabled ={!isAllowed}// Assuming base price from product data is disabled
             value={Number(selectedProduct?.SaleRate)?.toFixed(0) || 0} // Format price to 0 decimals for display
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => {setPrice(Math.max(0, parseInt(e.target.value, 10) || 0));}} // Ensure non-negative
             InputProps={{
-              inputProps: { style: { textAlign: "right" } },
+              inputProps: { style: { textAlign: "right", fontWeight: "bold", } },
             }}
             sx={{
               gridColumn: { xs: "span 1", sm: "span 1", md: "auto" }, // Adjust grid span
@@ -1641,11 +1760,14 @@ const BigTextField = styled(TextField)({
               setSuggestedPrice(Math.max(0, value || 0)); // Set to 0 if NaN or negative
             }}
             InputProps={{
-              inputProps: { style: { textAlign: "right" } },
+                 
+              inputProps: { style: { textAlign: "right", fontWeight: "bold", } },
             }}
             sx={{
               gridColumn: { xs: "span 1", sm: "span 1", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "100px" },
+              "%.input": {
+              }
             }}
             disabled={loading || initialDataLoading || !selectedProduct}
             inputProps={{ min: 0 }} // Ensure minimum is 0
@@ -1667,9 +1789,12 @@ const BigTextField = styled(TextField)({
             sx={{
               gridColumn: { xs: "span 1", sm: "span 1", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "100px" },
+                textAlign: "right", // Align text to the right
+
               "& .Mui-disabled": {
                 fontWeight: "bold",
                 WebkitTextFillColor: "black !important",
+                textAlign: "right", // Align text to the right
               },
             }}
           />
@@ -1689,13 +1814,30 @@ const BigTextField = styled(TextField)({
             sx={{
               gridColumn: { xs: "span 1", sm: "span 1", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "100px" },
+                textAlign: "right", // Align text to the right
+
               "& .Mui-disabled": {
                 fontWeight: "bold",
                 WebkitTextFillColor: "black !important",
+                textAlign: "right", // Align text to the right
+
               },
             }}
           />
 
+<Box
+sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "repeat(3, 1fr)", // Two columns on extra small
+              sm: "repeat(3, 1fr)", // Three columns on small
+              md: "repeat(4, 1fr)", // Four columns on medium and above
+            },
+            gap: 2,
+            alignItems: "center",
+            gridColumn: { xs: "span 4", sm: "span 3", md: "span 4" }, // Adjust grid span
+          }}
+>
           {/* FOR AMOUNT (Calculated Item Amount) */}
           <TextField
             label="Amount"
@@ -1710,6 +1852,7 @@ const BigTextField = styled(TextField)({
               width: { xs: "100%", md: "150px" },
               "& .Mui-disabled": {
                 fontWeight: "bold",
+                fontSize: "1.3rem", // Adjust font size for better readability
                 WebkitTextFillColor: "black !important",
               },
             }}
@@ -1722,12 +1865,12 @@ const BigTextField = styled(TextField)({
             value={productRemakes}
             onChange={(e) => setProductRemakes(e.target.value)} // Corrected typo
             sx={{
-              gridColumn: { xs: "span 3", sm: "span 2", md: "auto" }, // Adjust grid span
+              gridColumn: { xs: "span 2", sm: "span 2", md: "auto" }, // Adjust grid span
               width: { xs: "100%", md: "200px" },
             }}
             disabled={loading || initialDataLoading || !selectedProduct}
           />
-
+</Box>
           {/* for STOCK - Conditional Rendering based on user type */}
           {(user?.userType?.toLowerCase() === "admin" ||
             user?.username?.toLowerCase() === "zain") && (
@@ -1869,7 +2012,8 @@ const BigTextField = styled(TextField)({
               <Typography variant="h5">
                 {" "}
                 {/* Use variant h5 for total */}
-                <b>Total Amount: </b> {doc ? formatCurrency(totalAmount + perAmount): totalAmount}{" "}
+                <b>Total Amount: </b>{" "}
+                {doc ? formatCurrency(totalAmount + perAmount) : formatCurrency(totalAmount)}{" "}
                 {/* Display formatted total */}
               </Typography>
             </Box>

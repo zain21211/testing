@@ -81,22 +81,20 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
-
   });
 
   useEffect(() => {
- const freight = customer?.Frieght || 0;
+    const freight = customer?.Frieght || 0;
     const extra = customer?.Extra || 0;
     const invoiceAmount = customer?.InvoiceAmount || 0;
     const amount = invoiceAmount - freight + extra;
 
-    if(extra || freight ) {
-    setInitialAmount(amount);
+    if (extra || freight) {
+      setInitialAmount(amount);
     } else {
       setInitialAmount(0);
     }
     console.log("Initial Amount:", amount);
-
   }, [invoice]);
 
   useEffect(() => {
@@ -140,12 +138,12 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   }, []); // Empty dependency array means this only runs once
 
   // Define rows first (outside JSX)
-const rows = [
-  ["Amount:", initialAmount],
-  ["FREIGHT:", customer.Frieght],
-  ["EXTRA:", customer.Extra],
-  ["TOTAL AMOUNT:", customer.InvoiceAmount],
-].filter(([, value]) => value > 0); // Only include if value > 0
+  const rows = [
+    ["Amount:", initialAmount],
+    ["FREIGHT:", customer.Frieght],
+    ["EXTRA:", customer.Extra],
+    ["TOTAL AMOUNT:", customer.InvoiceAmount],
+  ].filter(([, value]) => value > 0); // Only include if value > 0
 
   return (
     <ThemeProvider theme={theme}>
@@ -334,55 +332,50 @@ const rows = [
           </Grid>
 
           {/* Totals and Notes */}
-<Box
-  sx={{
-    display: "flex",
-    justifyContent: "flex-end",
-    my: "60px",
-    pr: {xs: 1,xl:'65px'}, // shorthand for paddingRight
-  }}
->
-  <Box
-    sx={{
-      border: "2px solid #ddd",
-      borderRadius: 2,
-      p: 2,
-      minWidth: "300px",
-    }}
-  >
-    {
-    rows.map(([label, value], index, arr) => (
-     <Box
-  key={index}
-  sx={{
-    display: "flex",
-    justifyContent: "space-between",
-    mb: 1,
-    borderBottom: index < rows.length ? "1px solid #ddd" : "none",
-  }}
->
-  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-    {label}
-  </Typography>
-  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-    {value}
-  </Typography>
-</Box>
-
-    ))}
-  </Box>
-</Box>
-
-
-
-
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              my: "25px",
+              pr: { xs: 1, xl: "65px" }, // shorthand for paddingRight
+            }}
+          >
+            <Box
+              sx={{
+                border: "2px solid #ddd",
+                borderRadius: 2,
+                p: 2,
+                minWidth: "300px",
+              }}
+            >
+              {rows.map(([label, value], index, arr) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 1,
+                    borderBottom:
+                      index < rows.length ? "1px solid #ddd" : "none",
+                  }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                    {label}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                    {formatCurrency(value)}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
 
           {/* Notes Section */}
           <TextField
             label="Additional Notes"
             variant="outlined"
             InputLabelProps={{ shrink: true }}
-            sx={{ marginY: 4 }}
+            // sx={{ marginY: 4 }}
             value={customer.Description}
             onChange={(e) =>
               setInvoice((prev) => ({

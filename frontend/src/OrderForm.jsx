@@ -160,7 +160,7 @@ const OrderForm = () => {
     ""
   );
 
-  const [customerInput, setCustomerInput] = useLocalStorageState(
+  const [customerInput, setCustomerInput] = Storage(
     "orderFormCustomerInput",
     ""
   ); // For customer search input
@@ -194,7 +194,7 @@ const OrderForm = () => {
     `pridInput${location.pathname}`
   ); // Input for product ID
   // Store numeric price and calculate/store numeric amount
-  const [price, setPrice] = useState(0); // Selected product's sale rate
+  const [price, setPrice] = useState(selectedProduct?.SaleRate); // Selected product's sale rate
   const [calculatedAmount, setCalculatedAmount] = useState(0); // Numeric amount for the current item
   const [vest, setVest] = useState(0); // Numeric vest value for the current item
 
@@ -218,7 +218,7 @@ const OrderForm = () => {
   );
 
   const isCustomer = !!customerInput; // Check if a customer is selected based on acid
-  const isAllowed = user.userType.toLowerCase().includes("sm") || user.userType.toLowerCase().includes("admin"); // Check if user is allowed to create orders
+  const isAllowed = user.userType.toLowerCase().includes("sm") // Check if user is allowed to create orders
 
   // Calculate min and max dates (7 days before and after today)
   const today = useMemo(() => new Date(), []);
@@ -351,7 +351,7 @@ const OrderForm = () => {
     // Only calculate if all required values are present and valid
     if (cost && orderQuantity) {
       const net_profit =
-        ((calculatedAmount || 0) / (quantity || 0) - cost) * (quantity || 0);
+        ((calculatedAmount || 0) / (quantity || 0) - cost.cost) * (quantity || 0);
       setProfit(Math.round(net_profit));
     } else {
       setProfit(0);
@@ -507,8 +507,17 @@ const OrderForm = () => {
   }, [selectedProduct, API_BASE_URL, token]); // Added dependencies
 
   useEffect(() => {
-    setSuggestedPrice(selectedProduct?.SaleRate);
-  }, [selectedProduct]);
+  const saleRate = selectedProduct?.SaleRate;
+  setSuggestedPrice(saleRate);
+  setPrice(saleRate);
+  console.log("setting price to", saleRate);
+}, [selectedProduct]);
+
+
+  useEffect(()=>{
+    console.log('price = ', price)
+  }, [price])
+
   // Effect to calculate scheme pieces (SchPc) based on orderQuantity and selected product
   useEffect(() => {
     const getSch = async () => {
@@ -560,10 +569,14 @@ const OrderForm = () => {
     getSch();
   }, [orderQuantity, selectedProduct, Sch]); // Added dependencies
 
+  useEffect(() =>{
+    setPrice(selectedProduct?.SaleRate)
+  }, [selectedProduct])
+
   // Effect to calculate price, vest, and amount for the current item
   useEffect(() => {
-    const currentPrice = selectedProduct?.SaleRate ?? 0;
-    setPrice(currentPrice); // Set price state for display
+    const currentPrice = price ?? 0;
+    // setPrice(currentPrice); // Set price state for display
 
     const numericOrderQuantity = Number(orderQuantity) || 0; // Ensure number, default to 0
     const numericPrice = Number(currentPrice) || 0; // Ensure number, default to 0
@@ -580,7 +593,7 @@ const OrderForm = () => {
     const finalAmount = calculatedVest - discountAmount;
 
     setCalculatedAmount(finalAmount); // Store numeric calculated amount
-  }, [orderQuantity, selectedProduct, discount1, discount2]); // Recalculate when these change
+  }, [orderQuantity, selectedProduct,price, discount1, discount2]); // Recalculate when these change
 
   // Effect to fetch initial product and company data
   useEffect(() => {
@@ -713,7 +726,7 @@ const OrderForm = () => {
       if (nameRegex) {
         filtered = filtered.filter(
           (p) => p.Name && nameRegex.test(p.Name.toLowerCase())
-        );
+        ).slice(0, 8);
       } else {
         return []; // Invalid pattern
       }
@@ -724,9 +737,6 @@ const OrderForm = () => {
       quantityInputRef?.current?.focus;
     }
 
-    console.log("Filtered products based on prid:", filtered);
-    console.log("Product ID input:", productID);
-    console.log("Selected product:", selectedProduct);
     return filtered;
     // Memoize based on products, filters, and input value
   }, [
@@ -843,7 +853,7 @@ const OrderForm = () => {
       orderQuantity: Number(orderQuantity), // The quantity the user entered
       schPc: Number(schPc) || 0, // Calculated scheme pieces
       quantity: Number(quantity) || 0, // Total quantity (order + scheme)
-      rate: Number(selectedProduct.SaleRate) ?? 0, // Product's sale rate
+      rate: Number(price) ?? 0, // Product's sale rate
       suggestedPrice: Number(suggestedPrice) || 0, // User's suggested price
       vest: Number(vest) || 0, // Calculated vest
       discount1: Number(discount1) || 0, // Discount 1 percentage
@@ -1377,6 +1387,8 @@ const OrderForm = () => {
               freeSolo
               options={companies || []}
               inputref={companyInputRef}
+              onFocus={(e) => e.target.select()}
+
               getOptionLabel={(option) => option || ""}
               value={companyFilter} // Controlled by debounced filter state
               inputValue={companyInputValue} // For immediate input text display
@@ -1411,6 +1423,8 @@ const OrderForm = () => {
               getOptionLabel={(option) => option || ""}
               value={categoryFilter}
               inputValue={categoryInputValue}
+              onFocus={(e) => e.target.select()}
+
               onInputChange={(event, newInputValue, reason) => {
                 setCategoryInputValue(newInputValue);
                 if (reason === "input") {
@@ -1735,9 +1749,9 @@ const OrderForm = () => {
             label="Price"
             type="number"
             disabled ={!isAllowed}// Assuming base price from product data is disabled
-            value={Number(selectedProduct?.SaleRate)?.toFixed(0) || 0} // Format price to 0 decimals for display
+            value={Number(price)?.toFixed(0) || 0} // Format price to 0 decimals for display
             onFocus={(e) => e.target.select()}
-            onChange={(e) => {setPrice(Math.max(0, parseInt(e.target.value, 10) || 0));}} // Ensure non-negative
+            onChange={(e) => {setPrice((e.target.value));}} // Ensure non-negative
             InputProps={{
               inputProps: { style: { textAlign: "right", fontWeight: "bold", } },
             }}

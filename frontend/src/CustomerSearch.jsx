@@ -195,7 +195,7 @@ const LedgerSearchForm = React.memo(
           : "ledgerCustomerInput",
       [usage]
     );
-    const [customerInput, setCustomerInput] = useLocalStorageState(
+    const [customerInput, setCustomerInput] = Storage(
       localStorageKey,
       ""
     );

@@ -150,6 +150,11 @@ const Ledger = () => {
   }, [isSmallScreen]); // Recalculate columns when isSmallScreen changes
   // --- End responsive table widths logic ---
 
+  
+  useEffect(()=>{
+  console.log("the rows = ", rows)
+
+  }, [rows])
   // Load saved state from localStorage on component mount
   useEffect(() => {
     const savedRows = localStorage.getItem("ledgerRows");
@@ -237,6 +242,8 @@ const Ledger = () => {
         params: { acid, startDate, endDate },
         timeout: 15000, // Add a 15-second timeout for the request
       });
+
+      console.log("responce = ", response)
 
       if (Array.isArray(response.data)) {
         // Assuming Date key is capitalized based on ledgerColumns ID

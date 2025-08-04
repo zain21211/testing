@@ -21,60 +21,108 @@ import {
   OutlinedInput,
 } from "@mui/material";
 
+const paymentVoucher = ['admin', 'payment']
+const packingList = ['pack', 'admin', 'operator']
+const list = ["sm", 'admin']
+const forSpo = ['spo', 'admin', 'operator'] // for sales and spoworking
+
+// const spoWorking = ['spo']
 // Material UI Icons
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+// import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined"; // Not used in the form currently
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { jwtDecode } from "jwt-decode";
 
+const url = import.meta.env.VITE_API_URL
 const Login = () => {
-  const [name, setName] = useState(""); // Assuming 'name' is username or similar identifier
+  // const [name, setName] = useState(""); // 'name' state was not used in login form, can be removed if not needed for other logic
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [decoded, setDecoded] = useState({});
-  const token = localStorage.getItem("authToken");
+  // const [decoded, setDecoded] = useState({}); // 'decoded' state not actively used elsewhere, jwtDecode result used directly
   const navigate = useNavigate();
-  const[checked, setChecked] = useState(true);
+  const [checked, setChecked] = useState(true); // For "Remember Me"
+  const [isCustomer, setIsCustomer] = useState(false);
+  // const [user, setUser] = useState(null); // 'user' state seems redundant with 'userData'
 
+  // Helper function to check token expiration
   function isTokenExpired(token) {
+    if (!token) return true; // No token means it's effectively expired/invalid
     try {
-      const decoded = jwtDecode(token);
-      if (!decoded.exp) return false;
-      return decoded.exp < Date.now() / 1000;
+      const decodedToken = jwtDecode(token);
+      if (!decodedToken.exp) return false; // No expiration claim, assume not expired
+      return decodedToken.exp < Date.now() / 1000; // Compare exp time with current time
     } catch (e) {
-      return true; // Invalid token
+      console.error("Invalid token:", e);
+      return true; // Invalid token structure
     }
   }
-  // Check for existing token on component mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    
-    if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUserData(parsedUser);
-        setIsLoggedIn(true);
 
-      } catch (e) {
-        console.error("Failed to parse user data from localStorage", e);
-        // Clear potentially corrupted data
+  // Effect 1: Initialize component state from localStorage on mount
+  useEffect(() => {
+    const tokenFromStorage = localStorage.getItem("authToken");
+    const userStringFromStorage = localStorage.getItem("user");
+
+    if (tokenFromStorage && userStringFromStorage) {
+      if (!isTokenExpired(tokenFromStorage)) {
+        try {
+          const parsedUser = JSON.parse(userStringFromStorage);
+          setUserData(parsedUser);
+          setIsLoggedIn(true);
+          // isCustomer will be set by Effect 2 based on userData
+        } catch (e) {
+          console.error("Failed to parse user data from localStorage:", e);
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("user");
+          setIsLoggedIn(false);
+          setUserData(null);
+        }
+      } else {
+        // Token exists but is expired
         localStorage.removeItem("authToken");
         localStorage.removeItem("user");
         setIsLoggedIn(false);
+        setUserData(null);
       }
     } else {
+      // No token or no user string in localStorage
       setIsLoggedIn(false);
+      setUserData(null);
     }
-  }, []);
+  }, []); // Empty dependency array means this runs only once on mount
 
-const handleChange = (event) => {
+  const userTypes = ["sm", "admin", "operator"];
+  const userType = userData?.userType?.toLowerCase() || "";
+  let isList = false;
+  if (userTypes.some(type => userType.includes(type))) {
+    isList = true
+  }
+
+  // Effect 2: Update isCustomer whenever userData changes
+  useEffect(() => {
+    if (userData && typeof userData.userType === 'string') {
+      const customerCheck = userData.userType.toLowerCase().includes("cust");
+      setIsCustomer(customerCheck);
+    } else {
+      setIsCustomer(false); // Reset if no userData or userType is not a string
+    }
+  }, [userData]); // This effect runs when userData changes
+
+  // Effect 3: Handle redirection for customers
+  useEffect(() => {
+    if (isLoggedIn && isCustomer && userData) {
+      // console.log("Customer detected, navigating to /order. UserData:", userData);
+      navigate("/order");
+    }
+  }, [isLoggedIn, isCustomer, userData, navigate]); // Runs when these dependencies change
+
+  const handleChangeRememberMe = (event) => {
     setChecked(event.target.checked);
   };
 
@@ -82,32 +130,35 @@ const handleChange = (event) => {
     event.preventDefault();
     setError(null);
     setIsLoading(true);
+    console.log("api")
+
 
     try {
-      // --- Actual API Call ---
+      console.log("api")
       const response = await axios.post(
-        "http://100.72.169.90:3001/api/login", // Replace with your actual API endpoint
+        `${url}/login`,
         {
+          // username: name, // If 'name' was meant to be username, it should be sent
           password: password,
-          checked: checked
+          checked: checked // Assuming 'checked' is 'rememberMe'
         }
       );
 
-      const token = response.data.token;
-      console.log("expires in: ", response.data.options)
-      const decode = jwtDecode(token); // Get id, username, userType, etc.
+      const receivedToken = response.data.token;
+      // console.log("expires in: ", response.data.options);
+      const userFromApi = jwtDecode(receivedToken);
 
-      const userFromApi = decode; // Assuming this is the user object
-
-      localStorage.setItem("authToken", token);
+      localStorage.setItem("authToken", receivedToken);
       localStorage.setItem("user", JSON.stringify(userFromApi));
 
-      setUserData(userFromApi);
-      setIsLoggedIn(true);
+      setUserData(userFromApi); // This will trigger Effect 2 and then potentially Effect 3
+      setIsLoggedIn(true);      // This will also contribute to triggering Effect 3
+
+      // No direct navigation here; Effect 3 will handle it.
+      setPassword(""); // Clear password on successful login
     } catch (err) {
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (axios.isAxiosError(err) && err.response) {
-        // Handle specific API error messages if available
         errorMessage =
           err.response.data.message || err.response.data.error || errorMessage;
       } else if (err instanceof Error) {
@@ -115,7 +166,7 @@ const handleChange = (event) => {
       }
       console.error("Login failed:", err);
       setError(errorMessage);
-      setPassword(""); // Clear password field on error
+      setPassword("");
     } finally {
       setIsLoading(false);
     }
@@ -126,34 +177,57 @@ const handleChange = (event) => {
     localStorage.removeItem("user");
     setIsLoggedIn(false);
     setUserData(null);
-    setName(""); // Clear form fields
+    setIsCustomer(false); // Ensure isCustomer is also reset
+    // setName(""); // Clear name field if it were used
     setPassword("");
+    // Navigate to login page or home page if not already on it
+    // navigate("/login"); // Or simply let the component re-render to show the form
   };
 
-  // Conditional Rendering: Show links if logged in, show form otherwise
-  if (isLoggedIn && token && !isTokenExpired(token)) {
+  // Conditional Rendering Logic
+  if (isLoggedIn) {
+    if (isCustomer) {
+      // User is a customer, Effect 3 should be redirecting them.
+      // Show a loading indicator while the redirect happens.
+      return (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "80vh", // Use viewport height to center vertically
+          }}
+        >
+          <CircularProgress />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Redirecting to your orders...
+          </Typography>
+        </Box>
+      );
+    }
+    // Logged in, but not a customer (or redirect hasn't happened yet for a customer)
+    // Show "Welcome Back" screen for non-customers
     return (
       <Box
         sx={{
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height:"100%",
-          alignContent:"center",
-          flexWrap: 'wrap', // Align the login window to the top
-          bgcolor: "grey.100", // Light mode background
-          padding: 2, // Add some padding on smaller screens
+          alignItems: "center", // Vertically center content
+          justifyContent: "center", // Horizontally center content
+          minHeight: "calc(100vh - 64px)", // Adjust 64px based on your AppBar height, if any
+          bgcolor: "grey.100",
+          padding: 2,
         }}
       >
         <Paper
-          elevation={6} // Shadow
+          elevation={6}
           sx={{
             width: "100%",
-            maxWidth: 400, // max-w-md equivalent
-            padding: 4, // p-8 equivalent (MUI spacing unit, 4 * 8px = 32px)
-            borderRadius: "35px", // rounded-xl equivalent
+            maxWidth: 400,
+            padding: 4,
+            borderRadius: "35px",
             border: "1px solid",
-            borderColor: "grey.300", // dark:border-gray-700 would need theme
+            borderColor: "grey.300",
             textAlign: "center",
           }}
         >
@@ -164,51 +238,95 @@ const handleChange = (event) => {
             You are logged in.
           </Typography>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {packingList.some(e => userType.includes(e)) && (
+              <Button
+                component={RouterLink}
+                to="/pending"
+                variant="contained"
+                size="large"
+                sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold  " }}
+              >
+                Packing List
+              </Button>
+            )}
+            {(forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
+              <Button
+                component={RouterLink}
+                to="/turnoverreport"
+                variant="contained"
+                size="large"
+                sx={{ py: 1.5, height: "60px", bgcolor: "#FFC107", fontWeight: "Bold ", color: "black" }}
+              >
+                Spo Working
+              </Button>
+            )}
+            {paymentVoucher.includes(userType) || userData?.username.includes("ZAIN") && (
             <Button
-              component={RouterLink} // Use RouterLink for navigation
-              to="/recovery" // Replace with your actual order page route
+              component={RouterLink}
+              to="/paymentvoucher"
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "green" }} // Add vertical padding
+              sx={{ py: 1.5, height: "60px", bgcolor: "	#795548" }}
+            >
+              Payment Voucher
+            </Button>
+            )}
+            <Button
+              component={RouterLink}
+              to="/recovery"
+              variant="contained"
+              size="large"
+              sx={{ py: 1.5, height: "60px", bgcolor: "green" }}
             >
               Recovery
             </Button>
             <Button
-              component={RouterLink} // Use RouterLink for navigation
-              to="/order" // Replace with your actual order page route
+              component={RouterLink}
+              to="/sales"
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px" }} // Add vertical padding
+              sx={{ py: 1.5, height: "60px", bgcolor: "#009688" }}
+            >
+              Sales
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/order" // Non-customers can still go to create order manually
+              variant="contained"
+              size="large"
+              sx={{ py: 1.5, height: "60px" }}
             >
               Create New Order
             </Button>
-            <Button
-              component={RouterLink} // Use RouterLink for navigation
-              to="/ledger" // Replace with your actual ledger page route
-              variant="contained"
-              color="secondary" // Use a different color for distinction
-              size="large"
-              sx={{ py: 1.5, height: "60px" }} // Add vertical padding
-            >
-              View Ledger & Invoices
-            </Button>
+            {isList && (
+              <Button
+                component={RouterLink}
+                to="/list" // Non-customers can still go to create order manually
+                variant="contained"
+                size="large"
+                sx={{ py: 1.5, height: "60px" }}
+              >
+                Customer Route Order
+              </Button>
+            )}
+
           </Box>
           <Button
             onClick={handleLogout}
-            variant="outlined" // Outline style
-            color="inherit" // Inherit text color
+            variant="outlined"
+            color="inherit"
             sx={{
-              mt: 10,
+              mt: 4, // Reduced margin top a bit
               width: "100%",
               height: "60px",
-              bgcolor: "RED",
-              color: "WHITE", // Text color for the button
-              fontWeight: "bold", // Bold text
+              bgcolor: "error.main", // Using theme color for red
+              color: "white",
+              fontWeight: "bold",
               "&:hover": {
-                bgcolor: "WHITE", // Keep the same color on hover
-                color: "BLACK", 
-              }// Keep the same text color on hover
-            }} // top margin and full width
+                bgcolor: "error.dark", // Darken on hover
+                color: "white",
+              },
+            }}
           >
             Logout
           </Button>
@@ -217,50 +335,39 @@ const handleChange = (event) => {
     );
   }
 
-  // If not logged in, show the login form (MUI version)
+  // If not logged in, show the login form
   return (
     <Box
       sx={{
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        bgcolor: "grey.100", // Light mode background
-        // Add dark mode if using MUI Theme Provider
-        // '&.MuiBox-root': (theme) => ({
-        //   bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
-        // }),
-        padding: 2, // Add some padding on smaller screens
+        alignItems: "center", // Vertically center content
+        justifyContent: "center", // Horizontally center content
+        minHeight: "calc(100vh - 64px)", // Adjust 64px based on your AppBar height, if any
+        bgcolor: "grey.100",
+        padding: 2,
       }}
     >
       <Paper
-        elevation={6} // shadow-xl equivalent
+        elevation={6}
         sx={{
           width: "100%",
-          maxWidth: 400, // max-w-md equivalent (using pixels)
-          padding: 4, // p-8 equivalent (MUI spacing unit, 4 * 8px = 32px)
-          borderRadius: 2, // rounded-xl equivalent (MUI border radius unit, 2 * 4px = 8px)
+          maxWidth: 400,
+          padding: 4,
+          borderRadius: 2,
           border: "1px solid",
-          borderColor: "grey.300", // dark:border-gray-700 would need theme
+          borderColor: "grey.300",
         }}
       >
         <Box sx={{ textAlign: "center", mb: 4 }}>
-          {" "}
-          {/* mb-8 equivalent */}
-          {/* Optional: Add a logo here */}
-          {/* <Box component="img" src="/logo.svg" alt="Logo" sx={{ mx: 'auto', height: 60, mb: 2 }} /> */}
           <Typography
             variant="h4"
             component="h1"
             fontWeight="bold"
             color="text.primary"
           >
-            {" "}
-            {/* text-3xl font-bold text-gray-800 */}
             Login.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {" "}
-            {/* text-sm text-gray-600 */}
             Access your account.
           </Typography>
         </Box>
@@ -270,14 +377,8 @@ const handleChange = (event) => {
           onSubmit={handleLogin}
           sx={{ display: "flex", flexDirection: "column", gap: 3 }}
         >
-          {" "}
-          {/* space-y-6 equivalent */}
-          {/* Name/Username Field - Use TextField with startAdornment */}
-          {/* Include only if your API uses it for login */}
-          {/* Password Field - Custom structure for visibility toggle */}
+          {/* Removed Name/Username field as it wasn't used in handleLogin payload */}
           <div>
-            {" "}
-            {/* Or remove this div and use gap on parent Box */}
             <Typography
               variant="body2"
               component="label"
@@ -285,28 +386,21 @@ const handleChange = (event) => {
               color="text.secondary"
               sx={{ display: "block", mb: 0.5, fontWeight: "medium" }}
             >
-              {" "}
-              {/* label styling */}
               Password
             </Typography>
             <FormControl fullWidth variant="outlined">
-              {/* InputLabel can be inside FormControl, but we're using custom Typography label above */}
-              {/* So, we use OutlinedInput directly */}
               <OutlinedInput
-                id="password-input" // Connects to Typography htmlFor
+                id="password-input"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 required
-                // error={!!error} // Link to error state if needed for input styling
-                // aria-describedby="password-error" // Connects to error message below
-                size="medium" // Controls padding/height
+                size="medium"
                 startAdornment={
                   <InputAdornment position="start">
-                    <LockOutlinedIcon color="action" />{" "}
-                    {/* gray-400 equivalent */}
+                    <LockOutlinedIcon color="action" />
                   </InputAdornment>
                 }
                 endAdornment={
@@ -322,65 +416,46 @@ const handleChange = (event) => {
                   </InputAdornment>
                 }
               />
-              {/* Example of helperText if you want error message directly below the input */}
-              {/* {error && <FormHelperText id="password-error" error>{error}</FormHelperText>} */}
             </FormControl>
           </div>
-          {/* Forgot Password Link */}
+
           <Box sx={{ textAlign: "right", mt: -1.5 }}>
-            {" "}
-            {/* Negative margin to pull it closer to input */}
             <FormControlLabel
-              control={<Checkbox checked={checked} onChange={handleChange} />}
+              control={<Checkbox checked={checked} onChange={handleChangeRememberMe} />}
               label="Remember Me"
             />
           </Box>
-          {/* Error Message Alert */}
+
           {error && (
             <Alert
               severity="error"
               sx={{ mb: 2 }}
               aria-live="assertive"
-              id="password-error"
-              onClose={() => setError(null)}
+              onClose={() => setError(null)} // Allow dismissing error
             >
-              {" "}
-              {/* text-sm text-red-600 text-center */}
               {error}
             </Alert>
           )}
-          {/* Submit Button */}
+
           <Button
             type="submit"
-            fullWidth // w-full equivalent
+            fullWidth
             variant="contained"
-            size="large" // Controls padding/height
+            size="large"
             disabled={isLoading}
             sx={{
-              py: 1.5, // Custom vertical padding
-              mt: 2, // Top margin
-              transition: "background-color 0.15s ease-in-out", // transition
-              // Conditional background color based on loading state
-              bgcolor: isLoading ? "indigo.300" : "primary.main", // Using placeholder colors, replace with theme colors
+              py: 1.5,
+              mt: 2,
+              transition: "background-color 0.15s ease-in-out",
+              bgcolor: isLoading ? "primary.light" : "primary.main", // Adjusted loading color
               "&:hover": {
-                bgcolor: isLoading ? "indigo.300" : "primary.dark", // Placeholder hover
+                bgcolor: isLoading ? "primary.light" : "primary.dark",
               },
-              // Using color names directly or defining in theme for better control
-              // Example using theme colors (requires custom theme setup with named colors like 'indigo'):
-              // bgcolor: isLoading ? 'indigo[400]' : 'indigo[600]',
-              // '&:hover': {
-              //   bgcolor: isLoading ? 'indigo[400]' : 'indigo[700]',
-              // },
-              // '&:disabled': {
-              //   bgcolor: 'indigo[400]', // Tailwind bg-indigo-400 for disabled
-              //   color: 'rgba(255, 255, 255, 0.7)', // Disabled text color
-              // }
             }}
           >
             {isLoading ? (
               <>
-                <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />{" "}
-                {/* Spinner with right margin */}
+                <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
                 Signing In...
               </>
             ) : (
@@ -388,7 +463,6 @@ const handleChange = (event) => {
             )}
           </Button>
         </Box>
-
       </Paper>
     </Box>
   );

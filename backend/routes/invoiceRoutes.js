@@ -8,5 +8,6 @@ router.get('/', invoiceControllers.getInvoice);
 
 // Route to get a single invoice by ID
 router.get('/:id', invoiceControllers.getInvoiceByID);
+router.put('/:id/update', invoiceControllers.updateInvoice);
 
 module.exports = router;

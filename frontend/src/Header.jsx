@@ -16,6 +16,13 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import InventoryIcon from '@mui/icons-material/Inventory';
+
+import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
+
 import {
   Menu as MenuIcon,
   AccountCircle,
@@ -23,9 +30,11 @@ import {
   ExitToApp as ExitToAppIcon,
   ReceiptSharp as ReceiptSharpIcon,
   BookSharp as BookSharpIcon,
+  RoundaboutLeft,
+  RouterOutlined,
 } from "@mui/icons-material";
 
-import { useNavigate, useLocation } from "react-router-dom"; // Import useLocation
+import { useNavigate, useLocation, Router, Link as RouterLink } from "react-router-dom"; // Import useLocation
 
 // Define menu item components and their icons
 const profileMenuItems = [
@@ -42,7 +51,7 @@ const profileMenuItems = [
     icon: ExitToAppIcon,
   },
 ];
-const drawerMenuItems = [
+let drawerMenuItems = [
   {
     label: "Order",
     icon: ReceiptSharpIcon,
@@ -55,14 +64,19 @@ const drawerMenuItems = [
   },
   {
     label: "Recovery",
-    icon: BookSharpIcon,
+    icon: () => <span style={{ fontSize: 30, fontWeight: "bold" }}>RS.</span>,
     path: "/recovery",
+  },
+  {
+    label: "Sales",
+    icon: TrendingUpIcon,
+    path: "/sales",
   },
 ];
 
 // This URL seems to be where your app is served FROM for login, or an external logout target
 // If it's the root of your React app (where the login page is), use "/" for navigate
-const LOGOUT_REDIRECT_URL = "http://100.72.169.90:5173/"; // Forcing external navigation
+//const LOGOUT_REDIRECT_URL = "https://100.68.6.110:4173/"; // Forcing external navigation
 // If your login page is at the root of THIS React app, use:
 const LOGIN_APP_PATH = "/";
 
@@ -81,6 +95,7 @@ const Header = () => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           setCurrentUser(JSON.parse(storedUser));
+
         } else {
           setCurrentUser(null);
         }
@@ -100,6 +115,26 @@ const Header = () => {
     //   window.removeEventListener('storage', updateUserState);
     // };
   }, [location.pathname]); // Re-run when path changes (e.g., after login navigation)
+
+  const isCustomer = currentUser?.userType?.toLowerCase().includes("cust") || false
+
+
+  const userTypes = ["sm", "admin", "operator"];
+  const userType = currentUser?.userType?.toLowerCase() || "";
+
+  if (
+    userTypes.includes(userType) &&
+    !drawerMenuItems.some(item => item.path === "/list")
+  ) {
+    drawerMenuItems = [
+      ...drawerMenuItems,
+      {
+        label: "Customer Route Order",
+        icon: ListAltIcon,
+        path: "/list",
+      },
+    ];
+  }
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -199,25 +234,28 @@ const Header = () => {
         }}
       >
         <Toolbar
-        sx={{
-          m:0,
-          // minHeight:"48px"
-        }}
+          sx={{
+            m: 0,
+            // minHeight:"48px"
+          }}
         >
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-            onClick={handleDrawerToggle}
-          >
-            <MenuIcon />
-          </IconButton>
+          {!isCustomer && (
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              sx={{ mr: 2 }}
+              onClick={handleDrawerToggle}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
           <Typography
             variant="h5"
-            component="div"
-            sx={{ flexGrow: 1, color: "#2d3436", fontFamily: "Montserrat" }}
+            component={RouterLink}
+            to="/"
+            sx={{ flexGrow: 1, color: "#2d3436", fontFamily: "Montserrat", textDecoration: "none" } /* Added RouterLink for navigation */}
           >
             AHMAD INTERNATIONAL
           </Typography>
@@ -298,7 +336,7 @@ const Header = () => {
                 }}
               >
                 <ListItemIcon>
-                  <item.icon sx={{ fontSize: {xs: "1.8rem", xl: "2.5rem"} }} />
+                  <item.icon sx={{ fontSize: { xs: "1.8rem", xl: "2.5rem" } }} />
                 </ListItemIcon>
                 <ListItemText
                   primary={item.label}

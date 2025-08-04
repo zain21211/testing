@@ -39,7 +39,7 @@ const getApplicableScheme = {
     const result = await request.query(query);
 
     if (result.recordset.length === 0) {
-      return res.status(200).json({"SchOn":0,"SchPc":0,"SaleList":"A         ","SaleRate":0});
+      return res.status(200).json({"SchOn":0,"SchPc":0,"SaleList":"A","SaleRate":0});
     }
 
     res.json(result.recordset[0]);

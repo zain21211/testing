@@ -15,8 +15,14 @@ import BillingComponent from './BillingComponent.jsx';
 import OrderForm from './OrderForm.jsx';
 import Header from "./Header.jsx";
 import RecoveryPaper from "./RecoveryPaper.jsx";
-import { registerSW } from 'virtual:pwa-register';
-
+// import { registerSW } from 'virtual:pwa-register';
+import SalesReport from './SalesReport.jsx';
+import CustomerRouteList from './CustomerRouteList.jsx'
+import PackingList from './packingList.jsx';
+import PackingForm from './PackingForm.jsx';
+import PaymentVoucher from './PaymentVoucher.jsx';
+import TurnoverReport from './turnoverReport.jsx';
+import COA from './coa'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -34,7 +40,7 @@ if ('serviceWorker' in navigator) {
 const ToolbarSpacer = styled(Box)(({ theme }) => theme.mixins.toolbar);
 
 const AppLayout = () => {
-  const theme = useTheme(); // (Still need useTheme if using styled/sx)
+  // const theme = useTheme(); // (Still need useTheme if using styled/sx)
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'auto' }}>
@@ -52,6 +58,13 @@ const AppLayout = () => {
            <Route path="/estimate" element={<EstimatePage />} />
            <Route path="/app" element={<App />} />
            <Route path="/recovery" element={<RecoveryPaper />} />
+           <Route path="/sales" element={<SalesReport />} />
+           <Route path="/list" element={<CustomerRouteList />} />
+           <Route path="/pack/:id" element={<PackingForm />} />
+           <Route path="/pending" element={<PackingList />} />
+           <Route path="/paymentvoucher" element={<PaymentVoucher />} />
+           <Route path="/turnoverreport" element={<TurnoverReport />} />
+           <Route path="/coa" element={<COA />} />
         </Routes>
       </Box>
 

@@ -4,15 +4,17 @@ const dbConnection = require("../database/connection"); // Import your database 
 const customerControllers = {
   getCustomers: async (req, res) => {
     try {
+      console.log(req.query);
       const pool = await dbConnection();
       const searchTerm = req.query.search || "";
-      const username = req.user.username; // Get username from authenticated user token
-      const usertype = req.user.usertype || req.user.userType || ""; // Try multiple keys for usertype
+      const username = req.query.username; // Get username from authenticated user token
+      const usertype = req.query.usertype || req.user.userType || ""; // Try multiple keys for usertype
       const rawUser = req.user; // Log raw user object for debugging
       const form = req.query.form || " ";
-
       // Determine if user is ADMIN
       const isAdmin = usertype.toUpperCase() === "ADMIN";
+      let acid;
+
 
       // Base SQL query
       let sql = `
@@ -29,8 +31,14 @@ const customerControllers = {
           
       `;
 
-      if(!isAdmin && username.toLowerCase() !== "zain")  
-        sql += `AND MAIN = 'TRADE DEBTORS'`
+      if (usertype.toLowerCase().includes("cust")) {
+        acid = parseInt(usertype?.split("-")[1]);
+
+        sql += ` AND id = ${acid}`;
+      }
+
+      if (!isAdmin && username.toLowerCase() !== "zain")
+        sql += ` AND MAIN = 'TRADE DEBTORS'`;
 
       // Add SPO filter only for non-ADMIN users (except for specific conditions)
       if (
@@ -38,7 +46,8 @@ const customerControllers = {
         username.toLowerCase() !== "zain" &&
         form.toLowerCase() !== "recovery" &&
         !usertype.toLowerCase().includes("sm") &&
-        !usertype.toLowerCase().includes("operator")
+        !usertype.toLowerCase().includes("operator") &&
+        !usertype.toLowerCase().includes("cust")
       ) {
         sql += ` AND SPO LIKE '%' + @name + '%'`;
       }
@@ -64,11 +73,9 @@ const customerControllers = {
 
       const result = await request.query(sql);
       res.status(200).json(result.recordset);
-
     } catch (err) {
       console.error("Error retrieving customer data:", err.message, err.stack);
       res.status(500).send("Error retrieving customer data: " + err.message);
-
     }
   },
 };

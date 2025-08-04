@@ -5,12 +5,14 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useNavigate, useLocation } from "react-router-dom"; // Import useNavigate for navigation
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom"; // Import useNavigate for navigation
 import axios from "axios";
 import LedgerSearchForm from "./CustomerSearch";
 import { useLocalStorageState } from "./hooks/LocalStorage";
 import { useRealOnlineStatus } from "./hooks/IsOnlineHook";
 import Storage from "use-local-storage-state";
+// import html2canvas from "html2canvas";
+import { takeScreenShot } from "./fuctions";
 
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
 
@@ -24,20 +26,30 @@ import {
   Alert,
   // InputAdornment, // Not used in this version
   List,
+  FormLabel,
   ListItem,
   ListItemText,
   Stack,
   Container,
 } from "@mui/material";
 
-const url = "http://100.72.169.90:3001/api"; // Update with your actual API URL
+const lre = '\u202A'; // Left-to-right embedding
+const pdf = '\u202C'; // Pop directional formatting
+const url = import.meta.env.VITE_API_URL; // Update with your actual API URL
 // These should match the keys in your backend `expenseMethods` object, in lowercase.
+
+
 const KNOWN_EXPENSE_METHODS = [
   "petrol",
   "entertainment",
   "bilty",
-  "toll",
   "repair",
+  "zaqat",
+  "localpurchase",
+  "exp",
+  "salary",
+  "salesbonus",
+  "toll"
 ];
 
 const expenseLabelMap = {
@@ -46,7 +58,13 @@ const expenseLabelMap = {
   repair: "Repair",
   entertainment: "Entertainment",
   bilty: "Bilty",
+  zaqat: "Zaqat",
+  localPurchase: "Local Purchase",
+  exp: "Misc Expense",
+  salary: "Salary",
+  salesBonus: "Sales Bonus",
 };
+
 
 const LabelWithImage = ({ src, label }) => (
   <Box display="flex" alignItems="center" gap={1}>
@@ -122,10 +140,19 @@ const RecoveryPaper = () => {
     "recoveryPaperJazzcashAmount",
     ""
   );
+  const [onlineAmount, setOnlineAmount] = useLocalStorageState(
+    "recoveryPaperOnlineAmount",
+    ""
+  );
+  const targetRef = useRef(null)
   const location = useLocation(); // Get current route
   const routePath = location.pathname; // Get the current path
   const storageKey = `accountID-${routePath}`; // Unique key based on route
   const [accountID, setAccountID] = Storage(storageKey, null); // Use state for ID to allow updates
+  const [searchParams] = useSearchParams();
+
+  // const name = searchParams.get('name');
+  const acid = searchParams.get('acid');
 
   const [easypaisaAmount, setEasypaisaAmount] = useLocalStorageState(
     "recoveryPaperEasypaisaAmount",
@@ -149,6 +176,7 @@ const RecoveryPaper = () => {
 
   const [customerName, setCustomerName] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const isSubmittingRef = useRef(false);
 
   // These will now store NET values (after expenses)
   const [totalAmount, setTotalAmount] = useState(0);
@@ -169,7 +197,7 @@ const RecoveryPaper = () => {
     type: "",
   }); // 'success' or 'error'
   const [totalMeezanBank, setTotalMeezanBank] = useState(0);
-const searchInputRef = useRef(null); // Ref for the search input in LedgerSearchForm
+  const searchInputRef = useRef(null); // Ref for the search input in LedgerSearchForm
   // Expense inputs
   const [petrolExpense, setPetrolExpense] = useLocalStorageState(
     "recoveryPetrolExpenseVal",
@@ -192,13 +220,20 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     ""
   );
   // These will store the calculated total expenses
-
+  const [description, setDescription] = useState('')
   // Calculated total expenses
   const [currentTotalExpenses, setCurrentTotalExpenses] = useState(0);
+  const [capturing, setCapturing] = useState(false)
 
   // Temporary states for gross calculation before applying expenses
   const [grossCashFromEntries, setGrossCashFromEntries] = useState(0);
   const [grossAmountFromEntries, setGrossAmountFromEntries] = useState(0);
+
+  const [zaqatExpense, setZaqatExpense] = useState(null);
+  const [localPurchaseExpense, setLocalPurchaseExpense] = useState(null);
+  const [miscExpense, setMiscExpense] = useState(null);
+  const [salaryExpense, setSalaryExpense] = useState(null);
+  const [salesBonusExpense, setSalesBonusExpense] = useState(null);
 
   const expenseStateMap = {
     petrol: { value: petrolExpense, setter: setPetrolExpense },
@@ -209,6 +244,11 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
       setter: setEntertainmentExpense,
     },
     bilty: { value: biltyExpense, setter: setBiltyExpense },
+    zaqat: { value: zaqatExpense, setter: setZaqatExpense },
+    localPurchase: { value: localPurchaseExpense, setter: setLocalPurchaseExpense },
+    exp: { value: miscExpense, setter: setMiscExpense },
+    salary: { value: salaryExpense, setter: setSalaryExpense },
+    salesBonus: { value: salesBonusExpense, setter: setSalesBonusExpense },
   };
 
   const cashInputRef = useRef(null);
@@ -216,11 +256,20 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
   const acidInputRef = useRef(null);
   const isOnline = useRealOnlineStatus();
 
-  const isOperator = user.userType.toLowerCase().includes("operator");
+  const isOperator = user?.userType?.toLowerCase().includes("operator");
+  const isSpo = user?.userType?.toLowerCase().includes("spo");
+
 
   const expenseKeys = isOperator
-    ? ["entertainment", "bilty", "repair"]
-    : ["petrol", "toll", "repair"];
+    ? ["entertainment", "bilty", "repair", "zaqat", "petrol", "localPurchase"]
+    : isSpo
+      ? ["exp", "salary", "salesBonus"]
+      : ["petrol", "toll", "repair"];
+
+
+  // ["exp", "salary", "Sales Bonus" ]  ARIF
+  // ["exp", "salary", "Sales Bonus" ]  salaman
+
 
   const handleSubmitExpenses = async () => {
     setIsLoading(true);
@@ -228,14 +277,13 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     setDetailedResults([]);
 
     const amounts = {};
-    if (parseFloat(petrolExpense) > 0)
-      amounts.petrol = parseFloat(petrolExpense);
-    if (parseFloat(tollExpense) > 0) amounts.toll = parseFloat(tollExpense);
-    if (parseFloat(repairExpense) > 0)
-      amounts.repair = parseFloat(repairExpense);
-    if (parseFloat(entertainmentExpense) > 0)
-      amounts.entertainment = parseFloat(entertainmentExpense);
-    if (parseFloat(biltyExpense) > 0) amounts.bilty = parseFloat(biltyExpense);
+    // Dynamically populate amounts from the expenseStateMap
+    for (const [key, { value }] of Object.entries(expenseStateMap)) {
+      const amount = parseFloat(value);
+      if (amount > 0) {
+        amounts[key] = amount;
+      }
+    }
 
     if (Object.keys(amounts).length === 0) {
       setSubmissionStatus({
@@ -274,9 +322,50 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
       setRepairExpense("");
       setEntertainmentExpense("");
       setBiltyExpense("");
+      setZaqatExpense(null);
+      setLocalPurchaseExpense(null);
+      setMiscExpense(null);
+      setSalaryExpense(null);
+      setSalesBonusExpense(null);
       setCurrentTotalExpenses(0); // Reset total expenses after successful submission
     }
   };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isLoading) {
+        e.preventDefault();
+        e.returnValue = ""; // Required for some browsers
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isLoading]);
+
+  const screenshot = async (targetRef) => {
+    if (!targetRef || !targetRef.current) return;
+
+    setCapturing(true)
+    // Force blur to remove focus from any TextField/input
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    // Wait for the blur and render to apply
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Wait for fonts
+    await document.fonts.ready;
+
+    // Optional: Force font update or flush pending paints
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    // Wait 1 second as before (you can reduce this if above delays are enough)
+    await takeScreenShot(targetRef);
+    setCapturing(false)
+  };
+
 
   useEffect(() => {
     if (accountID) {
@@ -304,12 +393,14 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     const numericMeezan = cleanNumber(meezanBankAmount) || 0;
     const numericCrown = cleanNumber(crownWalletAmount) || 0;
     const numericEasy = cleanNumber(easypaisaAmount) || 0;
+    const numericOnline = cleanNumber(onlineAmount) || 0;
 
     const currentEntryPaymentTotal =
       numericCash +
       numericJazzcash +
       numericMeezan +
       numericCrown +
+      numericOnline +
       numericEasy;
 
     const newRemainingBalance = numericBalance - currentEntryPaymentTotal;
@@ -321,7 +412,37 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     meezanBankAmount,
     crownWalletAmount,
     easypaisaAmount,
+    onlineAmount,
   ]);
+
+  useEffect(() => {
+    setAccountID(acid)
+    const lastEntry = localStorage.getItem("unsynced-entry");
+    const status = localStorage.getItem("entry-status");
+
+    if (status === "in-progress" && lastEntry) {
+      const parsed = JSON.parse(lastEntry);
+      const confirmResend = window.confirm(
+        "An entry was being submitted before the page reloaded. Do you want to resend it?"
+      );
+
+      if (confirmResend) {
+        makeCashEntry(parsed).then((success) => {
+          if (success) {
+            alert("Previous entry submitted successfully.");
+          } else {
+            alert("Previous entry failed. Please try again.");
+          }
+          localStorage.removeItem("unsynced-entry");
+          localStorage.removeItem("entry-status");
+        });
+      } else {
+        localStorage.removeItem("unsynced-entry");
+        localStorage.removeItem("entry-status");
+      }
+    }
+  }, []);
+
 
   const handleReset = useCallback(() => {
     setAccountID(null); // This will trigger the useEffect above to clear other customer states
@@ -372,18 +493,17 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     setTotalMeezanBank(meezanBankTotal);
   }, [entries]);
 
-  // 2. Calculate TOTAL expenses from individual expense inputs
+  // 2. Calculate TOTAL expenses from all individual expense inputs
   useEffect(() => {
     const cleanNumber = (val) =>
       Number(String(val).replace(/[^0-9.-]+/g, "")) || 0;
-    const petrol = cleanNumber(petrolExpense);
-    const toll = cleanNumber(tollExpense);
-    const repair = cleanNumber(repairExpense);
-    const entertainment = cleanNumber(entertainmentExpense);
-    const bilty = cleanNumber(biltyExpense);
 
-    const calculatedTotalExpenses =
-      petrol + toll + repair + entertainment + bilty;
+    // Dynamically calculate total from all expenses in the state map
+    const calculatedTotalExpenses = Object.values(expenseStateMap).reduce(
+      (total, { value }) => total + cleanNumber(value),
+      0
+    );
+
     setCurrentTotalExpenses(calculatedTotalExpenses);
   }, [
     petrolExpense,
@@ -391,6 +511,11 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     repairExpense,
     entertainmentExpense,
     biltyExpense,
+    zaqatExpense,
+    localPurchaseExpense,
+    miscExpense,
+    salaryExpense,
+    salesBonusExpense,
   ]);
 
   // 3. Calculate NET totalCash and totalAmount
@@ -402,9 +527,6 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     setTotalAmount(netAmount);
   }, [grossCashFromEntries, grossAmountFromEntries, currentTotalExpenses]);
 
-  useEffect(() => {
-    console.log("Overdue value changed:", overDue);
-  }, [overDue]);
   useEffect(() => {
     const fetchCustomerFinancials = async () => {
       if (!selectedCustomer || !selectedCustomer.acid) {
@@ -463,9 +585,15 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     setter(numericString);
   };
 
+  useEffect(() => {
+    console.log("online", onlineAmount)
+  }, [onlineAmount])
+
   const handleCashAmountChange = createAmountChangeHandler(setCashAmount);
   const handleJazzcashAmountChange =
     createAmountChangeHandler(setJazzcashAmount);
+  const handleOnlineAmountChange =
+    createAmountChangeHandler(setOnlineAmount);
   const handleEasypaisaAmountChange =
     createAmountChangeHandler(setEasypaisaAmount);
   const handleCrownWalletAmountChange =
@@ -474,17 +602,20 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     createAmountChangeHandler(setMeezanBankAmount);
 
   const handleAddEntry = async () => {
+
     const parsedCash = parseFloat(cashAmount) || 0;
     const parsedJazzcash = parseFloat(jazzcashAmount) || 0;
     const parsedEasypaisa = parseFloat(easypaisaAmount) || 0;
     const parsedCrownWallet = parseFloat(crownWalletAmount) || 0;
     const parsedMeezanBank = parseFloat(meezanBankAmount) || 0;
+    const parsedOnline = parseFloat(onlineAmount) || 0;
 
     const currentEntryTotal =
       parsedCash +
       parsedJazzcash +
       parsedEasypaisa +
       parsedCrownWallet +
+      parsedOnline +
       parsedMeezanBank;
 
     if (!selectedCustomer) {
@@ -504,12 +635,15 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     const newEntry = {
       id: accountID,
       name: selectedCustomer.name,
+      UrduName: selectedCustomer.UrduName,
+      description,
       amounts: {
         cash: parsedCash,
         jazzcash: parsedJazzcash,
         easypaisa: parsedEasypaisa,
         crownWallet: parsedCrownWallet,
         meezanBank: parsedMeezanBank,
+        online: parsedOnline,
       },
       userName: user?.username || "Unknown User",
       entryTotal: currentEntryTotal,
@@ -520,11 +654,20 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     setIsLoading(true);
     let entrySuccessfullyPostedOnline = false;
 
+    // Store in localStorage before making request
+    localStorage.setItem("unsynced-entry", JSON.stringify(newEntry));
+    localStorage.setItem("entry-status", "in-progress");
+
     if (isOnline) {
       try {
         entrySuccessfullyPostedOnline = await makeCashEntry(newEntry);
         newEntry.status = entrySuccessfullyPostedOnline;
-      } catch (apiError) {
+        if (entrySuccessfullyPostedOnline) {
+          localStorage.setItem("entry-status", "completed");
+        } else {
+          localStorage.setItem("entry-status", "failed");
+        }
+      } catch (err) {
         newEntry.status = false;
       }
     }
@@ -536,6 +679,7 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     setJazzcashAmount("");
     setEasypaisaAmount("");
     setCrownWalletAmount("");
+    setOnlineAmount("");
     setMeezanBankAmount("");
     setSelectedCustomer(null);
     setAcidInput("");
@@ -553,11 +697,15 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     // setRoute(""); // Decide if route should be reset
 
     searchInputRef.current?.focus();
+
+    // Clean up
+    localStorage.removeItem("unsynced-entry");
+    localStorage.removeItem("entry-status");
   };
 
   const makeCashEntry = async (entry) => {
     try {
-      const { amounts, id: custId, userName } = entry;
+      const { amounts, id: custId, userName, description } = entry;
       const entriesToPost = Object.entries(amounts).filter(
         ([_, amount]) => amount > 0
       );
@@ -571,12 +719,21 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
             method === "crownWallet"
               ? "crownone"
               : method === "meezanBank"
-              ? "mbl"
-              : method,
+                ? "mbl"
+                : method,
           custId,
           receivedAmount: amount,
           userName,
-        };
+          desc: description,
+        }
+
+        if (isSubmittingRef.current) {
+          console.warn("Blocked duplicate submission on refresh");
+          return;
+        }
+
+        isSubmittingRef.current = true;
+        setIsLoading(true);
         try {
           const response = await axios.post(`${url}/cash-entry`, payload);
           if (response.status !== 200 && response.status !== 201) {
@@ -584,6 +741,9 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
           }
         } catch (error) {
           allSubEntriesSuccessful = false;
+        } finally {
+          isSubmittingRef.current = false;
+          setIsLoading(false);
         }
       }
       return allSubEntriesSuccessful;
@@ -591,6 +751,9 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
       return false;
     }
   };
+
+  console.log(entries)
+
   const makeExpenseEntry = async (entry) => {
     try {
       const { amounts, custId: custId, userName, userType } = entry;
@@ -778,7 +941,9 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
       selectedCustomer.acid
     )}&startDate=${encodeURIComponent(
       ledgerStartDate
-    )}&endDate=${encodeURIComponent(ledgerEndDate)}`;
+    )}&endDate=${encodeURIComponent(
+      ledgerEndDate
+    )}&from=${encodeURIComponent(routePath)}`;
 
     // Use navigate or window.open depending on desired behavior
     // window.open(url, "_blank"); // Open in new tab
@@ -845,10 +1010,12 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     const parsedEasypaisa = parseFloat(easypaisaAmount) || 0;
     const parsedCrownWallet = parseFloat(crownWalletAmount) || 0;
     const parsedMeezanBank = parseFloat(meezanBankAmount) || 0;
+    const parsedOnline = parseFloat(onlineAmount) || 0;
     const currentEntryTotal =
       parsedCash +
       parsedJazzcash +
       parsedEasypaisa +
+      parsedOnline +
       parsedCrownWallet +
       parsedMeezanBank;
 
@@ -869,6 +1036,7 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
     easypaisaAmount,
     crownWalletAmount,
     meezanBankAmount,
+    onlineAmount,
   ]);
 
   const handlePaidAndResetAll = () => {
@@ -894,7 +1062,7 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
 
   return (
     <Container
-      maxWidth="sm"
+      maxWidth={"lg"}
       sx={{
         border: "1px solid #ccc",
         borderRadius: 2,
@@ -903,21 +1071,22 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
       }}
     >
       <Box
-        display={"grid"}
-        justifyContent={"center"}
-        gridTemplateColumns={{ xs: "repeat(3, 1fr)", md: "repeat(3, 1fr)" }}
-        alignItems={"center"}
-        gap={2}
+        display="grid"
+        justifyContent="center"
+        alignItems="center"
+        gap={2} // adds spacing between items
+        gridTemplateColumns={{ xs: "repeat(3, 1fr)", sm: "repeat(6, 1fr)", lg: "repeat(12, 1fr)" }}
       >
         <Typography
           variant="h5"
           component="h2"
           gutterBottom
           textAlign="start"
-          sx={{ gridColumn: { xs: "span 2", md: "1" }, fontWeight: "bold" }}
+          sx={{ gridColumn: { xs: "span 2", sm: "span 6", lg: "span 9" }, fontWeight: "bold" }}
         >
           Recovery Entry
         </Typography>
+
         <TextField
           label="Route"
           variant="outlined"
@@ -928,12 +1097,13 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
             setRoute(e.target.value.toUpperCase());
             handleReset();
           }}
-          sx={{ gridColumn: { xs: "span 1", md: "1" }, fontWeight: "bold" }}
+          sx={{ gridColumn: { xs: "span 1", sm: "span 3", lg: "span 3" } }}
           inputProps={{
             style: { textTransform: "uppercase", fontWeight: "bold" },
           }}
         />
       </Box>
+
 
       <Stack spacing={2} >
         <Box >
@@ -947,8 +1117,8 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
               alignItems: "center",
             }}
           >
-            <Box 
-            inputref = {searchInputRef}>
+            <Box
+              inputref={searchInputRef}>
               <LedgerSearchForm
                 usage={"recovery"}
                 onSelect={handleFetchData}
@@ -989,7 +1159,7 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
 
               {!isLoading && !error && selectedCustomer && (
                 <>
-                 
+
                 </>
               )}
               {!isLoading && !error && !selectedCustomer && accountID && (
@@ -1005,47 +1175,49 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
                 alignItems={"center"}
                 gap={2}
               >
-                 {/* Ledger Button — only if customer is selected */}
-                  {selectedCustomer && (
-                    <Box
+                {/* Ledger Button — only if customer is selected */}
+                {selectedCustomer && (
+                  <Box
+                    sx={{
+                      gridColumn: {
+                        xs: "span 2", // Half width on xs
+                        sm: "span 2",
+                        md: "span 2",
+                        xl: "span 2",
+                      },
+                      height: "100%", // Full height of the grid cell
+                    }}
+                  >
+                    <Button
+                      onClick={handleLedgerClick}
+                      variant="contained"
+                      color="primary"
+                      fullWidth
                       sx={{
-                        gridColumn: {
-                          xs: "span 2", // Half width on xs
-                          sm: "span 2",
-                          md: "span 2",
-                          xl: "span 2",
+                        height: "90%", // Make button fill container height
+                        transition: "background-color 0.3s, color 0.3s",
+                        letterSpacing: "0.25em",
+                        "&:hover": {
+                          backgroundColor: "primary.dark", // Darker shade on hover
+                          color: "white",
+                          borderColor: "primary",
                         },
-                        height: "100%", // Full height of the grid cell
                       }}
                     >
-                      <Button
-                        onClick={handleLedgerClick}
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        sx={{
-                          height: "90%", // Make button fill container height
-                          transition: "background-color 0.3s, color 0.3s",
-                          letterSpacing: "0.25em",
-                          "&:hover": {
-                            backgroundColor: "primary.dark", // Darker shade on hover
-                            color: "white",
-                            borderColor: "primary",
-                          },
-                        }}
-                      >
-                        LEDGER
-                      </Button>
-                    </Box>
-                  )}
+                      LEDGER
+                    </Button>
+                  </Box>
+                )}
 
                 {/* for description */}
                 <TextField
                   label="Description" // Original: "description"
-                  sx={{ gridColumn: { xs: "span 4", sm: "span 2" } }} // Adjusted to span appropriately
-                  // size="small"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  sx={{ gridColumn: { xs: "span 4", sm: "span 4" } }} // Adjusted to span appropriately
+                // size="small"
                 />
-                
+
                 {/* Balance and Remaining (side by side) */}
                 {/* Balance and Remaining (side by side) */}
                 {balance !== null && balance !== "" && selectedCustomer && (
@@ -1157,7 +1329,7 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
             display: "grid",
             gridTemplateColumns: {
               xs: "repeat(3, 1fr)",
-              sm: "repeat(3, 1fr)",
+              sm: "repeat(6, 1fr)",
             },
             gap: 1.5,
             alignItems: "center",
@@ -1226,11 +1398,13 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
             sx={textBoxStyle}
           />
           <TextField
-            label="Other"
+            label="Direct Online"
             variant="outlined"
             onFocus={(e) => e.target.select()}
+            onChange={handleOnlineAmountChange}
+            value={formatCurrency(onlineAmount)}
             fullWidth
-            disabled
+            // disabled
             inputProps={{ inputMode: "decimal" }}
             sx={textBoxStyle}
           />
@@ -1250,223 +1424,314 @@ const searchInputRef = useRef(null); // Ref for the search input in LedgerSearch
       </Stack>
 
       {/* Totals Display Section - totalCash and totalAmount are NET */}
-      <Box
-        sx={{ mt: 3, pt: 2, borderTop: "1px solid #eee", textAlign: "right" }}
-      >
-        <Box sx={{ mt: 1, textAlign: "right" }}>
-          {totalCash !== 0 && ( // Show net cash if not zero
-            <Typography variant="h4" sx={{ fontWeight: "bold" }}>
-              Net Cash: <strong>{formatCurrency(totalCash.toFixed(0))}</strong>
-            </Typography>
-          )}
-          {/* Other payment methods are still shown as gross totals from entries */}
-          {totalJazzcash > 0 && (
-            <Typography variant="body1">
-              Total Jazzcash:{" "}
-              <strong>{formatCurrency(totalJazzcash.toFixed(0))}</strong>
-            </Typography>
-          )}
-          {totalEasypaisa > 0 && (
-            <Typography variant="body1">
-              Total Easypaisa:{" "}
-              <strong>{formatCurrency(totalEasypaisa.toFixed(0))}</strong>
-            </Typography>
-          )}
-          {totalCrownWallet > 0 && (
-            <Typography variant="body1">
-              Total Crown Wallet:{" "}
-              <strong>{formatCurrency(totalCrownWallet.toFixed(0))}</strong>
-            </Typography>
-          )}
-          {totalMeezanBank > 0 && (
-            <Typography variant="body1">
-              Total Meezan Bank:{" "}
-              <strong>{formatCurrency(totalMeezanBank.toFixed(0))}</strong>
-            </Typography>
-          )}
-        </Box>
-        <Typography variant="h6" gutterBottom>
-          Net Overall Total Received:{" "}
-          <strong>{formatCurrency(totalAmount.toFixed(0))}</strong>
-        </Typography>
-      </Box>
-
-      <Typography variant="h6" component="h3" gutterBottom sx={{ mt: 2 }}>
-        Entries ({entries.length}):
-      </Typography>
-      {entries.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          No entries added yet.
-        </Typography>
-      ) : (
-        <List
-          sx={{
-            bgcolor: "background.paper",
-            p: 0,
-            maxHeight: "auto",
-            overflowY: "auto",
-            overflowX: "hidden",
-            border: "1px solid #ddd",
-            borderRadius: 1,
-          }}
-        >
-          {entries
-            .slice()
-            .reverse()
-            .map((entry, index) => {
-              const reversedIndex = entries.length - index;
-              const amountDetails = [];
-              if (entry.amounts?.cash > 0)
-                amountDetails.push(
-                  `Cash: ${formatCurrency(entry.amounts.cash.toFixed(0))}`
-                );
-              if (entry.amounts?.jazzcash > 0)
-                amountDetails.push(
-                  `Jazzcash: ${formatCurrency(
-                    entry.amounts.jazzcash.toFixed(0)
-                  )}`
-                );
-              if (entry.amounts?.easypaisa > 0)
-                amountDetails.push(
-                  `Easypaisa: ${formatCurrency(
-                    entry.amounts.easypaisa.toFixed(0)
-                  )}`
-                );
-              if (entry.amounts?.crownWallet > 0)
-                amountDetails.push(
-                  `Crown Wallet: ${formatCurrency(
-                    entry.amounts.crownWallet.toFixed(0)
-                  )}`
-                );
-              if (entry.amounts?.meezanBank > 0)
-                amountDetails.push(
-                  `Meezan Bank: ${formatCurrency(
-                    entry.amounts.meezanBank.toFixed(0)
-                  )}`
-                );
-
-              return (
-                <ListItem
-                  key={`${entry.timestamp}-${entry.id}-${index}`}
-                  divider={index < entries.length - 1}
-                  onClick={() => {
-                    if (!entry.status) handleSyncOneEntry(entry);
-                  }}
-                  sx={{
-                    paddingY: "6px",
-                    paddingX: "8px",
-                    cursor: entry.status ? "default" : "pointer",
-                    "&:hover": {
-                      backgroundColor: entry.status ? "#f5f5f5" : "#fffde7",
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary={`${reversedIndex}. ${entry.name} (${entry.id})`}
-                    secondary={
-                      amountDetails.length > 0
-                        ? `${amountDetails.join(
-                            " | "
-                          )}  |    Total: ${formatCurrency(
-                            entry.entryTotal?.toFixed(0)
-                          )}`
-                        : `Total: ${formatCurrency(
-                            entry.entryTotal?.toFixed(0)
-                          )}`
-                    }
-                    primaryTypographyProps={{
-                      fontWeight: "bold",
-                      fontSize: "1rem",
-                    }}
-                    secondaryTypographyProps={{
-                      fontSize: "0.9rem",
-                      color: "text.secondary",
-                    }}
-                  />
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      ml: 1,
-                      fontWeight: "bold",
-                      color: entry.status ? "green" : "orange",
-                    }}
-                  >
-                    {entry.status ? "Synced ✅" : "Pending ⏳"}
-                  </Typography>
-                </ListItem>
-              );
-            })}
-        </List>
-      )}
-
-      {/* Expenses section */}
-      {!user.userType.toLowerCase().includes("classic") && (
+      <div ref={targetRef}>
         <Box
-          sx={{
-            mt: 4,
-            backgroundColor: "red",
-            color: "white",
-            fontWeight: "bold",
-            p: 2,
-            borderRadius: 3,
-          }}
+          display={"flex"}
+          justifyContent={"space-between"}
+          // alignItems={'center'}
+          gap={2}
+          p={2}
         >
-          <Typography variant="h5" gutterBottom>
-            <b>
-              {" "}
-              Total Expenses: {formatCurrency(currentTotalExpenses.toFixed(0))}
-            </b>
-          </Typography>
           <Box
-            display="grid"
-            gridTemplateColumns={{ xs: "repeat(3, 1fr)", sm: "repeat(3, 1fr)" }}
-            gap={2}
-            alignItems="center"
-            mb={2}
+            sx={{
+              width: "30%"
+            }}
           >
-            {expenseKeys.map((key) => {
-              const { value, setter } = expenseStateMap[key];
-              return (
-                <TextField
-                  key={key}
-                  label={expenseLabelMap[key] || key}
-                  variant="outlined"
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{
-                    sx: {
-                      fontWeight: "bold",
-                      fontSize: "1.3rem",
-                    },
-                  }}
-                  value={formatCurrency(value)}
-                  onChange={(e) => setter(e.target.value.replace(/\D/g, ""))}
-                  inputProps={{ inputMode: "tel" }}
-                  onFocus={(e) => e.target.select()}
-                  sx={{
-                    color: "white",
-                    backgroundColor: "white",
-                    fontWeight: "bold",
-                    borderRadius: 1,
-                    borderColor: "white",
-                    "& .MuiInputBase-input": {
-                      fontWeight: "bold",
-                      textAlign: "right",
-                    },
-                  }}
-                />
-              );
-            })}
+
+            <Typography variant="h6" color="text">
+              {new Date().toLocaleDateString("en-PK", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </Typography>
+            <Typography variant="h5" fontWeight="bold" letterSpacing={2} color="text">
+              {user?.username}
+            </Typography>
+          </Box>
+          <Box
+
+            sx={{ borderTop: "1px solid #eee", textAlign: "right", width: "70%" }}
+          >
+            <Box sx={{ mt: 1, textAlign: "right" }}>
+              {grossCashFromEntries !== 0 && ( // Show net cash if not zero
+                <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                  Cash RECED: <strong>{formatCurrency((grossCashFromEntries).toFixed(0))}</strong>
+                </Typography>
+              )}
+              {currentTotalExpenses !== 0 && (
+                <Typography variant="h6" gutterBottom>
+                  Total Expenses: {formatCurrency(currentTotalExpenses.toFixed(0))}
+                </Typography>
+              )}
+              {totalCash !== 0 && ( // Show net cash if not zero
+                <Typography variant="h4" sx={{ fontWeight: "bold" }}>
+                  NET Cash: <strong>{formatCurrency(totalCash.toFixed(0))}</strong>
+                </Typography>
+              )}
+              {/* Other payment methods are still shown as gross totals from entries */}
+              {totalJazzcash > 0 && (
+                <Typography variant="body1">
+                  Total Jazzcash:{" "}
+                  <strong>{formatCurrency(totalJazzcash.toFixed(0))}</strong>
+                </Typography>
+              )}
+              {totalEasypaisa > 0 && (
+                <Typography variant="body1">
+                  Total Easypaisa:{" "}
+                  <strong>{formatCurrency(totalEasypaisa.toFixed(0))}</strong>
+                </Typography>
+              )}
+              {totalCrownWallet > 0 && (
+                <Typography variant="body1">
+                  Total Crown Wallet:{" "}
+                  <strong>{formatCurrency(totalCrownWallet.toFixed(0))}</strong>
+                </Typography>
+              )}
+              {totalMeezanBank > 0 && (
+                <Typography variant="body1">
+                  Total Meezan Bank:{" "}
+                  <strong>{formatCurrency(totalMeezanBank.toFixed(0))}</strong>
+                </Typography>
+              )}
+            </Box>
+            <Typography variant="h6" gutterBottom>
+              Overall Received:{" "}
+              <strong>{formatCurrency(totalAmount.toFixed(0))}</strong>
+            </Typography>
           </Box>
         </Box>
-      )}
+        <Typography variant="h6" component="h3" gutterBottom sx={{ mt: 2 }}>
+          Entries ({entries.length}):
+        </Typography>
+        {entries.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No entries added yet.
+          </Typography>
+        ) : (
+          <List
+            sx={{
+              bgcolor: "background.paper",
+              p: 0,
+              maxHeight: "auto",
+              overflowY: "auto",
+              overflowX: "hidden",
+              border: "1px solid #ddd",
+              borderRadius: 1,
+            }}
+          >
+            {entries
+              .slice()
+              .reverse()
+              .map((entry, index) => {
+                const reversedIndex = entries.length - index;
+                const amountDetails = [];
+                if (entry.amounts?.cash > 0)
+                  amountDetails.push(
+                    `Cash: ${formatCurrency(entry.amounts.cash.toFixed(0))}`
+                  );
+                if (entry.amounts?.jazzcash > 0)
+                  amountDetails.push(
+                    `Jazzcash: ${formatCurrency(
+                      entry.amounts.jazzcash.toFixed(0)
+                    )}`
+                  );
+                if (entry.amounts?.easypaisa > 0)
+                  amountDetails.push(
+                    `Easypaisa: ${formatCurrency(
+                      entry.amounts.easypaisa.toFixed(0)
+                    )}`
+                  );
+                if (entry.amounts?.crownWallet > 0)
+                  amountDetails.push(
+                    `Crown Wallet: ${formatCurrency(
+                      entry.amounts.crownWallet.toFixed(0)
+                    )}`
+                  );
+                if (entry.amounts?.meezanBank > 0)
+                  amountDetails.push(
+                    `Meezan Bank: ${formatCurrency(
+                      entry.amounts.meezanBank.toFixed(0)
+                    )}`
+                  );
+
+                return (
+                  <ListItem
+                    key={`${entry.timestamp}-${entry.id}-${index}`}
+                    divider={index < entries.length - 1}
+                    onClick={() => {
+                      if (!entry.status) handleSyncOneEntry(entry);
+                    }}
+                    sx={{
+                      paddingY: "6px",
+                      paddingX: "8px",
+                      display: "flex",
+                      textAlign: "end",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 2,
+                      // cursor: "pointer",
+                      backgroundColor: entry.status ? "#f5f5f5" : "#fffde7",
+                      borderRadius: 1,
+                      "&:not(:last-child)": {
+                        marginBottom: "4px",
+                      },
+                      cursor: entry.status ? "default" : "pointer",
+                      "&:hover": {
+                        backgroundColor: entry.status ? "#f5f5f5" : "#fffde7",
+                      },
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        ml: 1,
+                        fontWeight: "bold",
+                        color: entry.status ? "success.main" : "warning.main",
+                      }}
+                    >
+                      {entry.status ? "Synced ✅" : "Pending ⏳"}
+                    </Typography>
+
+                    <ListItemText
+                      primary={
+                        <Box component="span" display="inline-flex" alignItems="center" gap={1}>
+                          <span dir="ltr" style={{ fontSize: "1.5rem" }}>({entry.id})</span>
+                          <span>{entry.UrduName || entry.name}</span>
+                          <span dir="ltr">.{reversedIndex}</span>
+                        </Box>
+                      }
+
+
+                      secondary={
+                        amountDetails.length > 0
+                          ? `${amountDetails.join(" | ")}  |    Total: ${formatCurrency(entry.entryTotal?.toFixed(0))}`
+                          : `Total: ${formatCurrency(entry.entryTotal?.toFixed(0))}`
+                      }
+                      primaryTypographyProps={{
+                        fontWeight: "bold",
+                        fontSize: "2.3rem",
+                        direction: "ltr",
+                        letterSpacing: "normal",
+                        fontFamily: "Jameel Noori Nastaleeq, serif",
+                      }}
+                      secondaryTypographyProps={{
+                        fontSize: "1rem",
+                        color: "text.secondary",
+                        direction: "rtl", // optional for Urdu
+                      }}
+                    />
+
+
+                  </ListItem>
+                );
+              })}
+          </List>
+        )}
+
+        {/* Expenses section */}
+        {!user?.userType?.toLowerCase().includes("classic") && (
+          <Box
+            sx={{
+              mt: 4,
+              backgroundColor: "red",
+              color: "white",
+              fontWeight: "bold",
+              p: 2,
+              borderRadius: 3,
+            }}
+          >
+            <Typography variant="h5" gutterBottom>
+              <b>
+                {" "}
+                Total Expenses: {formatCurrency(currentTotalExpenses.toFixed(0))}
+              </b>
+            </Typography>
+            <Box
+              display="grid"
+              gridTemplateColumns={{ xs: "repeat(3, 1fr)", sm: "repeat(3, 1fr)" }}
+              gap={2}
+              alignItems="center"
+              mb={2}
+            >
+              {expenseKeys.map((key) => {
+                const { value, setter } = expenseStateMap[key];
+                return (
+
+                  !capturing ?
+                    <TextField
+                      key={key}
+                      label={expenseLabelMap[key] || key}
+                      variant="outlined"
+                      fullWidth
+                      size="small"
+                      InputLabelProps={{
+                        sx: {
+                          fontWeight: "bold",
+                          fontSize: "1.3rem",
+                        },
+                      }}
+                      value={formatCurrency(value)}
+                      onChange={(e) => setter(e.target.value.replace(/\D/g, ""))}
+                      inputProps={{ inputMode: "tel" }}
+                      onFocus={(e) => e.target.select()}
+                      sx={{
+                        color: "white",
+                        backgroundColor: "white",
+                        fontWeight: "bold",
+                        borderRadius: 1,
+                        borderColor: "white",
+                        "& .MuiInputBase-input": {
+                          fontWeight: "bold",
+                          textAlign: "right",
+                        },
+                      }}
+                    />
+                    :
+                    <Box sx={{
+                      display:'flex',
+                      flexDirection:'column'
+                    }}>
+                      <FormLabel
+                      sx={{
+                        color: "white",
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase'
+                      }}
+                      >{key}</FormLabel>
+                      <br />
+                      <Box
+                        sx={{
+                          backgroundColor: "white",
+                          color: "black",
+                          borderRadius: ".5rem",
+                          p: "1rem"
+                        }}
+                      >
+                        <Typography textAlign={'right'} fontWeight={"bold"} fontSize={"1.5rem"}>
+                          {value}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+
+                )
+              })}
+            </Box>
+          </Box>
+
+        )}
+      </div>
 
       <Button
         variant="contained"
         fullWidth
         color="error"
         sx={{ mt: 2, fontSize: "1.2rem" }}
-        onClick={() => {
+        onClick={async () => {
+
+          await screenshot(targetRef);
+          // alert("ss dome")
           handleSubmitExpenses();
           setEntries([]);
           // handlePaidAndResetAll()

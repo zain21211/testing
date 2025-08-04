@@ -10,9 +10,10 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 // Import useNavigate from react-router-dom
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Typography } from "@mui/material"; // For consistent styling
 import Skeleton from "@mui/material/Skeleton";
+
 
 // Add isLedgerTable prop (defaults to false)
 const DataTable = ({
@@ -22,24 +23,20 @@ const DataTable = ({
   onDelete,
   apiEndpoint,
   isLedgerTable = false,
+  handleDoubleClick,
 }) => {
+  // console.log("tavle rerender")
   const navigate = useNavigate(); // Initialize the navigate function
 
   const deleteColumn = columns.find((col) => col.id === "delete");
   const enableDelete = !!(deleteColumn && onDelete && apiEndpoint && rowKey);
+                                    // alert(toString(data[0]))
+                                    // alert(data[0].toString());
+// alert(JSON.stringify(data[2], null, 2)); // Pretty format
+// alert(data[2].Type); // Pretty format
+
 
   const visibleColumns = columns;
-
-  const formatCurrency = (value) => {
-    const num = Number(value);
-    if (isNaN(num)) return "0"; // Returning "0" for NaN as requested
-    return num.toLocaleString("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
-
-
 
   function formatDate(value) {
     const date = new Date(value); // convert input to Date
@@ -49,6 +46,23 @@ const DataTable = ({
 
     return `${day}-${month}-${year}`;
   }
+  // useEffect(() => {
+  //   let lastTouchEnd = 0;
+
+  //   const handleTouchEnd = (event) => {
+  //     const now = new Date().getTime();
+  //     if (now - lastTouchEnd <= 300) {
+  //       event.preventDefault();
+  //     }
+  //     lastTouchEnd = now;
+  //   };
+
+  //   document.addEventListener("touchend", handleTouchEnd, false);
+
+  //   return () => {
+  //     document.removeEventListener("touchend", handleTouchEnd);
+  //   };
+  // }, []);
 
   const handleDelete = useCallback(
     async (id) => {
@@ -83,7 +97,7 @@ const DataTable = ({
   const handleDocumentClick = (docNo) => {
     if (docNo) {
       // Adjust your route structure as needed
-      const url = `/invoice/${docNo}`;
+      const url = isLedgerTable ? `/invoice/${docNo}` : `/pack/${docNo}`;
       navigate(url);
     }
   };
@@ -95,6 +109,7 @@ const DataTable = ({
         overflow: "hidden",
         borderRadius: "7px",
         padding: 0,
+        fontSize: "2rem"
       }}
     >
       <TableContainer sx={{ maxHeight: "auto" }}>
@@ -120,17 +135,18 @@ const DataTable = ({
                     <TableCell
                       key={column.id}
                       align={column.align || "center"}
-                      style={{
+                      sx={{
                         minWidth:
                           column.minWidth ||
                           (column.id === "narration" ? 200 : 100),
                         width: column.width,
-                        fontSize: "1rem",
+                        fontSize: { xs: "1rem", sm: "1.3rem" },
+                        textAlign: "center",
                         fontWeight: "bold",
                         textTransform: "uppercase",
                         color: "#fff",
                         backgroundColor: "rgba(24, 24, 24, 0.85)",
-                        border: "1px solid #ddd",
+                        border: "2px solid #ddd",
                         padding: "8px 10px",
                         // borderRadius: "8px",
                         boxSizing: "border-box",
@@ -156,17 +172,94 @@ const DataTable = ({
             ) : (
               tableData.map((row, index) => {
                 const rowId = rowKey ? row[rowKey] : null;
-                const shouldHighlightRow = Object.values(row).some(
-                  (val) =>
-                    typeof val === "string" &&
-                    (val.toLowerCase() === "estimate" ||
-                      val.toLowerCase().includes("pending"))
-                );
+                const rowDate = new Date(row.date);
+                const today = new Date();
+                      // console.log("value", value)
+
+                // Normalize both dates to midnight
+                rowDate.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0);
+
+                // Calculate the difference in days
+                const oneDayInMs = 24 * 60 * 60 * 1000;
+                const dayDiff = (today - rowDate) / oneDayInMs;
+
+                const delayed = dayDiff >= 1;
+
+                // console.log(row)
+                const shouldHighlightRow =
+                  Object.entries(row).some(([key, val]) => {
+                    const isEstimateOrPending =
+                      typeof val === "string" &&
+                      isLedgerTable &&
+                      (val.toLowerCase() === "estimate" || val.toLowerCase().includes("pending"));
+
+                    const isFullDiscount =
+                      key.toLowerCase().includes("dis") &&
+                      typeof val === "number" &&
+                      val === 100;
+
+                    return isEstimateOrPending || isFullDiscount;
+                  }) || delayed;
+
+
+                let lastTap = 0;
                 return (
                   <TableRow
                     hover
+                    // onTouchEnd={(e) => {
+                    //   const now = new Date().getTime();
+                    //   if (now - lastTap < 300) {
+                    //     // It's a double-tap!
+                    //     e.preventDefault(); // optional, might help prevent ghost click
+                    //     if (handleDoubleClick)
+                    //       handleDoubleClick(row.prid, row.psid, row.TQ);
+                    //   }
+                    //   lastTap = now;
+                    // }}
                     sx={{
-                      backgroundColor: shouldHighlightRow ? "red" : "white",
+                      touchAction: "manipulation", // ⛔ Prevents double-tap zoom
+                      userSelect: "none",
+                      backgroundColor:
+                        row.status === "pending"
+                          ? "yellow" : row.claimStatus === 1 ? "rgb(211, 211, 211)"
+                            : shouldHighlightRow
+                              ? "red"
+                              : "white",
+                      "& td": {
+                        color:
+                          row.status === "pending"
+                            ? "black !important"
+                            : shouldHighlightRow
+                              ? "white"
+                              : "inherit",
+                      },
+                      color:
+                        row.status === "pending"
+                          ? "black!important"
+                          : shouldHighlightRow
+                            ? "white"
+                            : "inherit",
+                      transition: "background-color 0.3s ease, color 0.3s ease",
+                      "&:hover": {
+                        backgroundColor: shouldHighlightRow
+                          ? "rgba(24, 24, 24, 0.85)!important"
+                          : "rgba(189, 236, 252, 1)!important",
+                        color:
+                          row.status === "pending"
+                            ? "white!important"
+                            : shouldHighlightRow
+                              ? "white"
+                              : "inherit",
+                        "& td": {
+                          color:
+                            row.status === "pending"
+                              ? "white !important"
+                              : shouldHighlightRow
+                                ? "white"
+                                : "inherit",
+                        },
+                      },
                     }}
                     role="checkbox"
                     tabIndex={-1}
@@ -174,39 +267,44 @@ const DataTable = ({
                   >
                     {visibleColumns.map((column) => {
                       if (column.id === "delete" && !enableDelete) return null;
-
+                      // console.table(row)
                       const value = row[column.id]; // Use column.id to get value
-
                       return (
                         <TableCell
-                          key={column.id}
-                          align={column.align || "center"}
-                          style={{
-                            border: "1px solid #ddd",
-                                color: shouldHighlightRow ? "white" : "black",
-    fontWeight: shouldHighlightRow ? "bold" : "normal",
-
-                            padding: "6px 8px",
-                            textTransform: "uppercase",
-                            minWidth:
-                              column.minWidth ||
-                              (column.id === "narration" ? 200 : 100),
-                            boxSizing: "border-box",
-                          }}
+                        key={column.id}
+                        align={column.align || "center"}
+                        sx={{
+                          border: "2px solid #000",
+                          color: shouldHighlightRow ? "white !important" : "black",
+                          fontWeight: "bold" ,
+                          // fontWeight: shouldHighlightRow ? "bold" : "normal",
+                          padding: "4px",
+                          letterSpacing: "normal",
+                          textTransform: "uppercase",
+                          minWidth:
+                          column.minWidth ||
+                          (column.id === "narration" ? 200 : 100),
+                          boxSizing: "border-box",
+                          fontSize: column.label.includes("ust")
+                          ? { xs: "2.5rem", sm: "2.5rem" }
+                          : { xs: "1.1rem", sm: "1.2rem" },
+                          fontFamily: 'Jameel Noori Nastaleeq, serif !important',
+                        }}
                         >
                           {
-                            // Custom rendering for the document number in ledger
-                            isLedgerTable &&
-                            column.id === "Doc" &&
-                            row.Type.toLowerCase() === "sale" &&
-                            value ? (
+                            (column?.id?.toLowerCase().includes("doc") && 
+                            row.Type?.toLowerCase().includes("sale")) &&
+                              value ? (
                               <Typography
                                 onClick={() => handleDocumentClick(value)} // Call handler on click
                                 sx={{
-                                  color: "primary.main",
+                                  color: row.status === "pending" ? "black" : (column?.id?.toLowerCase().includes("doc") && shouldHighlightRow) ? "white" : "primary.main",
+                                  fontWeight: "bold",
+                                  fontSize: "1.2rem",
                                   textDecoration: "none",
                                   "&:hover": {
                                     textDecoration: "underline",
+                                    color: row.status === "pending" ? "white!important" : ""
                                   },
                                   cursor: "pointer", // Make it look clickable
                                 }}
@@ -214,7 +312,7 @@ const DataTable = ({
                                 {value}
                               </Typography>
                             ) : isLedgerTable &&
-                              column.id.toLowerCase() === "date" ? (
+                              column?.id?.toLowerCase() === "date" ? (
                               formatDate(value)
                             ) : column.id === "delete" && enableDelete ? (
                               <IconButton
@@ -244,4 +342,4 @@ const DataTable = ({
   );
 };
 
-export default DataTable;
+export default React.memo(DataTable);

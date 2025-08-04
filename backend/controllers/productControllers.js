@@ -1,32 +1,20 @@
-const mssql = require("mssql");
-const dbConnection = require('../database/connection');
+const dbConnection = require("../database/connection");
 
 const productControllers = {
-getProducts: async (req, res) => {
-    // const { company = '', category = '', name = '' } = req.query;
+  getProducts: async (req, res) => {
     try {
       pool = await dbConnection();
-
-      const result = await pool.request()
-        // .input('company', sql.NVarChar, `%${company}%`)
-        // .input('category', sql.NVarChar, `%${category}%`)
-        // .input('name', sql.NVarChar, `%${name}%`)
-        .query(`
-SELECT *
-FROM Products
-ORDER BY Name;
-
-        `);
-      res.json(result.recordset);
+      const result = await pool.request().query(`
+  SELECT *
+  FROM Products
+  ORDER BY Name;
+`);
+res.json(result.recordset);
 
     } catch (error) {
-      console.log("eror in the product api")
-      console.error('Error fetching products:', error);
-      res.status(500).json({ message: 'Failed to fetch products.', error });
-    } finally {
-      if (pool) await pool.close();
-    }
+      res.status(500).json({ message: "Failed to fetch products.", error });
+    } 
   },
-}
-  
+};
+
 module.exports = productControllers;

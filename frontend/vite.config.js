@@ -1,36 +1,57 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+// vite.config.js
+// import fs from 'fs';
+import path from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { VitePWA } from 'vite-plugin-pwa'; // ✅ You missed this import
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  server:{
-    allowedHosts: [
-      'thin-signs-marry.loca.lt',  // <-- add your tunnel hostname here
-      // You can also allow all hosts with: 'all'
-    ]
-    ,
-    host: "0.0.0.0",
-    port: 5173,
+   preview: {
+    port: 4173,
+    host: true, // important for allowing external access
+    allowedHosts: ['spaniel-musical-shrew.ngrok-free.app',], // ✅ Add your ngrok domain here
   },
-  preview: {
-    port: 5173,
+  server: {
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+    // https: {
+    //   key: fs.readFileSync(path.resolve(__dirname, './key.pem')),
+    //   cert: fs.readFileSync(path.resolve(__dirname, './cert.pem')),
+    // }, 
+    // hmr: {
+    //   host: '100.68.6.110', // use your local IP here
+    //   protocol: 'wss',       // if using HTTPS
+    //   port: 5174
+    // },
+    host: "0.0.0.0",
+    port: 5174,
+  },
+   build: {
+    sourcemap: true, // <-- add this
   },
   plugins: [
     react(),
-
+    
 VitePWA({
   registerType: 'autoUpdate',
-  strategies: 'injectManifest',
-  srcDir: 'src',
-  filename: 'sw.js',
-   devOptions: {
-        enabled: true, // to enable SW in dev mode
-      },
+  strategies: 'generateSW', // ✅ correct
+  filename: 'sw.js',         // Optional – defaults to 'sw.js'
+  devOptions: {
+    enabled: true,
+  },
   manifest: {
-    name: 'Your App',
-    short_name: 'sms',
+    name: 'ahmad internatinal',
+    short_name: 'Accounts',
     start_url: '/',
     display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#317EFB',
     icons: [
       {
         src: '/icons/cash.png',
@@ -46,5 +67,60 @@ VitePWA({
   }
 })
 
-  ],
+  ]
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

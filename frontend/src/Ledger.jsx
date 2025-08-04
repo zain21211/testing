@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef} from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import {
   Container,
@@ -16,6 +16,8 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
 import { useSearchParams } from "react-router-dom";
+import useLocalStorageState  from "use-local-storage-state";
+ // Importing Storage for localStorage management
 // import { useLocation } from "react-router-dom"; // Removed unused import
 
 import DataTable from "./table";
@@ -89,6 +91,9 @@ const Ledger = () => {
   const tableRef = useRef(null); // State to hold the table reference
   const [error, setError] = useState(null);
   const [customerName, setCustomerName] = useState("");
+    const storageKey = `accountID-/ledger`; // Unique key based on route
+    const [ID, setID] = useLocalStorageState (storageKey, null);  // Use state for ID to allow updates
+
   const [balanceInc, setBalanceInc] = useState(true); // State to track if balance is increasing
   // Safely parse userData and provide a default empty object if null or invalid
   const [userData, setUserData] = useState(() => {
@@ -107,6 +112,8 @@ const Ledger = () => {
     totalCredit: 0,
     netBalance: 0,
   });
+
+  const isCustomer = userData?.userType?.toLowerCase().includes("customer");
 
   const [searchParams] = useSearchParams();
 
@@ -150,11 +157,26 @@ const Ledger = () => {
   }, [isSmallScreen]); // Recalculate columns when isSmallScreen changes
   // --- End responsive table widths logic ---
 
-  
-  useEffect(()=>{
-  console.log("the rows = ", rows)
 
-  }, [rows])
+  useEffect(() => {
+
+         if (!isCustomer) {
+        const str = userData?.userType;
+        const number = parseInt(str?.split("-")[1], 10);
+        console.log(number); // 616
+        let id  = number;
+        const customer = {
+          acid: id,
+          startDate: new Date(new Date().setMonth(new Date().getMonth() - 3)),
+          endDate: new Date(),
+          name: ''
+        }
+
+        handleFetchData(customer)
+         }
+
+  }, [isCustomer])
+
   // Load saved state from localStorage on component mount
   useEffect(() => {
     const savedRows = localStorage.getItem("ledgerRows");
@@ -237,7 +259,11 @@ const Ledger = () => {
     setSummary({ totalDebit: 0, totalCredit: 0, netBalance: 0 }); // Reset summary immediately
 
     try {
-      const url = `http://100.72.169.90:3001/ledger`;
+     const url = `http://100.68.6.110:3001/ledger`;
+
+
+      
+
       const response = await axios.get(url, {
         params: { acid, startDate, endDate },
         timeout: 15000, // Add a 15-second timeout for the request
@@ -319,11 +345,11 @@ const Ledger = () => {
       } else {
         setError(
           fetchError.response?.data?.message ||
-            "Failed to fetch ledger data. Please check your network connection or contact support."
+          "Failed to fetch ledger data. Please check your network connection or contact support."
         );
       }
 
-      
+
       setRows([]); // Clear rows on error
       setSummary({ totalDebit: 0, totalCredit: 0, netBalance: 0 }); // Reset summary
       // Clear localStorage on fetch error
@@ -343,6 +369,7 @@ const Ledger = () => {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const name = searchParams.get("name");
+    const from = searchParams.get("from");
 
     // Only attempt fetch if acid is present in URL params
     if (acid) {
@@ -351,7 +378,9 @@ const Ledger = () => {
         startDate: startDate,
         endDate: endDate,
         name: name,
+        from: from, // Include 'from' if needed for your logic
       };
+      setID(acid); // Update ID state with the acid from URL params
       handleFetchData(params);
       console.log(
         `URL params found. Fetching data for acid: ${acid}, startDate: ${startDate}, endDate: ${endDate}, name: ${name}`
@@ -397,22 +426,20 @@ const Ledger = () => {
     <Container maxWidth={false} sx={{ py: 2, px: { xs: 0, sm: 1, md: 1, }, width: "100%" }}>
       {/* Corrected Grid container and item structure */}
       <Grid container spacing={3} sx={{ m: 0, width: "100%" }}>
-        {" "}
         {/* Use spacing and full width */}
-        <Grid  sx={{width: "100%"}}>
-          {" "}
-          {/* Added item prop */}
-          <Card elevation={2} sx={{ height: "100%", width: "100%" }}>
-            <CardContent>
-              <LedgerSearchForm
-                usage={"ledger"}
-                onFetch={handleFetchData}
-                loading={loading}
-                name={customerName}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
+          <Grid sx={{ width: "100%" }}>
+            {/* Added item prop */}
+            <Card elevation={2} sx={{ height: "100%", width: "100%" }}>
+              <CardContent>
+                <LedgerSearchForm
+                  usage={"ledger"}
+                  onFetch={handleFetchData}
+                  loading={loading}
+                  name={customerName}
+                />
+              </CardContent>
+            </Card>
+          </Grid>
         <Grid sx={{ width: "100%" }}>
           {" "}
           {/* Added item prop */}
@@ -444,15 +471,15 @@ const Ledger = () => {
           {/* Show data or messages only when not loading */}
           {!loading && rows.length > 0 && (
             <Box
-            sx={{
-              width: "100%",
+              sx={{
+                width: "100%",
               }}>
               {/* Add Card to display the summary */}
               <Card elevation={2} sx={{ mb: 3 }}>
                 {" "}
                 {/* Added margin-bottom */}
                 <CardContent>
-                  
+
                   {/* Added Summary Header */}
                   <Box
                     display="grid"
@@ -475,15 +502,15 @@ const Ledger = () => {
                     <Typography variant="subtitle1">
                       <b>Total Credit:</b> {formatCurrency(totalCredit)}
                     </Typography>
-                    <Typography variant="subtitle1" sx={{ backgroundColor: balanceInc ? "red" : "green",p:1,width:"auto", color: "white", textAlign:"center", fontWeight:"bold", borderRadius: 1 }}>
-                      <b>Balance {balanceInc?"Increase":"Decrease"}:</b> {formatCurrency(netBalance)}
+                    <Typography variant="subtitle1" sx={{ backgroundColor: balanceInc ? "red" : "green", p: 1, width: "auto", color: "white", textAlign: "center", fontWeight: "bold", borderRadius: 1 }}>
+                      <b>Balance {balanceInc ? "Increase" : "Decrease"}:</b> {formatCurrency(netBalance)}
                     </Typography>
                   </Box>
                 </CardContent>
               </Card>
 
               {/* Existing Card for the DataTable */}
-              <Card elevation={2} sx={{width:"100%"}}>
+              <Card elevation={2} sx={{ width: "100%" }}>
                 {/*
                     Removed overflowX: 'auto'.
                     Table width is controlled by the dynamic 'ledgerColumns'.
@@ -502,19 +529,19 @@ const Ledger = () => {
                     Consider adding CSS like word-break: break-word; to relevant cells
                     if you encounter text overflowing within the columns themselves.
                   */}
-                <Box
-                ref={tableRef}
-                >
-                  <DataTable
-                    data={rows}
-                    // Pass the dynamically generated columns based on screen size
-                    columns={ledgerColumns}
+                  <Box
+                    ref={tableRef}
+                  >
+                    <DataTable
+                      data={rows}
+                      // Pass the dynamically generated columns based on screen size
+                      columns={ledgerColumns}
 
-                    rowKey={uniqueRowKey} // Make sure DataTable component uses this as React's key prop
-                    isLedgerTable={true} // Props for DataTable
-                    showPagination={true}
-                    rowsPerPageOptions={[10, 25, 50, 100]}
-                  />
+                      rowKey={uniqueRowKey} // Make sure DataTable component uses this as React's key prop
+                      isLedgerTable={true} // Props for DataTable
+                      showPagination={true}
+                      rowsPerPageOptions={[10, 25, 50, 100]}
+                    />
                   </Box>
                 </Box>
               </Card>

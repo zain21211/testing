@@ -25,10 +25,11 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.9.2",
     "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.503.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-router-dom": "^7.5.3",
     "react-syntax-highlighter": "^15.6.1",
     "react-window": "^1.8.11",
@@ -41,7 +42,7 @@
     "@tailwindcss/vite": "^4.1.6",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.22.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -50,8 +51,8 @@
     "mkcert": "^3.2.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.6",
-    "vite": "^6.3.4",
+    "vite": "^5.4.19",
     "vite-plugin-mkcert": "^1.17.8",
-    "vite-plugin-pwa": "^1.0.0"
+    "vite-plugin-pwa": "^1.0.1"
   }
 }

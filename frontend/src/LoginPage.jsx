@@ -120,6 +120,13 @@ const Login = () => {
       // console.log("Customer detected, navigating to /order. UserData:", userData);
       navigate("/order");
     }
+  }, [isLoggedIn, isCustomer, userData, navigate]); // Runs when these dependencies change  // Effect 3: Handle redirection for customers
+  useEffect(() => {
+    const isSpo = userData?.userType?.toLowerCase().includes("spo");
+    if (isLoggedIn && isSpo && userData) {
+      // console.log("Customer detected, navigating to /order. UserData:", userData);
+      navigate("/turnoverreport");
+    }
   }, [isLoggedIn, isCustomer, userData, navigate]); // Runs when these dependencies change
 
   const handleChangeRememberMe = (event) => {
@@ -186,7 +193,7 @@ const Login = () => {
 
   // Conditional Rendering Logic
   if (isLoggedIn) {
-    if (isCustomer) {
+    if (isCustomer || userData?.userType?.toLowerCase().includes("spo")) {
       // User is a customer, Effect 3 should be redirecting them.
       // Show a loading indicator while the redirect happens.
       return (
@@ -201,7 +208,8 @@ const Login = () => {
         >
           <CircularProgress />
           <Typography variant="h6" sx={{ mt: 2 }}>
-            Redirecting to your orders...
+            {/* {isCustomer ? 'Redirecting to your orders...' : 'Redirecting to your report...'} */}
+            Redirecting to your report...
           </Typography>
         </Box>
       );
@@ -261,15 +269,15 @@ const Login = () => {
               </Button>
             )}
             {paymentVoucher.includes(userType) || userData?.username.includes("ZAIN") && (
-            <Button
-              component={RouterLink}
-              to="/paymentvoucher"
-              variant="contained"
-              size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "	#795548" }}
-            >
-              Payment Voucher
-            </Button>
+              <Button
+                component={RouterLink}
+                to="/paymentvoucher"
+                variant="contained"
+                size="large"
+                sx={{ py: 1.5, height: "60px", bgcolor: "	#795548" }}
+              >
+                Payment Voucher
+              </Button>
             )}
             <Button
               component={RouterLink}

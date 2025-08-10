@@ -412,10 +412,12 @@ const orderControllers = {
         .input("type", sql.VarChar, "sale")
         .input("doc", sql.Int, nextDoc) // Document number
         .input("narration", sql.VarChar(255), debitNarration)
+        .input("entryBy1", sql.VarChar, username)
+        .input("entryDateTime1", sql.DateTime, new Date())
         .input("debit", sql.Decimal(18, 2), totalOrderAmount) // Total sale amount
         .query(`
-            INSERT INTO ledgers (acid, date, type, doc, NARRATION, Debit) 
-            VALUES (@acid, @date, @type, @doc, @narration, @debit)
+            INSERT INTO ledgers (acid, date, type, doc, NARRATION, Debit, EntryBy, EntryDateTime) 
+            VALUES (@acid, @date, @type, @doc, @narration, @debit, @entryBy1, @entryDateTime1)
           `);
 
       // 7. Insert Credit entry into ledgers (Sales Revenue Account is Credited)
@@ -429,10 +431,12 @@ const orderControllers = {
         .input("type", sql.VarChar, "sale")
         .input("doc", sql.Int, nextDoc) // Document number
         .input("narration", sql.VarChar(255), creditNarration)
+        .input("entryBy2", sql.VarChar, username)
+        .input("entryDateTime2", sql.DateTime, new Date())
         .input("credit", sql.Decimal(18, 2), totalOrderAmount) // Total sale amount
         .query(`
-            INSERT INTO ledgers (acid, date, type, doc, NARRATION, credit) 
-            VALUES (@acid, @date, @type, @doc, @narration, @credit)
+            INSERT INTO ledgers (acid, date, type, doc, NARRATION, credit, EntryBy, EntryDateTime) 
+            VALUES (@acid, @date, @type, @doc, @narration, @credit, @entryBy2, @entryDateTime2)
           `);
 
       // for ledgerhostory debit

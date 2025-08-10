@@ -51,13 +51,13 @@ const theme = createTheme({
 });
 
 const productDetail = [
-  { label: "Product", size: 2, align: "left" },
+  { label: "Product", size: 5, align: "left" },
   { label: "B.Q", size: 1 },
   { label: "FOC", size: 1 },
-  { label: "T.Q", size: 1 },
-  { label: "Price", size: 1 },
+  // { label: "T.Q", size: 1 },
+  { id: "R", label: "Rate", size: 1 },
   { label: "D%", size: 1 },
-  { label: "Amount", size: 2 },
+  { id: "A", label: "Amount", size: 1 },
 ];
 
 const invoiceAPI = `${import.meta.env.VITE_API_URL}/invoices`;
@@ -94,7 +94,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   useEffect(() => {
     const invoiceURL = location.pathname;
 
-    if (!cameFromOrderPage || !targetRef.current || !invoiceURL ) return;
+    if (!cameFromOrderPage || !targetRef.current || !invoiceURL) return;
 
     const key = `screenshot_taken_${invoiceURL}`;
     const alreadyTaken = sessionStorage.getItem(key);
@@ -202,7 +202,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
         <Paper elevation={3} sx={{ px: 0, m: 0, width: "100%" }}>
           <Box
             ref={targetRef}
-            sx={{p: 1}}
+            sx={{ p: 1 }}
           >
             <Grid
               container
@@ -271,14 +271,21 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                 container
                 justifyContent="space-between"
                 alignItems="center"
+                margin={"auto"}
               >
                 <Typography
                   variant="h5"
-                  // fontWeight="bold"
                   alignSelf="center"
                 >
-                  <b>CUSTOMER NAME: </b>
-                  {customer?.CustomerName}
+                  <span style={{
+                    padding: "0 20px",
+
+                    fontSize: "3rem",
+                    fontFamily: 'Jameel Noori Nastaleeq, serif',
+                    fontWeight: "bold",
+                  }}>
+                    {customer?.CustomerName}
+                  </span>
                   {!customer?.CustomerName && (
                     <Skeleton height={30} width="90%" />
                   )}
@@ -301,7 +308,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                   data={products ?? []} // Ensure items is always an array
                   onLoad={() => setIsReady(true)}
                   columns={productDetail.map((field) => ({
-                    id: field.label.toLowerCase(),
+                    id: field.id,
                     label: field.label,
                     align: "center",
                     width:
@@ -314,24 +321,24 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                             : field.label === "Amount"
                               ? "5%"
                               : "5%", // Reduced Amount column width to 8%
-                    minWidth: field.label === "Product" ? 178 : "5%", // Adjusted minimum width for Product column
+                    minWidth: field.label === "Product" ? 300 : "5%", // Adjusted minimum width for Product column
                     render: (value, row) => {
                       let displayValue = "";
                       if (!row) <Skeleton height={30} width="80%" />;
                       if (field.label === "Product") {
-                        displayValue = `${row.Product?.toUpperCase() || "error"
-                          } - ${row.Company?.toUpperCase() || ""} `;
+                        displayValue = ` ${row.Company?.toUpperCase() || ""} - ${row.Product?.toUpperCase() || "error"
+                          }`;
                       } else if (field.label === "B.Q") {
                         displayValue = row.BQ || "0";
                       } else if (field.label === "FOC") {
                         displayValue = row.FOC || "0";
                       } else if (field.label === "T.Q") {
                         displayValue = row.TQ || "0";
-                      } else if (field.label === "Price") {
+                      } else if (field.id === "R") {
                         displayValue = row.Price || "0";
                       } else if (field.label === "D%") {
                         displayValue = row.Disc2 || "0";
-                      } else if (field.label === "Amount") {
+                      } else if (field.id === "A") {
                         displayValue = formatCurrency(row.Amount) || "0";
                       }
 
@@ -351,11 +358,13 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                           }}
                           inputProps={{
                             style: {
-                              padding: "0px",
+                              padding: field.label === "Product" ? "0px 5px" : "0px",
+                              fontFamily: 'Jameel Noori Nastaleeq, serif',
+                              fontWeight: "bold",
                               textAlign:
-                                field.label === "Product" ? "left" : "center",
+                                field.label === "Product" ? "right" : "center",
                               fontSize:
-                                field.label === "Product" ? ".8rem" : "0.8rem",
+                                field.label === "Product" ? "1.3rem" : "1rem",
                               whiteSpace: "normal", // Enable text wrapping
                               wordWrap: "break-word", // Break long words
                             },
@@ -381,12 +390,12 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                 />
               </Suspense>
             </Grid>
-             {/* Notes Section */}
+            {/* Notes Section */}
             <TextField
               label="Description"
               variant="outlined"
               InputLabelProps={{ shrink: true }}
-               sx={{ marginY: 3 }}
+              sx={{ marginY: 3 }}
               value={customer.Description}
               onChange={(e) =>
                 setInvoice((prev) => ({

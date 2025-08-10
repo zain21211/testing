@@ -14,7 +14,7 @@ import axios from "axios";
 import { useLocalStorageState } from "./hooks/LocalStorage"; // Assuming this hook exists
 import debounce from "lodash.debounce"; // Import debounce utility
 import Storage from "use-local-storage-state";
-
+import { useIndexedDBState } from "./hooks/indexDBHook"; // Assuming this hook exists
 import {
   Container,
   Typography,
@@ -51,6 +51,12 @@ const formatCurrency = (value) => {
     maximumFractionDigits: 0,
   });
 };
+
+// Configure IndexedDB
+// localforage.config({
+//   name: "store-app",
+//   storeName: "products",
+// });
 
 // const customTextField = {
 //                 width: { xs: "100%", md: "150px" }, // Control width
@@ -108,7 +114,7 @@ const OrderForm = () => {
   console.log("OrderForm rendering or re-rendering");
 
   // --- State Variables ---
-  const [products, setProducts] = useState([]);
+  const [products, setProducts, productsLoaded] = useIndexedDBState("products", []);
   const [companies, setCompanies] = useState([]);
   const [categories, setCategories] = useState([]);
   const [companyInputValue, setCompanyInputValue] = useState("");
@@ -142,6 +148,10 @@ const OrderForm = () => {
   // Use a specific key for the selected customer OBJECT
   const [selectedCustomer, setSelectedCustomer] = useLocalStorageState(
     "orderFormSelectedCustomer",
+    null
+  );
+  const [invoice, setInvoice] = useLocalStorageState(
+    "invoice",
     null
   );
 
@@ -517,13 +527,8 @@ const OrderForm = () => {
     const saleRate = selectedProduct?.SaleRate;
     setSuggestedPrice(saleRate);
     setPrice(saleRate);
-    console.log("setting price to", saleRate);
   }, [selectedProduct]);
 
-
-  useEffect(() => {
-    console.log('price = ', price)
-  }, [price])
 
   // Effect to calculate scheme pieces (SchPc) based on orderQuantity and selected product
   useEffect(() => {
@@ -600,9 +605,9 @@ const OrderForm = () => {
     const finalAmount = calculatedVest - discountAmount;
 
     setCalculatedAmount(finalAmount); // Store numeric calculated amount
-  }, [orderQuantity, selectedProduct, price, discount1, discount2]); // Recalculate when these change
+  }, [orderQuantity, selectedProduct, price, discount1, discount2]); // Recalculate when these change`
 
-  // Effect to fetch initial product and company data
+  // load all the products
   useEffect(() => {
     if (!token) {
       setError("Authentication token not found. Please log in.");
@@ -612,68 +617,57 @@ const OrderForm = () => {
     }
 
     const fetchInitialData = async () => {
-      console.log("Fetching initial data...");
       setInitialDataLoading(true);
       setError(null);
-      setSuccess(null); // Clear success message on new load
+      setSuccess(null);
 
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        // Fetch products, companies, and categories in parallel if separate endpoints exist
-        // Or derive them from the products response if that's the case.
-        // Assuming /products returns everything needed.
-        const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
-          headers,
-        });
 
-        const allProducts = prodResponse.data || [];
-        const cleanedProducts = allProducts
-          .map((p) => ({
-            ...p,
-            Name: p.Name ? String(p.Name).trim() : "",
-            Company: p.Company ? String(p.Company).trim() : "",
-            Category: p.Category ? String(p.Category).trim() : "",
-            SaleRate: p.SaleRate ?? 0,
-            ID: p.ID, // Use ID consistently
-            code: p.code, // Ensure code is available for scheme lookups
-            StockQty: p.StockQty ?? 0, // Ensure StockQty is available
-          }))
-          .filter((p) => p.ID != null && p.Name && p.Name.trim() !== ""); // Filter out invalid items
+        // Only fetch from API if online
+        if (navigator.onLine) {
+          const prodResponse = await axios.get(`${API_BASE_URL}/products`, { headers });
+          const allProducts = prodResponse.data || [];
 
-        setProducts(cleanedProducts);
+          const cleanedProducts = allProducts
+            .map(p => ({
+              ...p,
+              Name: p.Name ? String(p.Name).trim() : "",
+              Company: p.Company ? String(p.Company).trim() : "",
+              Category: p.Category ? String(p.Category).trim() : "",
+              SaleRate: p.SaleRate ?? 0,
+              ID: p.ID,
+              code: p.code,
+              StockQty: p.StockQty ?? 0,
+            }))
+            .filter(p => p.ID != null && p.Name && p.Name.trim() !== "");
 
-        // COMPANIES: Derive from cleaned products
-        const uniqueCompanies = [
-          ...new Set(cleanedProducts.map((p) => p.Company).filter(Boolean)),
-        ].sort();
-        setCompanies(uniqueCompanies);
-
-        // CATEGORIES: Derive from cleaned products
-        const uniqueCategories = [
-          ...new Set(cleanedProducts.map((p) => p.Category).filter(Boolean)),
-        ].sort();
-        setCategories(uniqueCategories);
+          // Just update state — persistence happens automatically
+          setProducts(cleanedProducts);
+        }
       } catch (err) {
         console.error(
           "Error fetching initial data:",
           err.response?.data?.message || err.message || err
         );
-        setError(
-          `Failed to load initial data. ${err.response?.data?.message || err.message
-          }`
-        );
-        setProducts([]);
-        setCompanies([]);
-        setCategories([]);
+        setError(`Failed to load initial data. ${err.response?.data?.message || err.message}`);
       } finally {
         setInitialDataLoading(false);
         setLoading(false);
-        console.log("Finished fetching initial data.");
       }
     };
 
-    fetchInitialData();
-  }, [token, API_BASE_URL]); // Added dependencies
+    // Only fetch if initial IndexedDB load is done
+    if (productsLoaded) {
+      // Always set companies/categories from whatever is in IndexedDB first
+      setCompanies([...new Set(products.map(p => p.Company).filter(Boolean))].sort());
+      setCategories([...new Set(products.map(p => p.Category).filter(Boolean))].sort());
+
+      fetchInitialData();
+    }
+  }, [token, productsLoaded]); // productsLoaded ensures offline data is loaded first
+
+
 
   useEffect(() => {
     const saleRate = Number(selectedProduct?.SaleRate) || 0;
@@ -685,10 +679,6 @@ const OrderForm = () => {
     }
 
     const amount = (saleRate * (schOn || 0)) / totalUnits;
-
-    console.log("schOn: ", schOn)
-    console.log("schpcs: ", schPCS)
-    console.log("scheme price", amount);
     setSchPrice(Math.round(amount));
   }, [scheme]);
 
@@ -756,7 +746,6 @@ const OrderForm = () => {
       quantityInputRef?.current?.focus;
     }
 
-    console.log("filtered items: ", filtered)
     return filtered;
     // Memoize based on products, filters, and input value
   }, [
@@ -770,19 +759,23 @@ const OrderForm = () => {
 
   // --- Event Handlers ---
 
-  useEffect(() => {
-    if (productID) {
-      setProductID(null);
-      setProductIDInput(null); // Update input when productID changes
-    }
-  }, [productInputValue]);
+  // BUG FIX: This useEffect was removed. Its logic was too broad and could cause
+  // unintended resets. The logic is now handled more explicitly inside the
+  // Autocomplete's event handlers.
+  // useEffect(() => {
+  //   if (productID) {
+  //     setProductID(null);
+  //     setProductIDInput(null);
+  //   }
+  // }, [productInputValue]);
 
   useEffect(() => {
+    // This effect correctly syncs the ID input when a product is selected.
+    // The new robust clearing logic in the handlers prevents this from causing issues.
     if (selectedProduct && !productID) {
-      // setProductID(selectedProduct.ID); // Set productID when a product is selected
-      setProductIDInput(selectedProduct.ID); // Update input when a product is selected
+      setProductIDInput(selectedProduct.ID);
     }
-  }, [selectedProduct, productID]);
+  }, [selectedProduct]);
 
   // Handler for when a customer is selected from LedgerSearchForm
   const handleSelectCustomer = useCallback((customer) => {
@@ -804,6 +797,39 @@ const OrderForm = () => {
       handleAddProduct();
     }
   };
+
+
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (invoice) {
+        try {
+          const response = await axios.post(
+            `${API_BASE_URL}/create-order`,
+            invoice,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          console.log("Invoice posted automatically:", response.data);
+          setInvoice({}); // Clear after success
+        } catch (error) {
+          console.error("Retry failed:", error);
+        }
+      }
+    };
+
+    // Listen for browser coming online
+    window.addEventListener("online", handleOnline);
+
+    // If already online and invoice exists, try posting immediately
+    if (navigator.onLine) {
+      handleOnline();
+    }
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [invoice, setInvoice, token]);
+
+
 
   const handleLedgerClick = useCallback(() => {
     if (!selectedCustomer || !selectedCustomer.acid || !selectedDate) {
@@ -850,7 +876,6 @@ const OrderForm = () => {
     // Input validation before adding
     if (!selectedCustomer || !selectedCustomer.acid) {
       setError("Please select a customer first.");
-      console.error("Add product failed: No customer selected.");
       return;
     }
     if (!selectedProduct || !selectedProduct.ID) {
@@ -863,7 +888,6 @@ const OrderForm = () => {
     // Validate quantity
     if (!orderQuantity) {
       setError("Please specify a valid quantity (at least 1).");
-      console.error("Add product failed: Invalid quantity.");
       return;
     }
 
@@ -949,8 +973,11 @@ const OrderForm = () => {
   //   }
   // }, [productID, productIDInput]);
 
+  useEffect(() => {
+    console.log('preducts', products)
+  }, [products])
+
   const handleRemoveProduct = useCallback((indexToRemove) => {
-    console.log("handleRemoveProduct at index:", indexToRemove);
     setOrderItems((prev) => prev.filter((_, i) => i !== indexToRemove));
   }, []); // No dependencies needed
 
@@ -961,13 +988,11 @@ const OrderForm = () => {
     // Final validation before posting
     if (!selectedCustomer || !selectedCustomer.acid) {
       setError("Please select a customer before posting the order.");
-      console.error("Post order failed: No customer selected.");
       return;
     }
 
     if (orderItems.length === 0) {
       setError("Cannot post an empty order. Please add at least one product.");
-      console.error("Post order failed: No items in order.");
       return;
     }
 
@@ -976,40 +1001,43 @@ const OrderForm = () => {
     orderItems.map((item) => {
       console.log("this the item profit ", item.profit);
     });
+
+    const payload = {
+      products: orderItems.map((item) => ({
+        date: selectedDate, // Use the date in YYYY-MM-DD format
+        acid: String(selectedCustomer.acid), // Ensure acid is string
+        type: "SALE", // Assuming type is always SALE
+        qty: Number(item.orderQuantity), // Ordered quantity
+        aQty: Number(item.orderQuantity), // Appears to be same as qty? Confirm API needs
+        bQty: Number(item.orderQuantity), // Total quantity (including scheme)
+        rate: Number(item.rate),
+        suggestedPrice: Number(item.suggestedPrice),
+        vest: Number(item.vest),
+        discP1: Number(item.discount1), // Percentage discount 1
+        discP2: Number(item.discount2), // Percentage discount 2
+        // 'vist' seems like a typo or misnaming for the final item amount
+        // Use the calculated numeric amount from item.amount
+        vist: Math.round(item.amount),
+        SchPc: Number(item.schPc) || 0,
+        sch: Boolean(item.Sch), // Ensure boolean
+        isClaim: Boolean(item.isClaim), // Ensure boolean
+        prid: String(item.productID) || "0", // Ensure product ID is string, default to '0' if null/undefined
+        profit: item.profit,
+        remakes: item.remakes || "", // Include remakes
+      })),
+      // Add other top-level order details if API expects them (e.g., CustomerID, Date, Location, User)
+      orderDate: selectedDate,
+      customerAcid: String(selectedCustomer.acid),
+      userId: user?.UserID, // Assuming user object has UserID// Use coords if location hook was active
+      // Add any other required fields like total amount, total quantity etc.
+      totalAmount: doc ? Number(totalAmount + perAmount) : totalAmount,
+      totalQuantity: Number(orderItemsTotalQuantity),
+    };
+
     try {
-      const payload = {
-        products: orderItems.map((item) => ({
-          date: selectedDate, // Use the date in YYYY-MM-DD format
-          acid: String(selectedCustomer.acid), // Ensure acid is string
-          type: "SALE", // Assuming type is always SALE
-          qty: Number(item.orderQuantity), // Ordered quantity
-          aQty: Number(item.orderQuantity), // Appears to be same as qty? Confirm API needs
-          bQty: Number(item.orderQuantity), // Total quantity (including scheme)
-          rate: Number(item.rate),
-          suggestedPrice: Number(item.suggestedPrice),
-          vest: Number(item.vest),
-          discP1: Number(item.discount1), // Percentage discount 1
-          discP2: Number(item.discount2), // Percentage discount 2
-          // 'vist' seems like a typo or misnaming for the final item amount
-          // Use the calculated numeric amount from item.amount
-          vist: Math.round(item.amount),
-          SchPc: Number(item.schPc) || 0,
-          sch: Boolean(item.Sch), // Ensure boolean
-          isClaim: Boolean(item.isClaim), // Ensure boolean
-          prid: String(item.productID) || "0", // Ensure product ID is string, default to '0' if null/undefined
-          profit: item.profit,
-          remakes: item.remakes || "", // Include remakes
-        })),
-        // Add other top-level order details if API expects them (e.g., CustomerID, Date, Location, User)
-        orderDate: selectedDate,
-        customerAcid: String(selectedCustomer.acid),
-        userId: user?.UserID, // Assuming user object has UserID// Use coords if location hook was active
-        // Add any other required fields like total amount, total quantity etc.
-        totalAmount: doc ? Number(totalAmount + perAmount) : totalAmount,
-        totalQuantity: Number(orderItemsTotalQuantity),
-      };
 
       console.log("Posting order with payload:", payload);
+
 
       const response = await axios.post(
         `${API_BASE_URL}/create-order`,
@@ -1021,10 +1049,10 @@ const OrderForm = () => {
 
       const { updatedProducts, invoiceNumber } = response.data
 
-      const path = `/invoice/${invoiceNumber}`
-      navigate(path, {
-        state: { fromOrderPage: true },
-      });
+      // const path = `/invoice/${invoiceNumber}`
+      // navigate(path, {
+      //   state: { fromOrderPage: true },
+      // });
       setProducts(updatedProducts)
       // Handle success
       setSuccess(response.data.message || "Order created successfully!");
@@ -1059,6 +1087,7 @@ const OrderForm = () => {
       setProductID(null); // Clear product ID
       setProductIDInput(null); // Clear product ID input text
     } catch (err) {
+      setInvoice(prev => ({ ...prev, payload })); // Reset invoice number on error
       console.error(
         "Order creation failed:",
         err.response?.data || err.message || err
@@ -1144,12 +1173,10 @@ const OrderForm = () => {
 
   return (
     <Container
+      maxWidth={false}
       sx={{
-        "@media (max-width:600px)": {
-          all: "unset",
-        },
+        all: "unset",
       }}
-      maxWidth="xl" // Use max width from MUI
     >
       {/* Error and Success Alerts */}
       {(success || error) && (
@@ -1378,7 +1405,7 @@ const OrderForm = () => {
               xs: "repeat(4, 1fr)",
               sm: "repeat(3, 1fr)",
               md: "repeat(auto-fit, minmax(130px, 1fr))", // INCREASED min width
-              lg: "repeat(11, auto)",
+              lg: " repeat(auto-fit, minmax(150px, auto))",
             },
             gap: 3, // INCREASED gap
             mb: 2,
@@ -1548,21 +1575,37 @@ const OrderForm = () => {
             isOptionEqualToValue={(option, value) => option?.ID === value?.ID}
             inputValue={productInputValue}
             value={selectedProduct}
-            onInputChange={(event, newInputValue) => {
-              setProductInputValue(newInputValue);
-              if (selectedProduct && selectedProduct.Name !== newInputValue) {
-                setSelectedProduct(null);
+            // BUG FIX STARTS HERE
+            onChange={(event, newValue) => {
+              // This handler is triggered when a selection is made or cleared via the 'x'
+              setSelectedProduct(newValue);
+              if (newValue) {
+                // On selection, update the input value and focus the next field
+                setProductInputValue(newValue.Name || "");
+                setOrderQuantity(0);
+                setError(null);
+                setTimeout(() => {
+                  quantityInputRef.current?.focus();
+                }, 100);
+              } else {
+                // If newValue is null (cleared with 'x'), ensure IDs are also cleared
+                setProductID(null);
+                setProductIDInput(null);
               }
             }}
-            onChange={(event, newValue) => {
-              setSelectedProduct(newValue);
-              setProductInputValue(newValue?.Name || "");
-              setOrderQuantity(0);
-              setError(null);
-              setTimeout(() => {
-                quantityInputRef.current?.focus();
-              }, 100);
+            onInputChange={(event, newInputValue, reason) => {
+              setProductInputValue(newInputValue);
+              // If the user starts typing and the input no longer matches the selected product,
+              // or if the user clears the input via backspace, we must clear the selection and IDs.
+              if (reason === 'input') {
+                if (selectedProduct && selectedProduct.Name !== newInputValue) {
+                  setSelectedProduct(null);
+                  setProductID(null);
+                  setProductIDInput(null);
+                }
+              }
             }}
+            // BUG FIX ENDS HERE
             renderOption={(props, option, state) => {
               return (
                 <Box component="li" {...props} key={option.ID}>
@@ -1574,7 +1617,7 @@ const OrderForm = () => {
                         Rate: {option.SaleRate != null ? option.SaleRate.toFixed(0) : "N/A"}
                         {" | Co: "}{option.Company || "-"}
                         {" | "}
-                        <span style={{fontWeight: 'bold', color:'black'}}>MODEL: {option.Category || "-"}</span>
+                        <span style={{ fontWeight: 'bold', color: 'black' }}>MODEL: {option.Category || "-"}</span>
                       </>
                     }
                     primaryTypographyProps={{ noWrap: true, fontSize: '0.95rem' }} // ADJUSTED
@@ -2108,7 +2151,7 @@ const OrderForm = () => {
               loading || // Disable during loading/posting
               initialDataLoading || // Disable during initial data fetch
               orderItems.length === 0 || // Cannot post empty order
-              !selectedCustomer // Must have a selected customer
+              !selectedCustomer // Must have a selected customermmmmmm                                                      
             }
             sx={{ minWidth: "200px" }}
           >

@@ -5,11 +5,13 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection:', reason);
 });
 
-const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { Server } = require('socket.io'); // Import socket.io server
 const cors = require('cors');
 const express = require('express');
+const dbConnection = require('./database/connection'); // Import your database connection
 const bodyParser = require('body-parser');
 const orderRoutes = require('./routes/orderRoutes'); // Import your invoice route
 const loginRouter = require('./routes/loginRoutes'); // Import your login rout
@@ -30,6 +32,24 @@ const turnoverReport = require('./routes/turnOverReport');
 const app = express();
 const port = 3000;
 
+const server = http.createServer(app); // create HTTP server
+
+setInterval(async () => {
+  try {
+    const pool = await dbConnection();
+    await pool.request().query("SELECT top 1 id from coa"); // lightweight query
+    console.log("🔄 Keep-alive ping sent");
+  } catch (err) {
+    console.error("❌ Keep-alive failed:", err.message);
+  }
+}, 30000); // every 45 seconds
+
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
 // Middleware
 // app.use(cors({
 //   origin: ['http://localhost:5173', 'https://thin-signs-marry.loca.lt', "http://100.72.169.90:5173"], // include tunnel URL
@@ -91,6 +111,8 @@ app.use((req, res) => {
 });
 
 
- app.listen(3001, "0.0.0.0", () => {
+ server.listen(3001, "0.0.0.0", () => {
   console.log('✅ HTTP server running on http://100.68.6.110:3001');
 });
+
+module.exports = { io };

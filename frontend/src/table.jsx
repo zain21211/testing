@@ -30,10 +30,10 @@ const DataTable = ({
 
   const deleteColumn = columns.find((col) => col.id === "delete");
   const enableDelete = !!(deleteColumn && onDelete && apiEndpoint && rowKey);
-                                    // alert(toString(data[0]))
-                                    // alert(data[0].toString());
-// alert(JSON.stringify(data[2], null, 2)); // Pretty format
-// alert(data[2].Type); // Pretty format
+  // alert(toString(data[0]))
+  // alert(data[0].toString());
+  // alert(JSON.stringify(data[2], null, 2)); // Pretty format
+  // alert(data[2].Type); // Pretty format
 
 
   const visibleColumns = columns;
@@ -131,6 +131,7 @@ const DataTable = ({
             <TableRow>
               {visibleColumns.map(
                 (column) =>
+
                   (column.id !== "delete" || enableDelete) && (
                     <TableCell
                       key={column.id}
@@ -152,7 +153,7 @@ const DataTable = ({
                         boxSizing: "border-box",
                       }}
                     >
-                      {column.label}
+                      {(column.label.includes("Amo") || column.label.includes("Rate")) ? column.id : column.label}
                     </TableCell>
                   )
               )}
@@ -174,7 +175,7 @@ const DataTable = ({
                 const rowId = rowKey ? row[rowKey] : null;
                 const rowDate = new Date(row.date);
                 const today = new Date();
-                      // console.log("value", value)
+                // console.log("value", value)
 
                 // Normalize both dates to midnight
                 rowDate.setHours(0, 0, 0, 0);
@@ -271,29 +272,29 @@ const DataTable = ({
                       const value = row[column.id]; // Use column.id to get value
                       return (
                         <TableCell
-                        key={column.id}
-                        align={column.align || "center"}
-                        sx={{
-                          border: "2px solid #000",
-                          color: shouldHighlightRow ? "white !important" : "black",
-                          fontWeight: "bold" ,
-                          // fontWeight: shouldHighlightRow ? "bold" : "normal",
-                          padding: "4px",
-                          letterSpacing: "normal",
-                          textTransform: "uppercase",
-                          minWidth:
-                          column.minWidth ||
-                          (column.id === "narration" ? 200 : 100),
-                          boxSizing: "border-box",
-                          fontSize: column.label.includes("ust")
-                          ? { xs: "2.5rem", sm: "2.5rem" }
-                          : { xs: "1.1rem", sm: "1.2rem" },
-                          fontFamily: 'Jameel Noori Nastaleeq, serif !important',
-                        }}
+                          key={column.id}
+                          align={column.align || "center"}
+                          sx={{
+                            border: "2px solid #000",
+                            color: shouldHighlightRow ? "white !important" : "black",
+                            fontWeight: "bold",
+                            // fontWeight: shouldHighlightRow ? "bold" : "normal",
+                            padding: "4px",
+                            letterSpacing: "normal",
+                            textTransform: "uppercase",
+                            minWidth:
+                              column.minWidth ||
+                              (column.id === "narration" ? 200 : 100),
+                            boxSizing: "border-box",
+                            fontSize: column.label.includes("ust")
+                              ? { xs: "2.5rem", sm: "2.5rem" }
+                              : { xs: "1.1rem", sm: "1.2rem" },
+                            fontFamily: 'Jameel Noori Nastaleeq, serif !important',
+                          }}
                         >
                           {
-                            (column?.id?.toLowerCase().includes("doc") && 
-                            row.Type?.toLowerCase().includes("sale")) &&
+                            (column?.id?.toLowerCase().includes("doc") &&
+                              row.Type?.toLowerCase().includes("sale")) &&
                               value ? (
                               <Typography
                                 onClick={() => handleDocumentClick(value)} // Call handler on click

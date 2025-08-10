@@ -4,24 +4,24 @@ const dbConfig = require("./config");
 let pool;
 
 const dbConnection = async () => {
-  if (pool) {
-    // Ensure pool is connected and not closing
-    if (pool.connected) return pool;
-    if (!pool.connecting) {
-      // Try reconnecting if it's not already trying
-      pool = await mssql.connect(dbConfig);
-      console.log("♻️ Reconnected to database");
-      return pool;
+  try {
+    if (pool) {
+      if (pool.connected) return pool;
+      if (pool.connecting) {
+        // Wait until connection is established
+        await pool.connecting;
+        return pool;
+      }
     }
-    // If still connecting, wait for it to finish
-    await pool.connecting;
-    return pool;
-  }
 
-  // First-time connection
-  pool = await mssql.connect(dbConfig);
-  console.log("✅ Initial database connection established");
-  return pool;
+    // First time or reconnecting
+    pool = await new mssql.ConnectionPool(dbConfig).connect();
+    console.log("✅ Database connection established");
+    return pool;
+  } catch (err) {
+    console.error("❌ DB connection error:", err);
+    throw err;
+  }
 };
 
 module.exports = dbConnection;

@@ -208,11 +208,12 @@ const PackingList = () => {
                 params: requestBody
             });
 
+            console.log(response.data)
             if (response.data) {
                 const rows = response.data
                 const cleanedRows = rows.map((row, id) => {
-                    const d = new Date(row.date);
-                    const formattedDate = d.toISOString().split("T")[0];
+                    // const d = new Date(row.date);
+                    // const formattedDate = d.toISOString().split("T")[0];
 
                     const formattedAmount = row.amount.toLocaleString("en-US", {
                         minimumFractionDigits: 0,

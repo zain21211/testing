@@ -11,7 +11,12 @@ const dbConfig = {
   options: {
     trustServerCertificate: true,
     enableArithAbort: true
-  }
+  },
+   pool: {
+    max: 10,
+    min: 1,
+    idleTimeoutMillis: 60000, // 1 min
+  },
 };
 
 module.exports = dbConfig;

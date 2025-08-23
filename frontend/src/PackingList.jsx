@@ -30,10 +30,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Skeleton } from '@mui/material';
 
 // GLOBLE VARIABLES
-const user = JSON.parse(localStorage.getItem("user"));
-const userTypes = ['operator', 'admin']
-const userType = user?.userType?.toLowerCase();
-const isAllowed = userTypes.includes(userType);
+
 const uniqueRowKey = '(row) => row.rn'; // The unique key for each row in your data
 const Today = new Date().toISOString().split("T")[0];
 
@@ -51,19 +48,13 @@ function unformatNumber(formattedValue) {
 }
 
 // Define columns for the DataTable - adjust these to match your API response
-const ledgerColumns = [
+let ledgerColumns = [
     // { label: "Date", id: "date", minWidth: 90, format: (val) => new Date(val).toLocaleDateString() },
     { label: "Route", id: "route", minWidth: 40 },
     { label: "Customer", id: "UrduName", minWidth: 250, align: "right" },
     { label: "DOC #", id: "doc", minWidth: 80 },
     { label: "#", id: "rn", minWidth: 40 },
     { label: "DATE", id: "date", maxWidth: 20 },
-    ...(isAllowed
-        ? [
-            { label: "USER", id: "UserName", maxWidth: 10 },
-            { label: "AMOUNT", id: "amount", maxWidth: 20, align: "right" },
-        ]
-        : []),
 ];
 
 
@@ -108,6 +99,12 @@ const url = import.meta.env.VITE_API_URL;
 
 const PackingList = () => {
     console.log("list rendering or re-rendering");
+
+    // USER INFO
+    const user = JSON.parse(localStorage.getItem("user"));
+    const userTypes = ['operator', 'admin']
+    const userType = user?.userType?.toLowerCase();
+    const isAllowed = userTypes.includes(userType);
 
     const [customerName, setCustomerName] = useLocalStorageState('customerName', {
         defaultValue: '',

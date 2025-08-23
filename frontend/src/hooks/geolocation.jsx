@@ -2,41 +2,77 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-function useLocation() {
+export default function useGeolocation() {
   const [coordinates, setCoordinates] = useState({ latitude: null, longitude: null });
-  const [err, setErr] = useState(null);
+  const [address, setAddress] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Reverse geocode helper
+  async function reverseGeocode(lat, lon) {
+    try {
+      const res = await axios.get("https://nominatim.openstreetmap.org/reverse", {
+        params: {
+          lat,
+          lon,
+          format: "json",
+          email: "zainalip605@gmail.com", // OSM requires an identifier
+        },
+        headers: {
+          "Accept-Language": "en",
+        },
+      });
+      return res.data.display_name || null;
+    } catch (err) {
+      console.error("Reverse geocode error:", err.message);
+      return null;
+    }
+  }
 
   useEffect(() => {
-    // First try to get coordinates via geolocation API
-    // console.log("fetching location")
-    // if (navigator.geolocation) {
-    //   navigator.geolocation.getCurrentPosition(
-    //     (position) => {
-    //       const { latitude, longitude } = position.coords;
-    //       setCoordinates({ latitude, longitude });
-    //       console.log("navigaitor")
-    //     },
-    //     (err) => {
-    //       setErr('Failed to get geolocation: ' + err.message);
-    //       console.log('Failed to get geolocation: ' + err.message);
+    // Avoid running in SSR
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setError("Geolocation not supported in this environment");
+      return;
+    }
 
-    //     }
-    //   );
-    // } else {
-      // If geolocation is not available, fallback to IP-based geolocation
-      axios.get('https://ipinfo.io/json?token=c414f57e-e84e-4952-9535-8439f51988a4')
-        .then((response) => {
-          const { loc } = response.data;
-          const [latitude, longitude] = loc.split(',');
-          setCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
-          console.log('ipinfo.io')
-        })
-        .catch((err) => {
-          setErr('Failed to fetch IP-based location: ' + err.message);
-          console.log('Failed to fetch IP-based location: ' + err.message);
-        });
-    // }
+    async function fetchLocation() {
+      console.log("Fetching location…");
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setCoordinates({ latitude, longitude });
+
+          const readable = await reverseGeocode(latitude, longitude);
+          setAddress(readable);
+        },
+        async (geoErr) => {
+          console.warn("Geolocation failed:", geoErr.message);
+
+          // Fallback to IP-based location
+          // try {
+          //   const ipRes = await axios.get(
+          //     "https://ipinfo.io/json?token=c414f57e-e84e-4952-9535-8439f51988a4"
+          //   );
+          //   const [lat, lon] = ipRes.data.loc.split(",");
+          //   setCoordinates({ latitude: parseFloat(lat), longitude: parseFloat(lon) });
+
+          //   const readable = await reverseGeocode(lat, lon);
+          //   setAddress(readable);
+          // } catch (ipErr) {
+          //   setError("Failed to get location: " + ipErr.message);
+          // }
+        },
+        {
+          enableHighAccuracy: true, // better GPS precision
+          timeout: 10000, // fail faster to fallback
+          maximumAge: 0, // don’t reuse old cached position
+        }
+      );
+    }
+
+    fetchLocation();
   }, []);
 
-  return { coordinates, err };
+  return { coordinates, address, error };
 }

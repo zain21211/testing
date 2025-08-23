@@ -78,7 +78,7 @@ let drawerMenuItems = [
 // If it's the root of your React app (where the login page is), use "/" for navigate
 //const LOGOUT_REDIRECT_URL = "https://100.68.6.110:4173/"; // Forcing external navigation
 // If your login page is at the root of THIS React app, use:
-const LOGIN_APP_PATH = "/";
+const LOGOUT_REDIRECT_URL = "/"; // Assuming this is the path to your login page
 
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);

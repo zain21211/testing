@@ -5,46 +5,70 @@ const dbConnection = require("../database/connection");
 
 const TurnoverMethods = {
   getTurnoverReport: async (req, res) => {
-    const { route = "", spo = "" } = req.query;
+    const { route = "", spo = "", date = new Date() } = req.query;
     try {
       const pool = await dbConnection(); // uses global config
       const result = await pool
         .request()
-        .input("Route", sql.VarChar, route)
-.input("SPO", sql.VarChar, spo).query(`
+        .input("SPO", sql.VarChar, spo)
+        .input("Date", sql.Date, date) // your date variable
+        .input("Route", sql.VarChar, route) // assuming you have a @Route parameter
+        .query(`
 
--- Last Sale per ACID
 WITH LastDebit AS (
-    SELECT ACID, DEBIT AS [Last Sale], Date AS [Sale Date],
-           ROW_NUMBER() OVER (PARTITION BY ACID ORDER BY Date DESC) AS rn
+    SELECT ACID, DEBIT AS [Last Sale], [Date] AS [Sale Date],
+           ROW_NUMBER() OVER (PARTITION BY ACID ORDER BY [Date] DESC) AS rn
     FROM Ledgers
     WHERE DEBIT > 0
 ),
--- Last Recovery per ACID
 LastRecovery AS (
-    SELECT ACID, CREDIT AS [Last Recovery], Date AS [Recovery Date],
-           ROW_NUMBER() OVER (PARTITION BY ACID ORDER BY Date DESC) AS rn
+    SELECT ACID, CREDIT AS [Last Recovery], [Date] AS [Recovery Date],
+           ROW_NUMBER() OVER (PARTITION BY ACID ORDER BY [Date] DESC) AS rn
     FROM Ledgers
     WHERE CREDIT > 0
 ),
--- Monthly Recovery
 RecoveryData AS (
     SELECT ACID, SUM(ISNULL(CREDIT, 0)) AS Recovery
     FROM Ledgers
-    WHERE Date >= DATEADD(MONTH, -1, CAST(GETDATE() AS DATE))
-      AND Date < CAST(GETDATE() AS DATE)
+    WHERE [Date] >= DATEADD(MONTH, -1, CAST(@Date AS DATE))
+      AND [Date] < CAST(@Date AS DATE)
     GROUP BY ACID
 ),
--- Today's Payment and Order
 TodayData AS (
-    SELECT acid,
-           SUM(CASE WHEN entryby = @spo THEN CREDIT ELSE 0 END) AS payment,
-           SUM(DEBIT) AS orderAmount
-    FROM Ledgers
-    WHERE Date >= CAST(GETDATE() AS DATE) AND Date < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))
-    GROUP BY acid
+    SELECT 
+        l.acid,
+        SUM(CASE WHEN entryby = @SPO THEN CREDIT ELSE 0 END) AS payment,
+ISNULL(ROUND((
+    SELECT SUM(pss.vist)
+    FROM PsProduct pss
+    JOIN Products p ON pss.prid = p.ID
+    WHERE pss.spo LIKE @SPO + '%'
+      AND pss.[Date] >= CAST(@Date AS DATE)
+      AND pss.[Date] < DATEADD(DAY, 2, CAST(@Date AS DATE))
+      AND p.company LIKE 'fit%'
+      AND pss.Acid = l.acid
+), 0), 0) AS FitOrderAmount,
+
+ISNULL(ROUND((
+    SELECT SUM(pss2.vist)
+    FROM PsProduct pss2
+    JOIN Products p ON pss2.prid = p.ID
+    WHERE pss2.spo LIKE @SPO + '%'
+      AND pss2.[Date] >= CAST(@Date AS DATE)
+      AND pss2.[Date] < DATEADD(DAY, 2, CAST(@Date AS DATE))
+      AND p.company NOT LIKE 'fit%'
+      AND pss2.Acid = l.acid
+), 0), 0) AS OtherOrderAmount
+
+
+
+    FROM Ledgers l
+    WHERE l.[Date] >= CAST(@Date AS DATE) 
+      AND l.[Date] < DATEADD(DAY, 2, CAST(@Date AS DATE))
+
+    GROUP BY l.acid
 ),
--- Balance for customers
+
 BalanceData AS (
     SELECT A.ID AS ACID, A.Subsidary, A.UrduName, A.Ocell AS number,
            ISNULL(SUM(L.DEBIT), 0) - ISNULL(SUM(L.CREDIT), 0) AS Balance
@@ -56,19 +80,17 @@ BalanceData AS (
     GROUP BY A.ID, A.Subsidary, A.UrduName, A.Ocell
     HAVING ISNULL(SUM(L.DEBIT), 0) - ISNULL(SUM(L.CREDIT), 0) > 100
 ),
--- Credit Days & Limits
 LimitData AS (
     SELECT ID, CreditDays, CreditLimit
     FROM COA
 ),
--- Latest remarks today
 Promise AS (
     SELECT acid, remarks
     FROM (
         SELECT acid, remarks,
-               ROW_NUMBER() OVER (PARTITION BY acid ORDER BY datetime DESC) AS rn
+               ROW_NUMBER() OVER (PARTITION BY acid ORDER BY [datetime] DESC) AS rn
         FROM spoWorking
-        WHERE CAST(datetime AS DATE) = CAST(GETDATE() AS DATE)
+        WHERE CAST([datetime] AS DATE) = CAST(@Date AS DATE)
     ) AS x
     WHERE rn = 1
 ),
@@ -86,26 +108,38 @@ RecentDebits AS (
         SUM(L.DEBIT) AS RecentDebit
     FROM Ledgers L
     INNER JOIN COA ON L.ACID = COA.ID
-    WHERE L.Date >= DATEADD(DAY, -ISNULL(COA.CreditDays, 0), GETDATE())
+    WHERE L.[Date] >= DATEADD(DAY, -ISNULL(COA.CreditDays, 0), @Date)
     GROUP BY L.ACID
 ),
+-- Transactions in credit days window
+RecentActivity AS (
+    SELECT 
+        L.ACID,
+        SUM(CASE WHEN L.Debit > 0 THEN L.Debit ELSE 0 END) AS DebitsWithinCredit,
+        SUM(CASE WHEN L.Credit > 0 THEN L.Credit ELSE 0 END) AS CreditsWithinCredit
+    FROM Ledgers L
+    INNER JOIN COA C ON L.ACID = C.ID
+    WHERE L.[Date] >= DATEADD(DAY, -C.CreditDays, GETDATE())
+    GROUP BY L.ACID
+),
+
+-- Overdue calculation
 OverdueData AS (
     SELECT 
         TB.ACID,
         CASE 
-            WHEN ISNULL(COA.CreditDays, 0) = 0 THEN 0
+            WHEN COA.CreditDays IS NULL OR COA.CreditDays = 0 THEN 
+                (ISNULL(TB.TotalDebit,0) - ISNULL(TB.TotalCredit,0))
             ELSE 
-                CASE 
-                    WHEN (ISNULL(TB.TotalDebit, 0) - ISNULL(TB.TotalCredit, 0) - ISNULL(RD.RecentDebit, 0)) < 1 THEN 0
-                    ELSE (ISNULL(TB.TotalDebit, 0) - ISNULL(TB.TotalCredit, 0) - ISNULL(RD.RecentDebit, 0))
-                END
+                (ISNULL(TB.TotalDebit,0) - ISNULL(TB.TotalCredit,0))
+                - ISNULL(RA.DebitsWithinCredit,0)
+                -- + ISNULL(RA.CreditsWithinCredit,0)
         END AS Overdue
     FROM TotalBalance TB
-    LEFT JOIN RecentDebits RD ON TB.ACID = RD.ACID
     INNER JOIN COA ON TB.ACID = COA.ID
+    LEFT JOIN RecentActivity RA ON TB.ACID = RA.ACID
 )
 
--- Final Result
 SELECT 
     B.*,
     ISNULL(R.Recovery, 0) AS Recovery,
@@ -114,9 +148,10 @@ SELECT
     LR.[Last Recovery] AS lrecovery,
     LR.[Recovery Date],
     T.payment,
-    T.orderAmount,
-    L.CreditDays as [Credit Days],
-    L.CreditLimit as [Credit Limit],
+    T.FitOrderAmount,
+    T.OtherOrderAmount,
+    L.CreditDays AS [Credit Days],
+    L.CreditLimit AS [Credit Limit],
     P.remarks,
     O.Overdue,
     ROUND(
@@ -138,11 +173,8 @@ WHERE
         WHEN ISNULL(R.Recovery, 0) > 0 THEN (B.Balance / R.Recovery) * 30
         ELSE B.Balance / 1
     END > 0
-ORDER BY [Turnover Days] DESC;
-
+ORDER BY o.overdue DESC;
 `);
-
-
 
       res.json(result.recordset);
     } catch (error) {
@@ -176,11 +208,13 @@ ORDER BY [Turnover Days] DESC;
     }
   },
   getToday: async (req, res) => {
-    const {acid} = req.query
-    
-  if (!acid) {
-    return res.status(400).send({ status: "error", message: "Missing 'acid' parameter" });
-  }
+    const { acid } = req.query;
+
+    if (!acid) {
+      return res
+        .status(400)
+        .send({ status: "error", message: "Missing 'acid' parameter" });
+    }
 
     try {
       const pool = await dbConnection(); // uses global config
@@ -194,9 +228,9 @@ ORDER BY [Turnover Days] DESC;
   WHERE acid = @acid
   `);
 
-  res.status(200).send(result.recordset)
+      res.status(200).send(result.recordset);
     } catch (err) {
-      res.status(500).send({status: "failed", message: err})
+      res.status(500).send({ status: "failed", message: err });
     }
   },
 

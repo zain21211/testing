@@ -966,7 +966,7 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
                                                                         border: "1px solid black",
                                                                     }}
                                                                 >
-                                                                    {row.StockQTY || "0"}
+                                                                    {row.StockQTY || "0"} - ({row.Size || "--"})
                                                                 </Typography>
                                                                 {row.SchPcs > 0 && (
                                                                     <Typography

@@ -1,0 +1,208 @@
+// src/pages/OrderPage.jsx
+import React, { useState, useRef } from "react";
+import ProductForm from "./components/ProductForm";
+import { useFilterAutocomplete } from "./hooks/useFilter";
+import { useDiscount } from "./hooks/useDiscount";
+import { useCalculateAmount } from "./hooks/useCalculateAmount";
+import { useScheme } from "./hooks/useScheme";
+import { useProfit } from "./hooks/useProfit";
+import { useCost } from "./hooks/useCost";
+import { formatCurrency } from "./utils/formatCurrency"; // if you have one
+import { useEffect } from "react";
+
+export default function OrderPage({ selectedCustomer, user, userType, products, onAddProduct, companies, categories }) {
+    // ------- State -------
+    const [error, setError] = useState(null);
+    const [productIDInput, setProductIDInput] = useState("");
+    const [companyFilter, setCompanyFilter] = useState("");
+    const [companyInputValue, setCompanyInputValue] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("");
+    const [categoryInputValue, setCategoryInputValue] = useState("");
+    const [Sch, setSch] = useState(true);
+    const [isClaim, setIsClaim] = useState(false);
+    const [productInputValue, setProductInputValue] = useState("");
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [productID, setProductID] = useState(null);
+    const [orderQuantity, setOrderQuantity] = useState(0);
+    // const [schPc, setSchPc] = useState(0);
+    // const [quantity, setQuantity] = useState(0);
+    // const [schOn, setSchOn] = useState(0);
+    const [price, setPrice] = useState(selectedProduct?.SaleRate);
+    const [suggestedPrice, setSuggestedPrice] = useState(0);
+    // const [discount1, setDiscount1] = useState(0);
+    // const [discount2, setDiscount2] = useState(0);
+    const [productRemakes, setProductRemakes] = useState("");
+    // const [calculatedAmount, setCalculatedAmount] = useState(0);
+
+    // ------- Refs -------
+    const productIDInputRef = useRef();
+    const productInputRef = useRef();
+    const quantityInputRef = useRef();
+
+    useEffect(() => { setPrice(selectedProduct?.SaleRate) }, [selectedProduct])
+    // ------- Dummy handlers -------
+    const debouncedSetCompanyFilter = (val) => setCompanyFilter(val);
+    const debouncedSetCategoryFilter = (val) => setCategoryFilter(val);
+    const handleEnterkey = (e) => {
+        if (e.key === "Enter") {
+            console.log("Enter pressed");
+            handleAddProductClick()
+        }
+    };
+
+    const handleReset = () => {
+        setProductIDInput(null)
+        setSelectedProduct(null)
+        setProductInputValue(null)
+
+    }
+    const handleAddProductClick = () => {
+        console.log("Adding product:", selectedProduct);
+
+
+        const newItem = {
+            status: selectedProduct?.Status || "active", // Use product status, default to 'active'
+            productID: selectedProduct.ID,
+            name: selectedProduct.Name,
+            company: selectedProduct.Company,
+            model: selectedProduct.Category,
+            orderQuantity: Number(orderQuantity), // The quantity the user entered
+            schPc: Number(schPc) || 0, // Calculated scheme pieces
+            quantity: Number(quantity) || 0, // Total quantity (order + scheme)
+            rate: Number(selectedProduct?.SaleRate) ?? 0, // Product's sale rate
+            suggestedPrice: Number(suggestedPrice) || 0, // User's suggested price
+            vest: Number(vest) || 0, // Calculated vest
+            discount1: Number(discount1) || 0, // Discount 1 percentage
+            discount2: Number(discount2) || 0, // Discount 2 percentage
+            amount: Number(calculatedAmount) || 0, // Final calculated numeric amount for the item
+            isClaim: isClaim,
+            Sch: Sch,
+            profit: profit,
+            remakes: productRemakes.trim(), // Add remakes
+        };
+
+        console.log("newitem", newItem)
+        onAddProduct(newItem);
+        handleReset();
+    };
+
+    // ------- Sizes (can move to theme or constants) -------
+    const bigger = { width: "120px" };
+    const biggerInputTextSize = "1rem";
+    const biggerShrunkLabelSize = "0.9rem";
+    const biggerCheckboxLabelSize = "0.9rem";
+
+    // ------- Loading state simulation -------
+    const initialDataLoading = false;
+    const hasStock = selectedProduct?.StockQty > 0;
+    const isAllowed = true;
+
+    // ------- Filtered options (replace with useFilter hook later) -------
+    const filteredAutocompleteOptions = useFilterAutocomplete(products, {
+        companyFilter,
+        categoryFilter,
+        productInputValue,
+        productID,
+        initialDataLoading,
+        setSelectedProduct,
+        quantityInputRef,
+    });
+
+    // scheme
+    const { schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading } =
+        useScheme(selectedProduct, orderQuantity, true)
+
+    // discount
+    const { discount1, setDiscount1, discount2, setDiscount2 } = useDiscount(selectedCustomer, selectedProduct);
+
+
+
+    // for totalamount per item
+    const { vest, calculatedAmount, setCalculatedAmount } = useCalculateAmount(
+        orderQuantity,
+        price,
+        discount1,
+        discount2
+    );
+
+    // Cost
+    const { data: cost, isLoading } = useCost(selectedProduct);
+
+    // for profit
+    const profit = useProfit({ calculatedAmount, quantity, cost });
+
+    return (
+        <ProductForm
+            // Common
+            error={error}
+            setError={setError}
+            user={user}
+            profit
+            userType={userType}
+            products={products}
+            companies={companies}
+            categories={categories}
+            initialDataLoading={initialDataLoading}
+
+            // Filters
+            companyFilter={companyFilter}
+            companyInputValue={companyInputValue}
+            setCompanyInputValue={setCompanyInputValue}
+            debouncedSetCompanyFilter={debouncedSetCompanyFilter}
+            categoryFilter={categoryFilter}
+            categoryInputValue={categoryInputValue}
+            setCategoryInputValue={setCategoryInputValue}
+            debouncedSetCategoryFilter={debouncedSetCategoryFilter}
+
+            // Product selection
+            productID={productID}
+            setProductID={setProductID}
+            productIDInput={productIDInput}
+            setProductIDInput={setProductIDInput}
+            productIDInputRef={productIDInputRef}
+            productInputValue={productInputValue}
+            setProductInputValue={setProductInputValue}
+            selectedProduct={selectedProduct}
+            setSelectedProduct={setSelectedProduct}
+            productInputRef={productInputRef}
+            filteredAutocompleteOptions={filteredAutocompleteOptions}
+
+            // Flags
+            Sch={Sch}
+            setSch={setSch}
+            isClaim={isClaim}
+            setIsClaim={setIsClaim}
+
+            // Details
+            orderQuantity={orderQuantity}
+            setOrderQuantity={setOrderQuantity}
+            quantityInputRef={quantityInputRef}
+            handleEnterkey={handleEnterkey}
+            schPc={schPc}
+            setSchPc={setSchPc}
+            quantity={quantity}
+            setQuantity={setQuantity}
+            schOn={schOn}
+            setSchOn={setSchOn}
+            price={price}
+            setPrice={setPrice}
+            suggestedPrice={suggestedPrice}
+            setSuggestedPrice={setSuggestedPrice}
+            discount1={discount1}
+            setDiscount1={setDiscount1}
+            discount2={discount2}
+            setDiscount2={setDiscount2}
+            productRemakes={productRemakes}
+            setProductRemakes={setProductRemakes}
+            calculatedAmount={calculatedAmount}
+            formatCurrency={formatCurrency}
+            hasStock={hasStock}
+            isAllowed={isAllowed}
+            bigger={bigger}
+            biggerInputTextSize={biggerInputTextSize}
+            biggerShrunkLabelSize={biggerShrunkLabelSize}
+            biggerCheckboxLabelSize={biggerCheckboxLabelSize}
+            handleAddProductClick={handleAddProductClick}
+        />
+    );
+}

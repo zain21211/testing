@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-import { TextField, Button, Grid, Paper, useMediaQuery, useTheme } from '@mui/material';
+import { TextField, Button, Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import axios from 'axios';
 
 const Search = ({ type, onSearch }) => {
     const [name, setName] = useState('');
-    const [company, setCompany] = useState('');
-    const [model, setModel] = useState('');
+    const [spo, setSpo] = useState('');
+    const [route, setRoute] = useState('');
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const handleSearch = async () => {
-        if (!name && !company && !model) {
+        if (!name && !spo && !route) {
             alert('At least one search parameter is required!');
             return;
         }
-        console.log('Searching with:', { type, name, company, model });
+        console.log('Searching with:', { type, name, spo, route });
         try {
             const response = await axios.get(`/api/search`, {
-                params: { type, name, company, model }
+                params: { type, name, spo, route }
             });
             onSearch(response.data); // Pass the search results to the parent component
         } catch (error) {
@@ -38,67 +38,68 @@ const Search = ({ type, onSearch }) => {
             elevation={3}
             sx={{
                 padding: { xs: '16px', sm: '20px' },
-                marginTop: '20px',
-                width: '100%'
             }}
         >
-            <Grid container spacing={2} direction="column">
-                {/* First row with two fields */}
-                <Grid item>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Name"
-                                variant="outlined"
-                                fullWidth
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                size={isMobile ? "small" : "medium"}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Company"
-                                variant="outlined"
-                                fullWidth
-                                value={company}
-                                onChange={(e) => setCompany(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                size={isMobile ? "small" : "medium"}
-                            />
-                        </Grid>
-                    </Grid>
-                </Grid>
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                        xs: "repeat(3, 1fr)",   // mobile → 3 fields in one row
+                        sm: "repeat(4, 1fr)",   // desktop → 3 fields + button
+                    },
+                    gap: 2,
+                    alignItems: "center",
+                }}
+            >
+                {/* Name */}
+                <TextField
+                    label="Name"
+                    variant="outlined"
+                    fullWidth
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    size={isMobile ? "small" : "medium"}
+                />
 
-                {/* Second row with one field */}
-                <Grid item>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Model"
-                                variant="outlined"
-                                fullWidth
-                                value={model}
-                                onChange={(e) => setModel(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                size={isMobile ? "small" : "medium"}
-                            />
-                        </Grid>
-                    </Grid>
-                </Grid>
+                {/* Spo */}
+                <TextField
+                    label="Spo"
+                    variant="outlined"
+                    fullWidth
+                    value={spo}
+                    onChange={(e) => setSpo(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    size={isMobile ? "small" : "medium"}
+                />
 
-                {/* Third row with button alone */}
-                <Grid item sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                    <Button
-                        variant="contained"
-                        onClick={handleSearch}
-                        size={isMobile ? "medium" : "large"}
-                    >
-                        Search
-                    </Button>
-                </Grid>
-            </Grid>
+                {/* Route */}
+                <TextField
+                    label="Route"
+                    variant="outlined"
+                    fullWidth
+                    value={route}
+                    onChange={(e) => setRoute(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    size={isMobile ? "small" : "medium"}
+                />
+
+                {/* Search button */}
+                <Button
+                    variant="contained"
+                    onClick={handleSearch}
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                        gridColumn: { xs: "1 / -1", sm: "auto" }, // full row on mobile
+                        width: { xs: "100%", sm: "auto" },
+                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                    }}
+                >
+                    Search
+                </Button>
+            </Box>
+
+
         </Paper>
     );
 };

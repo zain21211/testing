@@ -13,8 +13,11 @@ import { useRealOnlineStatus } from "./hooks/IsOnlineHook";
 import Storage from "use-local-storage-state";
 // import html2canvas from "html2canvas";
 import { takeScreenShot } from "./fuctions";
-
+import {
+  resetCustomerSearch,
+} from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
+import { useDispatch } from "react-redux";
 
 // Import MUI Components
 import {
@@ -113,6 +116,8 @@ const textBoxStyle = {
 };
 
 const RecoveryPaper = () => {
+  const dispatch = useDispatch();
+
   const [route, setRoute] = useLocalStorageState("recoveryPaperRoute", "");
   // const [accountID, setAccountID] = useLocalStorageState(
   //   "recoveryPaperAccountID",
@@ -185,6 +190,7 @@ const RecoveryPaper = () => {
   const [isLoading, setIsLoading] = useState(false); // General loading
   const [error, setError] = useState("");
   const [acidInput, setAcidInput] = useState(accountID);
+  // const [acidInput2, setAcidInput2] = 
   const [loadingFinancials, setLoadingFinancials] = useState(false);
   const [detailedResults, setDetailedResults] = useState([]);
 
@@ -681,14 +687,16 @@ const RecoveryPaper = () => {
     setCrownWalletAmount("");
     setOnlineAmount("");
     setMeezanBankAmount("");
-    setSelectedCustomer(null);
-    setAcidInput("");
-    setAccountID(null);
-    setCustomerInput(null); // Reset customer input for next search
-    setAccountID(null); // Reset account ID for next entry
+    // setSelectedCustomer(null);
+    // setAcidInput("");
+    // setAccountID(null);
+    // setCustomerInput(null); // Reset customer input for next search
+    // setAccountID(null); // Reset account ID for next entry
+    // dispatch(resetCustomerSearch({ keysToClear: ["recoverpaperCustomerInput", storageKey] }));
+
 
     // Reset customer specific fields for next entry
-    handleReset(); // Use the reset handler
+    // handleReset(); // Use the reset handler
     // setAccountID(""); // Not needed, handleReset does it
     // setSelectedCustomer(null);
     // setCustomerName("");
@@ -1689,15 +1697,15 @@ const RecoveryPaper = () => {
                     />
                     :
                     <Box sx={{
-                      display:'flex',
-                      flexDirection:'column'
+                      display: 'flex',
+                      flexDirection: 'column'
                     }}>
                       <FormLabel
-                      sx={{
-                        color: "white",
-                        fontWeight: 'bold',
-                        textTransform: 'uppercase'
-                      }}
+                        sx={{
+                          color: "white",
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase'
+                        }}
                       >{key}</FormLabel>
                       <br />
                       <Box
@@ -1719,7 +1727,6 @@ const RecoveryPaper = () => {
               })}
             </Box>
           </Box>
-
         )}
       </div>
 
@@ -1727,6 +1734,7 @@ const RecoveryPaper = () => {
         variant="contained"
         fullWidth
         color="error"
+        disabled={entries.length === 0 || entries.some(e => e.status === false)}
         sx={{ mt: 2, fontSize: "1.2rem" }}
         onClick={async () => {
 

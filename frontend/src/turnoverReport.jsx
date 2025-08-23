@@ -4,17 +4,19 @@ import useLocalStorage from 'use-local-storage-state';
 import { useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+    Autocomplete,
     FormControl,
     InputLabel,
     MenuItem,
     Select
 } from '@mui/material';
+import { Box, IconButton, Collapse } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import {
     Card,
     CardContent,
     Typography,
     Container,
-    Box,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -22,15 +24,10 @@ import {
     Button,
     TextField,
 } from '@mui/material';
+import isEqual from "lodash/isEqual";
+import { set } from 'lodash';
 // import { use } from 'react';
 // import { set } from 'date-fns';
-
-const user = JSON.parse(localStorage.getItem("user"));
-const userType = user?.userType?.toLowerCase()
-const username = user?.username?.toLowerCase()
-
-const isZain = username?.includes('zain')
-const isAdmin = userType?.includes('admin')
 
 const columns = [
     { id: "remarks", label: 'remarks' },
@@ -278,7 +275,60 @@ const DialogBox = ({
     );
 };
 
+
+// const formatDate = (dateStr) => {
+//   const date = new Date(dateStr);
+//   const dd = String(date.getDate()).padStart(2, "0");
+//   const mm = String(date.getMonth() + 1).padStart(2, "0");
+//   const yyyy = date.getFullYear();
+//   return dd + mm + yyyy;
+// };
+
+
+function DateInput({ handleDate }) {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // default to today
+    // DDMMYYYY
+    const [pickerValue, setPickerValue] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
+
+    useEffect(() => {
+        if (handleDate) handleDate(pickerValue);
+    }, [pickerValue, handleDate]);
+
+    const handleChange = (e) => {
+        const raw = e.target.value; // YYYY-MM-DD from picker
+        if (!raw) {
+            setDate("");
+            setPickerValue("");
+            return;
+        }
+        const [yyyy, mm, dd] = raw.split("-");
+        setDate(dd + '-' + mm + '-' + yyyy);  // store as DDMMYYYY
+        setPickerValue(raw);       // keep picker happy
+    };
+
+    return (
+        <TextField
+            label="Date"
+            type="date"
+            value={pickerValue}
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+        />
+    );
+}
+
+
+
 const TurnoverReport = () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const userType = user?.userType?.toLowerCase()
+    const username = user?.username?.toLowerCase()
+
+    const isZain = username?.includes('zain')
+    const isAdmin = userType?.includes('admin')
+    const isClassic = userType?.includes('clas')
+
     const [open, setOpen] = useState(false);
     const [selectedAcid, setSelectedAcid] = useState(null);
     const [turnoverData, setTurnoverData] = useLocalStorage('turnoverData', []);
@@ -293,12 +343,19 @@ const TurnoverReport = () => {
     const [pending, setPending] = useState([])
     const [done, setDone] = useState([])
     const [all, setAll] = useState([])
-    const [total, setTotal] = useState([]); // for trader data
+    const [total, setTotal] = useState([]); // for all trader data
     const [filter, setFilter] = useState('pending');
-
+    const [totalFit, setTotalFit] = useState(0);
+    const [totalOther, setTotalOther] = useState(0);
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // default to today
+    const [isLoading, setIsLoading] = useState(false); // New loading state
+    const [nameFilter, setNameFilter] = useState(''); // New name filter state
+    const [showBox, setShowBox] = useState(true);
 
     const onChange = (value) => {
+        if (nameFilter) return; // Don't filter if nameFilter is set
         setFilter(value);
+        // alert(`Showing ${value} customers. spo ${userType}`);
         if (value === 'all') {
             setTotal(all);
         } else if (value === 'done') {
@@ -308,52 +365,69 @@ const TurnoverReport = () => {
         }
     };
 
+    const handleDate = (date) => {
+        setDate(date);
 
-    // setTimeout(fetchReport, 50000) // fetch every 5 minutes;
+    }
+
     useEffect(() => {
         if (turnoverData) {
             const data = turnoverData;
-            const done = data.filter(item => item.payment || item.remarks || item.orderAmount)
+            const done = data.filter(item => item.payment || item.remarks || item.orderAmount || item.FitOrderAmount || item.OtherOrderAmount);
             const pending = data.filter(item => !(item.payment || item.remarks || item.orderAmount))
-            const overdue = total.reduce((sum, item) => sum + (parseFloat(item.Overdue) || 0), 0);
-            const payment = total.reduce((sum, item) => sum + (parseFloat(item.payment) || 0), 0);
-            const sale = total.reduce((sum, item) => sum + (parseFloat(item.orderAmount) || 0), 0);
+            const overdue = data.reduce((sum, item) => sum + (parseFloat(item.Overdue) || 0), 0);
+            const payment = data.reduce((sum, item) => sum + (parseFloat(item.payment) || 0), 0);
+            const fit = data.reduce((sum, item) => sum + (parseFloat(item.FitOrderAmount) || 0), 0);
+            const other = total.reduce((sum, item) => sum + (parseFloat(item.OtherOrderAmount) || 0), 0);
             const action = done.length
 
             setAll(data)
             setDone(done)
             setActions(action)
-            setTotalSale(sale)
             setPending(pending)
             setTotalOverdue(overdue)
             setTotalPayment(payment)
+            setTotalFit(fit)
+            setTotalOther(other)
         }
 
     }, [turnoverData, location, filter])
 
     useEffect(() => {
+
         if (turnoverData) {
             setTotal(turnoverData);
         }
     }, [turnoverData, location]);
 
+    useEffect(() => {
+        console.log("totalr Data:", total);
+    }, [total]);
+
     const fetchReport = async () => {
+        setIsLoading(true); // Set loading to true
+
         try {
             const res = await axios.get(`${url}/turnover`, {
                 params: {
                     route,
-                    spo: spo || username,
-
+                    spo: (isAdmin || isZain) ? spo : username,
+                    date: new Date(date),
+                    company: isClassic ? "classic" : "",
                 },
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
-            setTurnoverData(res.data);
-            setTotal(res.data);
+            if (!isEqual(turnoverData, res.data)) {
+                setTurnoverData(res.data);
+                setTotal(res.data);
+            }
 
         } catch (error) {
             console.error('Error fetching turnover data:', error);
+        } finally {
+            setIsLoading(false); // Set loading to false
         }
     };
 
@@ -377,10 +451,19 @@ const TurnoverReport = () => {
         };
 
         console.table(payload)
-        const res = await axios.post(`${url}/turnover/post`, payload)
+        await axios.post(`${url}/turnover/post`, payload)
     }
 
-    setInterval(fetchReport, 5 * 60 * 1000) // fetch every 5 minutes;
+    // useEffect(() => {
+    //     // fetch once immediately when the user visits
+    //     fetchReport();
+
+    //     // start interval
+    //     const intervalId = setInterval(fetchReport, 5 * 60 * 1000);
+
+    //     // cleanup when user leaves the page/component
+    //     return () => clearInterval(intervalId);
+    // }, []); // empty deps => run only on mount/unmount
 
     useEffect(() => {
         if (!open) {
@@ -393,103 +476,189 @@ const TurnoverReport = () => {
             { p: 0 }
         }>
             <Box sx={{}}>
-                <Box
-                    sx={{
-                        borderRadius: '.5rem',
-                        position: 'sticky',
-                        backgroundColor: "white",
-                        display: 'grid',
-                        gridTemplateColumns: (isZain || isAdmin) ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
-                        gap: 3,
-                        // maxWidth: "60%",
-                        // margin: 'auto',
-                        padding: 2,
-                        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.2)',
-                        top: 70,
-                    }}
-                    mb={3}
-                >
-                    <TextField
-                        label=
-                        'Route'
-                        value={route}
-                        onChange={e => setRoute(e.target.value)}
-                        sx={{
-                            "& input": {
-                                textTransform: 'uppercase',
-                            }
-                        }}
-                        onFocus={e => e.target.select()}
-                    />
 
-                    {/* for spo */}
+                {/* summary bar */}
+                <Box sx={{ position: 'sticky', top: 55, zIndex: 1000, background: 'transparent' }}>
                     {(isZain || isAdmin) && (
-                        <TextField
-                            label=
-                            'SPO'
-                            value={spo}
-                            onFocus={e => e.target.select()}
-                            onChange={e => setSpo(e.target.value)}
-                        />
+                        <Box display="flex" justifyContent="flex-end" mb={1} sx={{ position: 'sticky', top: 62, zIndex: 1000 }}>
+                            <IconButton onClick={() => setShowBox((prev) => !prev)} sx={{
+                                backgroundColor: 'white', padding: 1, borderRadius: '50%',
+                            }}>
+                                {showBox ? <Visibility /> : <VisibilityOff />}
+                            </IconButton>
+                        </Box>
                     )}
-                    <Button variant='contained' onClick={fetchReport}>
-                        GET
-                    </Button>
-                    <StatusFilter handleChange={onChange} />
-
-
-                    <Box
-                        borderTop={'1px solid black'}
-                        paddingY={2}
-                        gridColumn={(isZain || isAdmin) ? 'span 4' : 'span 3'}
-                        display={'grid'}
-                        gridTemplateColumns={'repeat(8, 1fr)'}
-                        textAlign={'center'}
-                        alignItems={'center'}
-                    // gap={1}
-                    >
-
-                        {/* for action and total cust */}
-                        <Typography
-                            variant='h6'
-                            fontWeight={'bold'}
-                            gridColumn={'span 2'}
-
+                    {/* Collapsible Box */}
+                    <Collapse in={showBox}>
+                        <Box
+                            sx={{
+                                borderRadius: '.5rem',
+                                backgroundColor: "white",
+                                display: 'grid',
+                                gridTemplateColumns: (isZain || isAdmin) ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
+                                gap: 3,
+                                padding: 2,
+                                boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.2)',
+                            }}
+                            mb={3}
                         >
-                            <span style={{ display: 'block' }}>Customers </span>
-                            <b style={{ fontSize: '2rem' }}><span style={{ color: 'green' }}>{Actions}</span> / {turnoverData?.length}</b>
-                        </Typography>
+                            <Box
+                                display="grid"
+                                sx={{ gridColumn: (isZain || isAdmin) ? "span 4" : "span 3" }}
+                                gridTemplateColumns={(isZain || isAdmin) ? "repeat(4, 1fr)" : "repeat(3, 1fr)"}
+                                gap={2} // spacing between columns
+                            >
+                                {(isZain || isAdmin) && (
+                                    <Box sx={{ gridColumn: "span 1" }}>
+                                        <DateInput handleDate={handleDate} />
+                                    </Box>
+                                )}
 
-                        {/* for overdue */}
-                        <Typography
-                            variant='h5'
-                            fontWeight={'bold'}
-                            color='#f70d04ff'
-                            gridColumn={'span 2'}
-                        >
-                            Overdue: <span style={{ fontWeight: 'bold', display: 'block', fontSize: '2rem' }}>{formatCurrency(totalOverdue)}</span>
-                        </Typography>
+                                <Box sx={{ gridColumn: (isZain || isAdmin) ? "span 3" : "span 3" }}>
+                                    <Autocomplete
+                                        freeSolo
+                                        options={turnoverData}
+                                        value={nameFilter}
+                                        getOptionLabel={(option) => {
+                                            if (typeof option === "string") return option;
+                                            if (option && option.Subsidary) return option.Subsidary || option.name || "";
+                                            return "";
+                                        }}
+                                        onInputChange={(event, value) => {
+                                            if (value) {
+                                                setNameFilter(value);
+                                                const filteredData = turnoverData.filter((item) =>
+                                                    item.Subsidary?.toLowerCase().includes(value.toLowerCase())
+                                                );
+                                                console.log("Filtered Data:", filteredData);
+                                                setTotal(filteredData);
+                                            } else {
+                                                setTotal(turnoverData);
+                                            }
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                variant="outlined"
+                                                fullWidth
+                                                placeholder="Search by Name"
+                                            />
+                                        )}
+                                    />
+                                </Box>
+                            </Box>
 
-                        {/* for payment */}
-                        <Typography
-                            variant='h5'
-                            fontWeight={'bold'}
-                            color='green'
-                            gridColumn={'span 2'}
-                        >
-                            Recovery: <span style={{ fontWeight: 'bold', display: 'block', fontSize: '2rem' }}>{formatCurrency(totalPayment)}</span>
-                        </Typography>
+                            <TextField
+                                label=
+                                'Route'
+                                value={route}
+                                onChange={e => setRoute(e.target.value)}
+                                sx={{
+                                    "& input": {
+                                        textTransform: 'uppercase',
+                                    }
+                                }}
+                                onFocus={e => e.target.select()}
+                            />
 
-                        {/* for total sale */}
-                        <Typography
-                            variant='h5'
-                            fontWeight={'bold'}
-                            color='green'
-                            gridColumn={'span 2'}
-                        >
-                            Sale: <span style={{ fontWeight: 'bold', display: 'block', fontSize: '2rem' }}>{formatCurrency(totalSale)}</span>
-                        </Typography>
-                    </Box>
+                            {/* for spo */}
+                            {(isZain || isAdmin) && (
+                                <TextField
+                                    label=
+                                    'SPO'
+                                    value={spo}
+                                    onFocus={e => e.target.select()}
+                                    onChange={e => setSpo(e.target.value)}
+                                />
+                            )}
+                            <Button variant='contained' onClick={fetchReport} disabled={isLoading}>
+                                {isLoading ? 'Loading...' : 'GET'}
+                            </Button>
+                            <StatusFilter handleChange={onChange} />
+
+
+                            <Box
+                                display="grid"
+                                gridColumn={(isZain || isAdmin) ? 'span 4' : 'span 3'}
+                                gridTemplateColumns={{
+                                    xs: 'repeat(3, 1fr)',
+                                    sm: 'repeat(3, 1fr)',
+                                    md: 'repeat(6, 1fr)',
+                                }}
+                                border="2px solid black"
+                                sx={{
+                                    '& > div': {
+                                        border: "2px solid black",
+                                        textAlign: "center",
+                                        p: 1,
+                                    },
+                                }}
+                            >
+                                {/* Customers - Neutral */}
+                                <Box sx={{ backgroundColor: '#e0e0e0', color: 'black' }}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        Customers
+                                    </Typography>
+                                    <Typography fontSize="1.5rem" color="green" fontWeight={"bold"}>
+                                        {Actions} / <span style={{ color: 'black' }}>{turnoverData?.length}</span>
+                                    </Typography>
+                                </Box>
+
+                                {/* Overdue - Deep Red */}
+                                <Box sx={{ backgroundColor: 'red', color: 'white' }}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        Overdue
+                                    </Typography>
+                                    <Typography fontSize="1.5rem" fontWeight="bold">
+                                        {formatCurrency(totalOverdue)}
+                                    </Typography>
+                                </Box>
+
+                                {/* Recovery - Soft Green */}
+                                <Box sx={{ backgroundColor: 'green', color: 'white' }}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        Recovery
+                                    </Typography>
+                                    <Typography fontSize="1.5rem" fontWeight="bold">
+                                        {formatCurrency(totalPayment)}
+                                    </Typography>
+                                </Box>
+
+                                {/* FIT - Amber */}
+                                <Box sx={{ backgroundColor: '#ff6f00ff', color: 'white' }}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        FIT
+                                    </Typography>
+                                    <Typography fontSize="1.5rem" fontWeight="bold">
+                                        {formatCurrency(totalFit)}
+                                    </Typography>
+                                </Box>
+
+                                {/* Local - Bright Teal */}
+                                <Box sx={{ backgroundColor: '#c8ff00bc', color: 'black' }}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        Local
+                                    </Typography>
+                                    <Typography fontSize="1.5rem" fontWeight="bold">
+                                        {formatCurrency(totalOther)}
+                                    </Typography>
+                                </Box>
+
+                                {/* Sales - Royal Blue */}
+                                <Box sx={{ backgroundColor: '#1976d2', color: 'white' }}>
+                                    <Typography variant="h6" fontWeight="bold">
+                                        Sales
+                                    </Typography>
+                                    <Typography fontSize="1.5rem" fontWeight="bold">
+                                        {formatCurrency(totalOther + totalFit)}
+                                    </Typography>
+                                </Box>
+                            </Box>
+
+
+
+                        </Box>
+                    </Collapse>
                 </Box>
                 <Box
                     sx={{
@@ -534,7 +703,9 @@ const TurnoverReport = () => {
                                     Payment: {formatCurrency(trader.payment) || "--"}
                                 </Typography>
                                 <Typography variant="h6" fontWeight="bold">
-                                    Order: {formatCurrency(trader.orderAmount) || "--"}
+                                    FIT: {formatCurrency(trader.FitOrderAmount) || "--"}
+                                </Typography><Typography variant="h6" fontWeight="bold">
+                                    Local: {formatCurrency(trader.OtherOrderAmount) || "--"}
                                 </Typography>
                                 <Typography variant="h5" fontWeight="bold">
                                     Promise: {trader.remarks || "--"}
@@ -670,8 +841,9 @@ const TurnoverReport = () => {
                     />
                 </Box>
             </Box>
+            {/* </Box> */}
         </Container >
     );
 };
 
-export default TurnoverReport;  
+export default TurnoverReport;

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+// hooks/useGeolocation.js
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 function useLocation() {
   const [coordinates, setCoordinates] = useState({ latitude: null, longitude: null });
@@ -39,5 +40,3 @@ function useLocation() {
 
   return { coordinates, err };
 }
-
-export default useLocation;

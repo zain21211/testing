@@ -13,7 +13,9 @@ import { useRealOnlineStatus } from "./hooks/IsOnlineHook";
 import Storage from "use-local-storage-state";
 // import html2canvas from "html2canvas";
 import { takeScreenShot } from "./fuctions";
+import { useSelector } from "react-redux";
 import {
+  setSelectedCustomer,
   resetCustomerSearch,
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
@@ -118,6 +120,9 @@ const textBoxStyle = {
 const RecoveryPaper = () => {
   const dispatch = useDispatch();
 
+  const { selectedCustomer } =
+    useSelector((state) => state.customerSearch.customers['recovery']);
+
   const [route, setRoute] = useLocalStorageState("recoveryPaperRoute", "");
   // const [accountID, setAccountID] = useLocalStorageState(
   //   "recoveryPaperAccountID",
@@ -180,7 +185,7 @@ const RecoveryPaper = () => {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const [customerName, setCustomerName] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  // const [selectedCustomer, setSelectedCustomer] = useState(null);
   const isSubmittingRef = useRef(false);
 
   // These will now store NET values (after expenses)
@@ -692,7 +697,7 @@ const RecoveryPaper = () => {
     // setAccountID(null);
     // setCustomerInput(null); // Reset customer input for next search
     // setAccountID(null); // Reset account ID for next entry
-    // dispatch(resetCustomerSearch({ keysToClear: ["recoverpaperCustomerInput", storageKey] }));
+    dispatch(resetCustomerSearch());
 
 
     // Reset customer specific fields for next entry
@@ -729,7 +734,7 @@ const RecoveryPaper = () => {
               : method === "meezanBank"
                 ? "mbl"
                 : method,
-          custId,
+          custId: selectedCustomer?.acid,
           receivedAmount: amount,
           userName,
           desc: description,
@@ -1028,7 +1033,7 @@ const RecoveryPaper = () => {
       parsedMeezanBank;
 
     return (
-      !accountID ||
+      // !accountID ||
       !selectedCustomer ||
       isLoading ||
       loadingFinancials ||

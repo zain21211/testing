@@ -5,7 +5,7 @@ import customerDataReducer from "./slices/CustomerData";
 
 const store = configureStore({
   reducer: {
-    customerInput: customerSearchReducer,
+    customerSearch: customerSearchReducer,
     customerData: customerDataReducer,
   },
 });

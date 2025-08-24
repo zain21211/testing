@@ -1,4 +1,5 @@
 // src/components/ProductSelectionGrid.jsx
+import { forwardRef, useEffect, useImperativeHandle } from 'react';
 import {
     Box,
     TextField,
@@ -8,7 +9,7 @@ import {
     ListItemText,
 } from "@mui/material";
 
-export default function ProductSelectionGrid({
+const ProductSelectionGrid = forwardRef(({
     userType,
     productIDInput,
     setProductIDInput,
@@ -41,7 +42,18 @@ export default function ProductSelectionGrid({
     biggerInputTextSize,
     biggerShrunkLabelSize,
     initialDataLoading,
-}) {
+    bigger
+}, ref) => {
+
+    useImperativeHandle(ref, () => ({
+        focus: () => {
+            const input = productInputRef?.current?.querySelector('input');
+            input?.focus();
+        }
+    }));
+
+
+
     return (
         <Box
             sx={{
@@ -56,12 +68,34 @@ export default function ProductSelectionGrid({
                 mb: 2,
             }}
         >
+            {/* Scheme & Claim checkboxes */}
+            <Box
+                sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    order: { xs: 2, sm: 1 },
+                    gridColumn: { xs: "span 1", sm: "span 1" },
+                }}
+            >
+                <FormControlLabel
+                    control={<Checkbox checked={Sch} onChange={(e) => setSch(e.target.checked)} />}
+                    label="Scheme"
+                    labelTypographyProps={{ sx: { fontSize: biggerCheckboxLabelSize } }}
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={isClaim} onChange={(e) => setIsClaim(e.target.checked)} />}
+                    label="Claim"
+                    labelTypographyProps={{ sx: { fontSize: biggerCheckboxLabelSize } }}
+                />
+            </Box>
             {/* Product ID + Company */}
             <Box
                 sx={{
                     gridColumn: { xs: "span 4", sm: "span 4", md: "span 3" },
                     display: "flex",
                     gap: 1,
+                    order: { xs: 1, sm: 1 },
+                    ...bigger
                 }}
             >
                 {!userType?.includes("cust") && (
@@ -73,7 +107,7 @@ export default function ProductSelectionGrid({
                             value={productIDInput}
                             onChange={(e) => setProductIDInput(e.target.value)}
                             disabled={initialDataLoading}
-                            sx={{ flex: 1 }}
+                            sx={{ ...bigger, flex: 1 }}
                             onFocus={(e) => e.target.select()}
                             inputProps={{ inputMode: "numeric" }}
                         />
@@ -88,7 +122,7 @@ export default function ProductSelectionGrid({
                                 debouncedSetCompanyFilter(val);
                             }}
                             renderInput={(params) => <TextField {...params} label="Company" />}
-                            sx={{ flex: 1 }}
+                            sx={{ ...bigger, flex: 1 }}
                             disabled={initialDataLoading}
                         />
                     </>
@@ -104,37 +138,19 @@ export default function ProductSelectionGrid({
                     }}
                     renderInput={(params) => <TextField {...params} label="Model" />}
                     disabled={initialDataLoading}
-                    sx={{ flex: 1 }}
+                    sx={{ ...bigger, flex: 1 }}
                     onFocus={(e) => e.target.select()}
                 />
             </Box>
-
-            {/* Scheme & Claim checkboxes */}
-            <Box
-                sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gridColumn: { xs: "span 1", sm: "span 1" },
-                }}
-            >
-                <FormControlLabel
-                    control={<Checkbox checked={Sch} onChange={(e) => setSch(e.target.checked)} />}
-                    label="Scheme"
-                    labelTypographyProps={{ sx: { fontSize: biggerCheckboxLabelSize } }}
-                />
-                <FormControlLabel
-                    control={<Checkbox checked={isClaim} onChange={(e) => setIsClaim(e.target.checked)} />}
-                    label="Claim"
-                    labelTypographyProps={{ sx: { fontSize: biggerCheckboxLabelSize } }}
-                />
-            </Box>
-
             {/* Product Autocomplete */}
             <Autocomplete
                 freeSolo
                 options={
-                    productInputValue?.length < 2 ? [] : filteredAutocompleteOptions
+                    productInputValue?.length < 2
+                        ? []
+                        : filteredAutocompleteOptions ?? []
                 }
+
                 getOptionLabel={(option) => option?.Name || ""}
                 filterOptions={(x) => x}
                 isOptionEqualToValue={(option, value) => option?.ID === value?.ID}
@@ -264,7 +280,7 @@ export default function ProductSelectionGrid({
                         }}
                     />
                 )}
-                sx={{ gridColumn: { xs: "span 3", sm: "span 3", md: "span 4" } }}
+                sx={{ gridColumn: { xs: "span 3", sm: "span 3", md: "span 4" }, order: { xs: 1, sm: 1 }, }}
                 disabled={initialDataLoading}
                 loading={initialDataLoading && !products?.length}
             // noOptionsText={getNoOptionsText()}
@@ -278,7 +294,9 @@ export default function ProductSelectionGrid({
                     disabled
                     sx={{
                         gridColumn: "span 4",
-                        mt: 1,
+                        order: { xs: 4, sm: 4 },
+
+                        // mt: 1,
                         "& .MuiInputBase-input.Mui-disabled": {
                             fontWeight: "bold",
                             fontFamily: "Jameel Noori Nastaleeq, serif",
@@ -292,4 +310,6 @@ export default function ProductSelectionGrid({
             )}
         </Box>
     );
-}
+})
+
+export default ProductSelectionGrid;

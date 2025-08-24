@@ -41,6 +41,8 @@ export function useFilterAutocomplete(
     const filteredOptions = useMemo(() => {
         if (initialDataLoading) return [];
 
+
+        console.log("this is the product", productID)
         let filtered = [...products];
 
         // Filter by Company (must start with input)

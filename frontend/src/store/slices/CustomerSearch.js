@@ -1,6 +1,8 @@
 // src/store/customerSearchSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
+const CUSTOMER_KEYS = ["orderForm", "ledger", "recovery"];
+
 function loadFromStorage(key, fallback) {
   try {
     const saved = localStorage.getItem(key);
@@ -10,14 +12,22 @@ function loadFromStorage(key, fallback) {
   }
 }
 
+function createCustomerState(key) {
+  return {
+    selectedCustomer: loadFromStorage(`${key}_selectedCustomer`, null),
+    phoneNumber: loadFromStorage(`${key}_phoneNumber`, null),
+    customerInput: loadFromStorage(`${key}_customerInput`, ""),
+    ID: loadFromStorage(`${key}_ID`, null),
+    customerSuggestions: [],
+    popperOpen: false,
+  };
+}
+
 const initialState = {
-  selectedCustomer: loadFromStorage("selectedCustomer", null),
-  phoneNumber: loadFromStorage("phoneNumber", null),
-  acidInput: loadFromStorage("acidInput", ""),
-  customerInput: "", // dynamic key will set this
-  ID: null, // dynamic key will set this
-  customerSuggestions: [],
-  popperOpen: false,
+  customers: CUSTOMER_KEYS.reduce((acc, key) => {
+    acc[key] = createCustomerState(key);
+    return acc;
+  }, {}),
 };
 
 const customerSearchSlice = createSlice({
@@ -25,59 +35,87 @@ const customerSearchSlice = createSlice({
   initialState,
   reducers: {
     setSelectedCustomer: (state, action) => {
-      state.selectedCustomer = action.payload;
-      if (action.payload) {
-        state.acidInput = action.payload.acid;
-        state.customerInput = action.payload.name;
-        state.phoneNumber = action.payload.OCell || null;
-        state.popperOpen = false;
-        state.customerSuggestions = [];
+      const { key, customer } = action.payload; // e.g. { key: "ledger", customer: {...} }
+      state.customers[key].selectedCustomer = customer;
+
+      if (customer) {
+        state.customers[key].ID = customer.acid || null;
+        state.customers[key].customerInput = customer.name || "";
+        state.customers[key].phoneNumber = customer.OCell || null;
+        state.customers[key].popperOpen = false;
+        state.customers[key].customerSuggestions = [];
       }
-      localStorage.setItem("selectedCustomer", JSON.stringify(action.payload));
+
+      localStorage.setItem(`${key}_selectedCustomer`, JSON.stringify(customer));
+      localStorage.setItem(`${key}_ID`, JSON.stringify(customer?.acid || null));
+      localStorage.setItem(
+        `${key}_customerInput`,
+        JSON.stringify(customer?.name || "")
+      );
+      localStorage.setItem(
+        `${key}_phoneNumber`,
+        JSON.stringify(customer?.OCell || null)
+      );
     },
+
     setPhoneNumber: (state, action) => {
-      state.phoneNumber = action.payload;
-      localStorage.setItem("phoneNumber", JSON.stringify(action.payload));
+      const { key, value } = action.payload;
+      state.customers[key].phoneNumber = value;
+      localStorage.setItem(`${key}_phoneNumber`, JSON.stringify(value));
     },
-    setAcidInput: (state, action) => {
-      state.acidInput = action.payload;
-      localStorage.setItem("acidInput", JSON.stringify(action.payload));
-    },
+
     setCustomerInputWithKey: (state, action) => {
       const { key, value } = action.payload;
-      state.customerInput = value;
-      state.popperOpen = !!value;
-      localStorage.setItem(key, JSON.stringify(value));
+      state.customers[key].customerInput = value;
+      state.customers[key].popperOpen = !!value;
+      localStorage.setItem(`${key}_customerInput`, JSON.stringify(value));
     },
+
     setIDWithKey: (state, action) => {
       const { key, value } = action.payload;
-      state.ID = value;
-      localStorage.setItem(key, JSON.stringify(value));
+      state.customers[key].ID = value;
+      localStorage.setItem(`${key}_ID`, JSON.stringify(value));
     },
+
     setCustomerSuggestions: (state, action) => {
-      state.customerSuggestions = action.payload;
+      const { key, suggestions } = action.payload;
+      state.customers[key].customerSuggestions = suggestions;
     },
+
     setPopperOpen: (state, action) => {
-      state.popperOpen = action.payload;
+      const { key, value } = action.payload;
+      state.customers[key].popperOpen = value;
     },
-    clearSelection: (state) => {
-      state.selectedCustomer = null;
-      state.acidInput = "";
-      state.ID = null;
-      state.customerInput = "";
-      state.phoneNumber = null;
+
+    clearSelection: (state, action) => {
+      const { key } = action.payload;
+      state.customers[key] = createCustomerState(key);
+
+      // Clear from storage
+      [
+        `${key}_selectedCustomer`,
+        `${key}_ID`,
+        `${key}_customerInput`,
+        `${key}_phoneNumber`,
+      ].forEach((k) => localStorage.removeItem(k));
     },
-    resetCustomerSearch: (state, action) => {
-      const { keysToClear = [] } = action.payload;
-      // Clear specified dynamic and static keys
-      ["selectedCustomer", "phoneNumber", "acidInput", ...keysToClear].forEach(
-        (key) => localStorage.removeItem(key)
-      );
+
+    resetCustomerSearch: () => {
+      // Clear all keys in localStorage
+      CUSTOMER_KEYS.forEach((key) => {
+        [
+          `${key}_selectedCustomer`,
+          `${key}_ID`,
+          `${key}_customerInput`,
+          `${key}_phoneNumber`,
+        ].forEach((k) => localStorage.removeItem(k));
+      });
 
       return {
-        ...initialState,
-        customerInput: "",
-        ID: null,
+        customers: CUSTOMER_KEYS.reduce((acc, key) => {
+          acc[key] = createCustomerState(key);
+          return acc;
+        }, {}),
       };
     },
   },
@@ -86,7 +124,6 @@ const customerSearchSlice = createSlice({
 export const {
   setSelectedCustomer,
   setPhoneNumber,
-  setAcidInput,
   setCustomerInputWithKey,
   setIDWithKey,
   setCustomerSuggestions,

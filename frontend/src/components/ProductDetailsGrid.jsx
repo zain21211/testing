@@ -2,6 +2,7 @@
 import { Box, TextField, Button } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 
+
 export default function ProductDetailsGrid({
     selectedProduct,
     userType,
@@ -34,6 +35,10 @@ export default function ProductDetailsGrid({
     isAllowed,
     handleAddProductClick,
 }) {
+
+
+
+
     return (
         <Box
             sx={{
@@ -56,6 +61,27 @@ export default function ProductDetailsGrid({
                 inputRef={quantityInputRef}
                 onFocus={(e) => e.target.select()}
                 onKeyDown={(e) => handleEnterkey(e)}
+                sx={{
+                    gridColumn: { xs: "span 1", sm: "span 1", md: "auto" },
+                    width: { xs: "100%", md: "120px" }, // INCREASED width
+                    "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                            borderColor: !isClaim && selectedProduct ? (hasStock ? "green" : "red") : undefined,
+                        },
+                        "&:hover fieldset": {
+                            borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                        },
+                        "&.Mui-focused fieldset": {
+                            borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                        },
+                    },
+                    "& .MuiInputBase-input": { // Target input directly
+                        color: "black !important",
+                        textAlign: "center",
+                        fontSize: biggerInputTextSize,
+                    },
+                    '& .MuiInputLabel-root.MuiInputLabel-shrink': { fontSize: biggerShrunkLabelSize },
+                }}
                 onChange={(e) => {
                     const value = e.target.value;
                     if (value === "" || value === "-") {
@@ -123,15 +149,22 @@ export default function ProductDetailsGrid({
             <TextField
                 label="Amount"
                 disabled
-                sx={bigger}
+                sx={{
+                    ...bigger,
+                    gridColumn: { xs: 'span 2', sm: 'span 1' },
+                }}
                 value={formatCurrency(calculatedAmount)}
             />
             <TextField
                 label="Remakes"
                 value={productRemakes}
-                sx={bigger}
+                sx={{
+                    ...bigger,
+                    gridColumn: 'span 2',
+                }}
+
+
                 onChange={(e) => setProductRemakes(e.target.value)}
-                sx={{ gridColumn: { xs: "span 2", sm: "span 2", md: "span 2" } }}
             />
             {(userType === "admin" ||
                 user?.username?.toLowerCase() === "zain") && (

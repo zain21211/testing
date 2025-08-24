@@ -40,6 +40,36 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     const quantityInputRef = useRef();
 
     useEffect(() => { setPrice(selectedProduct?.SaleRate) }, [selectedProduct])
+    useEffect(() => {
+        if (!productIDInput) {
+            setSelectedProduct(null); // clear selection if input is empty
+            setProductID(null);       // also clear productID immediately
+            return;
+        }
+
+        const handler = setTimeout(() => {
+            setProductID(productIDInput);
+        }, 1000); // debounce delay
+
+        return () => clearTimeout(handler); // cleanup previous timeout
+    }, [productIDInput]);
+
+    useEffect(() => {
+        if (!productInputValue) {
+            setSelectedProduct(null); // clear selection if input is empty
+            setProductID(null);       // also clear productID immediately
+            return;
+        }
+    }, [productInputValue])
+
+
+    useEffect(() => {
+        if (selectedProduct && !productIDInput) setProductIDInput(selectedProduct.ID)
+        if (!selectedProduct)
+            setProductInputValue('')
+    }, [selectedProduct])
+
+
     // ------- Dummy handlers -------
     const debouncedSetCompanyFilter = (val) => setCompanyFilter(val);
     const debouncedSetCategoryFilter = (val) => setCategoryFilter(val);
@@ -51,11 +81,17 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     };
 
     const handleReset = () => {
-        setProductIDInput(null)
+        setProductIDInput('')
+        setProductID('')
         setSelectedProduct(null)
-        setProductInputValue(null)
+        setProductInputValue('')
+        setTimeout(() => {
+            productInputRef.current?.focus();
+        }, 0); // ensures DOM has updated
+
 
     }
+
     const handleAddProductClick = () => {
         console.log("Adding product:", selectedProduct);
 
@@ -87,11 +123,31 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     };
 
     // ------- Sizes (can move to theme or constants) -------
-    const bigger = { width: "120px" };
-    const biggerInputTextSize = "1rem";
-    const biggerShrunkLabelSize = "0.9rem";
-    const biggerCheckboxLabelSize = "0.9rem";
+    const biggerInputTextSize = '1.5rem'; // For text inside input fields
+    const biggerShrunkLabelSize = '0.9rem';  // For labels when they shrink (float above)
+    const biggerCheckboxLabelSize = '1rem'; // For checkbox labels
+    const bigger = {
+        // gridColumn: { xs: "span 1", sm: "span 1", md: "auto" },
+        // width: { xs: "100%", md: "120px" }, // INCREASED width
+        "& .MuiInputBase-input.Mui-disabled": {
+            textAlign: "center",
+            fontWeight: "bold",
+            WebkitTextFillColor: "black !important",
+            fontSize: biggerInputTextSize,
+        },
+        "& .MuiInputLabel-root.Mui-disabled": {
+            fontSize: biggerShrunkLabelSize,
+            color: "rgba(0, 0, 0, 0.6)" // Default disabled label color
+        },
+        "& .MuiInputBase-input": {
+            fontSize: biggerInputTextSize,
+            fontWeight: 'bold'
+        },
+        '& .MuiInputLabel-root.MuiInputLabel-shrink': {
+            fontSize: biggerShrunkLabelSize
+        },
 
+    }
     // ------- Loading state simulation -------
     const initialDataLoading = false;
     const hasStock = selectedProduct?.StockQty > 0;

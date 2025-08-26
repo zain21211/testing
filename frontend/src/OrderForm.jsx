@@ -37,7 +37,12 @@ import useGeolocation from "./hooks/geolocation";
 import InactiveItems from "./components/InactiveItems.jsx";
 import LedgerSearchForm from "./CustomerSearch.jsx";
 import ProductSelectionForm from "./ProductSelectionForm.jsx";
-import { setSelectedCustomer } from "./store/slices/CustomerSearch";
+import {
+  setSelectedCustomer,
+  resetCustomerSearch,
+} from "./store/slices/CustomerSearch";
+// import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
+import { useDispatch } from "react-redux";
 
 // --- Constants & Configuration ---
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -99,7 +104,7 @@ const OrderForm = () => {
   const { selectedCustomer } = useSelector(
     (state) => state.customerSearch.customers["orderForm"]
   );
-
+  const dispatch = useDispatch()
   // --- Component State ---
   const [products, setProducts, productsLoaded] = useIndexedDBState(
     "products",
@@ -136,7 +141,6 @@ const OrderForm = () => {
 
   // --- Derived State & Memoized Values ---
   const co = useGeolocation();
-  const userType = user?.userType?.toLowerCase();
   const today = useMemo(() => new Date(), []);
   const minDate = useMemo(() => {
     const d = new Date(today);
@@ -258,20 +262,33 @@ const OrderForm = () => {
     setOrderItemsTotalQuantity(newTotalQuantity);
   }, [orderItems, setOrderItemsTotalQuantity]);
 
-  // Auto-post pending invoice when online
   useEffect(() => {
     const handleOnline = async () => {
-      if (invoice && navigator.onLine) {
+      if (invoice?.length > 0 && navigator.onLine) {
         try {
-          const response = await axios.post(
-            `${API_BASE_URL}/create-order`,
-            invoice,
-            { headers: { Authorization: `Bearer ${token}` } }
+          const results = await Promise.allSettled(
+            invoice.map((inv) =>
+              axios.post(
+                `${API_BASE_URL}/create-order`,
+                inv,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
+            )
           );
-          console.log("Invoice posted automatically:", response.data);
-          setInvoice(null); // Clear after success
-        } catch (error) {
-          console.error("Retry failed:", error);
+
+          const successfulIndexes = results
+            .map((res, idx) => (res.status === "fulfilled" ? idx : null))
+            .filter((idx) => idx !== null);
+
+          if (successfulIndexes.length > 0) {
+            setInvoice((prev) =>
+              prev.filter((_, idx) => !successfulIndexes.includes(idx))
+            );
+          }
+
+          console.log("automatically Posting results:", results);
+        } catch (err) {
+          console.error("Batch retry failed:", err);
         }
       }
     };
@@ -281,6 +298,7 @@ const OrderForm = () => {
 
     return () => window.removeEventListener("online", handleOnline);
   }, [invoice, setInvoice, token]);
+
 
   // --- Event Handlers & Callbacks ---
 
@@ -405,10 +423,15 @@ const OrderForm = () => {
       resetProductInputs();
       setBalance(null);
       setOverDue(null);
+      dispatch(resetCustomerSearch());
     } catch (err) {
-      setInvoice(payload); // Save payload for retry if offline
+      setInvoice(payload);
+      setOrderItems([]);
+      setSelectedCustomer(null);
+      resetProductInputs();// Save payload for retry if offline
       const errorMessage =
         err.response?.data?.message || "Failed to create order.";
+      dispatch(resetCustomerSearch());
       console.error(
         "Order creation failed:",
         err.response?.data || err.message || err

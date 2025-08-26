@@ -9,37 +9,36 @@ import { useProfit } from "./hooks/useProfit";
 import { useCost } from "./hooks/useCost";
 import { formatCurrency } from "./utils/formatCurrency"; // if you have one
 import { useEffect } from "react";
+import { useLocalStorageState } from "./hooks/LocalStorage";
 
 export default function OrderPage({ selectedCustomer, user, userType, products, onAddProduct, companies, categories }) {
     // ------- State -------
     const [error, setError] = useState(null);
-    const [productIDInput, setProductIDInput] = useState("");
-    const [companyFilter, setCompanyFilter] = useState("");
-    const [companyInputValue, setCompanyInputValue] = useState("");
-    const [categoryFilter, setCategoryFilter] = useState("");
-    const [categoryInputValue, setCategoryInputValue] = useState("");
-    const [Sch, setSch] = useState(true);
-    const [isClaim, setIsClaim] = useState(false);
-    const [productInputValue, setProductInputValue] = useState("");
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [productID, setProductID] = useState(null);
-    const [orderQuantity, setOrderQuantity] = useState(0);
-    // const [schPc, setSchPc] = useState(0);
-    // const [quantity, setQuantity] = useState(0);
-    // const [schOn, setSchOn] = useState(0);
+    const [productIDInput, setProductIDInput] = useLocalStorageState("productIDInput", "");
+    const [companyFilter, setCompanyFilter] = useLocalStorageState("companyFilter", "");
+    const [companyInputValue, setCompanyInputValue] = useLocalStorageState("companyInputValue", "");
+    const [categoryFilter, setCategoryFilter] = useLocalStorageState("categoryFilter", "");
+    const [categoryInputValue, setCategoryInputValue] = useLocalStorageState("categoryInputValue", "");
+    const [Sch, setSch] = useLocalStorageState("Sch", true);
+    const [isClaim, setIsClaim] = useLocalStorageState("isClaim", false);
+    const [productInputValue, setProductInputValue] = useLocalStorageState("productInputValue", "");
+    const [selectedProduct, setSelectedProduct] = useLocalStorageState("selectedProduct", null);
+    const [productID, setProductID] = useLocalStorageState("productID", null);
+    const [orderQuantity, setOrderQuantity] = useLocalStorageState("orderQuantity", 0);
+    const [productRemakes, setProductRemakes] = useLocalStorageState("productRemakes", "");
     const [price, setPrice] = useState(selectedProduct?.SaleRate);
     const [suggestedPrice, setSuggestedPrice] = useState(0);
-    // const [discount1, setDiscount1] = useState(0);
-    // const [discount2, setDiscount2] = useState(0);
-    const [productRemakes, setProductRemakes] = useState("");
-    // const [calculatedAmount, setCalculatedAmount] = useState(0);
 
     // ------- Refs -------
     const productIDInputRef = useRef();
     const productInputRef = useRef();
     const quantityInputRef = useRef();
 
-    useEffect(() => { setPrice(selectedProduct?.SaleRate) }, [selectedProduct])
+    useEffect(() => {
+        setPrice(selectedProduct?.SaleRate)
+        setSuggestedPrice(selectedProduct?.SaleRate)
+
+    }, [selectedProduct])
     useEffect(() => {
         if (!productIDInput) {
             setSelectedProduct(null); // clear selection if input is empty
@@ -53,6 +52,13 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
 
         return () => clearTimeout(handler); // cleanup previous timeout
     }, [productIDInput]);
+
+    useEffect(() => {
+        console.log(productInputRef?.current)
+        if (selectedCustomer)
+            productInputRef?.current?.focus()
+
+    }, [selectedCustomer])
 
     useEffect(() => {
         if (!productInputValue) {
@@ -75,6 +81,7 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     const debouncedSetCategoryFilter = (val) => setCategoryFilter(val);
     const handleEnterkey = (e) => {
         if (e.key === "Enter") {
+            e.preventDefault();
             console.log("Enter pressed");
             handleAddProductClick()
         }
@@ -165,7 +172,7 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     });
 
     // scheme
-    const { schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading } =
+    const { schText, schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading } =
         useScheme(selectedProduct, orderQuantity, true)
 
     // discount
@@ -176,7 +183,7 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     // for totalamount per item
     const { vest, calculatedAmount, setCalculatedAmount } = useCalculateAmount(
         orderQuantity,
-        price,
+        suggestedPrice,
         discount1,
         discount2
     );
@@ -239,6 +246,7 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
             quantity={quantity}
             setQuantity={setQuantity}
             schOn={schOn}
+            schText={schText}
             setSchOn={setSchOn}
             price={price}
             setPrice={setPrice}

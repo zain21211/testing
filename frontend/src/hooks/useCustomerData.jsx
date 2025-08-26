@@ -15,7 +15,11 @@ import {
     clearSelection,
     resetCustomerSearch,
 } from "../store/slices/CustomerSearch";
-import { setMasterCustomerList } from "../store/slices/CustomerData";
+import {
+    fetchMasterCustomerList,
+    persistMasterCustomerList,
+    resetMasterCustomerList,
+} from "../store/slices/CustomerData";
 
 const wildcardToRegex = (pattern) => {
     return pattern?.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*");
@@ -39,26 +43,33 @@ export const useCustomerSearch = ({
     dates,
 }) => {
     const dispatch = useDispatch();
-    const location = useLocation();
+    // const location = useLocation();
 
     // 🔹 derive which customer slot we are working on
-    const customerKey = useMemo(() => usage || formType || "ledger", [usage, formType]);
+    const customerKey = useMemo(() =>
+        usage || formType || "ledger"
+        , [usage, formType]);
 
     const customerState = useSelector(
         (state) => state.customerSearch.customers[customerKey] || {}
     );
 
     const {
-        customerInput,
         ID,
-        selectedCustomer,
-        customerSuggestions,
         popperOpen,
         phoneNumber,
+        customerInput,
+        selectedCustomer,
+        customerSuggestions,
     } = customerState;
 
     const [acidInput, setAcidInput] = useState(selectedCustomer?.acid);
-    const { masterCustomerList } = useSelector((state) => state.customerData);
+    const masterCustomerList = useSelector((s) => s.customerData.masterCustomerList);
+
+    // Load from IndexedDB (via localforage) on mount
+    useEffect(() => {
+        dispatch(fetchMasterCustomerList());
+    }, [dispatch]);
 
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const customerInputRef = useRef(null);
@@ -83,8 +94,11 @@ export const useCustomerSearch = ({
 
     // keep master list synced
     useEffect(() => {
-        if (!isEqual(data, masterCustomerList)) {
-            dispatch(setMasterCustomerList(data));
+        console.log("this is the data ", fetchError)
+        if (fetchError) return;
+        if (data.length > 0 && !isEqual(data, masterCustomerList)) {
+            const updated = [...data];
+            dispatch(persistMasterCustomerList(updated));
         }
     }, [data, masterCustomerList, dispatch]);
 
@@ -93,7 +107,6 @@ export const useCustomerSearch = ({
         (customer) => {
             if (!customer) return;
             if (selectedCustomer?.acid === customer.acid) return;
-
             dispatch(setSelectedCustomer({ key: customerKey, customer }));
             dispatch(setCustomerSuggestions({ key: customerKey, suggestions: [] }));
             stableOnSelect(customer);
@@ -105,11 +118,15 @@ export const useCustomerSearch = ({
     // Effect 1: Sync ID → selectedCustomer
     useEffect(() => {
         if (!ID || allCustomerOptions.length === 0) return;
+
         if (selectedCustomer?.acid !== Number(ID)) {
             const customerToSelect = allCustomerOptions.find(
                 (c) => c.acid === Number(ID)
             );
-            if (customerToSelect) handleSelect(customerToSelect);
+            if (customerToSelect) {
+                handleSelect(customerToSelect);
+                return; // prevent unnecessary acidInput reset
+            }
         }
 
     }, [ID, allCustomerOptions, selectedCustomer, handleSelect]);
@@ -119,6 +136,12 @@ export const useCustomerSearch = ({
             handleReset()
         }
     }, [acidInput])
+
+    useEffect(() => {
+        if (!selectedCustomer) {
+            setAcidInput('')
+        }
+    }, [selectedCustomer])
 
     // Effect 2: Filter suggestions by name
     useEffect(() => {

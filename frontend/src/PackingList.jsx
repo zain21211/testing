@@ -48,14 +48,7 @@ function unformatNumber(formattedValue) {
 }
 
 // Define columns for the DataTable - adjust these to match your API response
-let ledgerColumns = [
-    // { label: "Date", id: "date", minWidth: 90, format: (val) => new Date(val).toLocaleDateString() },
-    { label: "Route", id: "route", minWidth: 40 },
-    { label: "Customer", id: "UrduName", minWidth: 250, align: "right" },
-    { label: "DOC #", id: "doc", minWidth: 80 },
-    { label: "#", id: "rn", minWidth: 40 },
-    { label: "DATE", id: "date", maxWidth: 20 },
-];
+
 
 
 // GLOBAL FUNCTION
@@ -137,7 +130,22 @@ const PackingList = () => {
     const [error, setError] = useState('');
 
     const memoizedData = useMemo(() => tableData, [tableData]);
-    const memoizedColumns = useMemo(() => ledgerColumns, [ledgerColumns]);
+    const memoizedColumns = useMemo(() => {
+        return [
+            { label: "Route", id: "route", minWidth: 40, align: 'center' },
+            { label: "Customer", id: "UrduName", minWidth: 250, align: "right" },
+            { label: "DOC #", id: "doc", minWidth: 80, align: 'center' },
+            { label: "#", id: "rn", minWidth: 40, align: 'center' },
+            { label: "DATE", id: "date", maxWidth: 20, align: 'center' },
+            ...(isAllowed
+                ? [
+                    { label: "USER", id: "UserName", maxWidth: 10, align: 'center' },
+                    { label: "AMOUNT", id: "amount", maxWidth: 20, align: "right", },
+                ]
+                : []),
+        ];
+    }, [isAllowed]);
+
 
 
 

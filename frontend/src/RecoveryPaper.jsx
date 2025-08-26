@@ -119,7 +119,6 @@ const textBoxStyle = {
 
 const RecoveryPaper = () => {
   const dispatch = useDispatch();
-
   const { selectedCustomer } =
     useSelector((state) => state.customerSearch.customers['recovery']);
 
@@ -692,23 +691,8 @@ const RecoveryPaper = () => {
     setCrownWalletAmount("");
     setOnlineAmount("");
     setMeezanBankAmount("");
-    // setSelectedCustomer(null);
-    // setAcidInput("");
-    // setAccountID(null);
-    // setCustomerInput(null); // Reset customer input for next search
-    // setAccountID(null); // Reset account ID for next entry
+
     dispatch(resetCustomerSearch());
-
-
-    // Reset customer specific fields for next entry
-    // handleReset(); // Use the reset handler
-    // setAccountID(""); // Not needed, handleReset does it
-    // setSelectedCustomer(null);
-    // setCustomerName("");
-    // setBalance("");
-    // setRemainingBalance("");
-    // setRoute(""); // Decide if route should be reset
-
     searchInputRef.current?.focus();
 
     // Clean up
@@ -718,7 +702,9 @@ const RecoveryPaper = () => {
 
   const makeCashEntry = async (entry) => {
     try {
-      const { amounts, id: custId, userName, description } = entry;
+      console.log('to enter:', entry)
+      const { amounts, id, userName, description, timestamp } = entry;
+
       const entriesToPost = Object.entries(amounts).filter(
         ([_, amount]) => amount > 0
       );
@@ -734,10 +720,11 @@ const RecoveryPaper = () => {
               : method === "meezanBank"
                 ? "mbl"
                 : method,
-          custId: selectedCustomer?.acid,
+          custId: id,
           receivedAmount: amount,
           userName,
           desc: description,
+          time: timestamp,
         }
 
         if (isSubmittingRef.current) {
@@ -965,6 +952,7 @@ const RecoveryPaper = () => {
 
   const handleSyncOneEntry = useCallback(
     async (entryToSync) => {
+      console.log("automatic", entryToSync)
       if (!isOnline) {
         alert("Cannot sync while offline.");
         return;
@@ -1739,7 +1727,7 @@ const RecoveryPaper = () => {
         variant="contained"
         fullWidth
         color="error"
-        disabled={entries.length === 0 || entries.some(e => e.status === false)}
+        // disabled={entries.length === 0 || entries.some(e => e.status === false)}
         sx={{ mt: 2, fontSize: "1.2rem" }}
         onClick={async () => {
 

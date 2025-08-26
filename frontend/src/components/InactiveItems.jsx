@@ -57,7 +57,7 @@ const InactiveItemsTable = ({ acid, company = "fit-o%", fromDate = "2024-01-01",
 
 
     if (loading) return <CircularProgress />;
-    if (error) return <Alert severity="error">{error}</Alert>;
+    if (error) return <Alert severity="error">{error.message}</Alert>;
 
     return (
 

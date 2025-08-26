@@ -7,6 +7,7 @@ export default function ProductDetailsGrid({
     selectedProduct,
     userType,
     user,
+    schText,
     orderQuantity,
     setOrderQuantity,
     quantityInputRef,
@@ -54,46 +55,49 @@ export default function ProductDetailsGrid({
         >
             {/* all your textfields + add button (same as before, just moved here) */}
             {/* Example: */}
-            <TextField
-                label="Qty"
-                type="number"
-                value={orderQuantity || ""}
-                inputRef={quantityInputRef}
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => handleEnterkey(e)}
-                sx={{
-                    gridColumn: { xs: "span 1", sm: "span 1", md: "auto" },
-                    width: { xs: "100%", md: "120px" }, // INCREASED width
-                    "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                            borderColor: !isClaim && selectedProduct ? (hasStock ? "green" : "red") : undefined,
+            <Box component="form" onSubmit={handleEnterkey} noValidate autoComplete="off">
+                <TextField
+                    label="Qty"
+                    type="number"
+                    value={orderQuantity || ""}
+                    inputRef={quantityInputRef}
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => handleEnterkey(e)}
+                    inputProps={{ enterKeyHint: "done" }}
+                    sx={{
+                        gridColumn: { xs: "span 1", sm: "span 1", md: "auto" },
+                        width: { xs: "100%", md: "120px" }, // INCREASED width
+                        "& .MuiOutlinedInput-root": {
+                            "& fieldset": {
+                                borderColor: !isClaim && selectedProduct ? (hasStock ? "green" : "red") : undefined,
+                            },
+                            "&:hover fieldset": {
+                                borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                            },
+                            "&.Mui-focused fieldset": {
+                                borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                            },
                         },
-                        "&:hover fieldset": {
-                            borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                        "& .MuiInputBase-input": { // Target input directly
+                            color: "black !important",
+                            textAlign: "center",
+                            fontSize: biggerInputTextSize,
                         },
-                        "&.Mui-focused fieldset": {
-                            borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
-                        },
-                    },
-                    "& .MuiInputBase-input": { // Target input directly
-                        color: "black !important",
-                        textAlign: "center",
-                        fontSize: biggerInputTextSize,
-                    },
-                    '& .MuiInputLabel-root.MuiInputLabel-shrink': { fontSize: biggerShrunkLabelSize },
-                }}
-                onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "" || value === "-") {
-                        setOrderQuantity(value);
-                    } else {
-                        const parsed = parseInt(value, 10);
-                        if (!isNaN(parsed)) setOrderQuantity(parsed);
-                    }
-                }}
-                disabled={initialDataLoading || !selectedProduct}
-            />
-
+                        '& .MuiInputLabel-root.MuiInputLabel-shrink': { fontSize: biggerShrunkLabelSize },
+                    }}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "" || value === "-") {
+                            setOrderQuantity(value);
+                        } else {
+                            const parsed = parseInt(value, 10);
+                            if (!isNaN(parsed)) setOrderQuantity(parsed);
+                        }
+                    }}
+                    disabled={initialDataLoading || !selectedProduct}
+                />
+                <Button type="submit" style={{ display: "none" }} aria-hidden="true" />
+            </Box>
             {/* ...rest of fields (FOC, TQ, Price, Discounts, Remarks, Stock, etc.) */}
             <TextField
                 label="FOC"
@@ -112,7 +116,7 @@ export default function ProductDetailsGrid({
             <TextField
                 label="Scheme"
                 type="text"
-                value={schOn}
+                value={schText || 'NA'}
                 onChange={(e) => setPrice(e.target.value)}
                 sx={bigger}
                 disabled={!isAllowed}
@@ -123,6 +127,7 @@ export default function ProductDetailsGrid({
                 value={price}
                 sx={bigger}
                 onChange={(e) => setPrice(e.target.value)}
+                InputLabelProps={{ shrink: true }}
                 disabled={!isAllowed}
             />
             <TextField
@@ -130,6 +135,7 @@ export default function ProductDetailsGrid({
                 type="number"
                 sx={bigger}
                 value={suggestedPrice}
+                InputLabelProps={{ shrink: true }}
                 onChange={(e) => setSuggestedPrice(e.target.value)}
             />
             <TextField

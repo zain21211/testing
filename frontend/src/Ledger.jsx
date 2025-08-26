@@ -16,8 +16,8 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
 import { useSearchParams } from "react-router-dom";
-import useLocalStorageState  from "use-local-storage-state";
- // Importing Storage for localStorage management
+import useLocalStorageState from "use-local-storage-state";
+// Importing Storage for localStorage management
 // import { useLocation } from "react-router-dom"; // Removed unused import
 
 import DataTable from "./table";
@@ -33,14 +33,23 @@ const formatCurrency = (value) => {
   });
 };
 
+function formatDate(value) {
+  const date = new Date(value);
+  const day = String(date.getDate()).padStart(0, "0");
+  const month = String(date.getMonth() + 1).padStart(0, "0");
+  const year = date.getFullYear().toString().slice(-2);
+  return `${day}/${month}/${year}`;
+}
+const url = `${import.meta.env.VITE_API_URL}/ledger`;
+
 // Base column definitions (used for md and larger screens)
 // NOTE: ID "Total" vs Label "Balance", fixed/minWidths are kept as per your request for the BASE definition
 const baseLedgerColumns = [
   {
     id: "Date", // Kept as "Date" as per user's latest code
     label: "Date",
-    align: "left",
-    render: (value) => (value ? new Date(value).toLocaleDateString() : "N/A"),
+    align: "center",
+    render: (value) => (value ? formatDate(value) : "N/A"),
     width: 100, // Base width
     minWidth: 80, // Base min width
   },
@@ -91,8 +100,8 @@ const Ledger = () => {
   const tableRef = useRef(null); // State to hold the table reference
   const [error, setError] = useState(null);
   const [customerName, setCustomerName] = useState("");
-    const storageKey = `accountID-/ledger`; // Unique key based on route
-    const [ID, setID] = useLocalStorageState (storageKey, null);  // Use state for ID to allow updates
+  const storageKey = `accountID-/ledger`; // Unique key based on route
+  const [ID, setID] = useLocalStorageState(storageKey, null);  // Use state for ID to allow updates
 
   const [balanceInc, setBalanceInc] = useState(true); // State to track if balance is increasing
   // Safely parse userData and provide a default empty object if null or invalid
@@ -160,20 +169,20 @@ const Ledger = () => {
 
   useEffect(() => {
 
-         if (!isCustomer) {
-        const str = userData?.userType;
-        const number = parseInt(str?.split("-")[1], 10);
-        console.log(number); // 616
-        let id  = number;
-        const customer = {
-          acid: id,
-          startDate: new Date(new Date().setMonth(new Date().getMonth() - 3)),
-          endDate: new Date(),
-          name: ''
-        }
+    if (!isCustomer) {
+      const str = userData?.userType;
+      const number = parseInt(str?.split("-")[1], 10);
+      console.log(number); // 616
+      let id = number;
+      const customer = {
+        acid: id,
+        startDate: new Date(new Date().setMonth(new Date().getMonth() - 3)),
+        endDate: new Date(),
+        name: ''
+      }
 
-        handleFetchData(customer)
-         }
+      handleFetchData(customer)
+    }
 
   }, [isCustomer])
 
@@ -259,11 +268,6 @@ const Ledger = () => {
     setSummary({ totalDebit: 0, totalCredit: 0, netBalance: 0 }); // Reset summary immediately
 
     try {
-     const url = `http://100.68.6.110:3001/ledger`;
-
-
-      
-
       const response = await axios.get(url, {
         params: { acid, startDate, endDate },
         timeout: 15000, // Add a 15-second timeout for the request
@@ -427,19 +431,19 @@ const Ledger = () => {
       {/* Corrected Grid container and item structure */}
       <Grid container spacing={3} sx={{ m: 0, width: "100%" }}>
         {/* Use spacing and full width */}
-          <Grid sx={{ width: "100%" }}>
-            {/* Added item prop */}
-            <Card elevation={2} sx={{ height: "100%", width: "100%" }}>
-              <CardContent>
-                <LedgerSearchForm
-                  usage={"ledger"}
-                  onFetch={handleFetchData}
-                  loading={loading}
-                  name={customerName}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
+        <Grid sx={{ width: "100%" }}>
+          {/* Added item prop */}
+          <Card elevation={2} sx={{ height: "100%", width: "100%" }}>
+            <CardContent>
+              <LedgerSearchForm
+                usage={"ledger"}
+                onFetch={handleFetchData}
+                loading={loading}
+                name={customerName}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
         <Grid sx={{ width: "100%" }}>
           {" "}
           {/* Added item prop */}

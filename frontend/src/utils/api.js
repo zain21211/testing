@@ -31,7 +31,7 @@ export const fetchDiscount = async (acid, company) => {
 
 // Fetch scheme details
 export const fetchScheme = async (productCode, orderQty, date) => {
-  const { data } = await client.get("/scheme", {
+  const { data } = await client.get("/scheme/all", {
     params: { productCode, orderQty, date },
   });
   return data;

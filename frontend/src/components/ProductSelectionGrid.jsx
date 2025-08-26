@@ -110,6 +110,7 @@ const ProductSelectionGrid = forwardRef(({
                             sx={{ ...bigger, flex: 1 }}
                             onFocus={(e) => e.target.select()}
                             inputProps={{ inputMode: "numeric" }}
+                            InputLabelProps={{ shrink: true }}
                         />
                         <Autocomplete
                             freeSolo

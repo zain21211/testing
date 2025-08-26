@@ -7,7 +7,7 @@ const customerControllers = {
       console.log(req.query);
       const pool = await dbConnection();
       const searchTerm = req.query.search || "";
-      const username = req.query.username; // Get username from authenticated user token
+      const username = req.user.username; // Get username from authenticated user token
       const usertype = req.query.usertype || req.user.userType || ""; // Try multiple keys for usertype
       const rawUser = req.user; // Log raw user object for debugging
       const form = req.query.form || " ";
@@ -30,7 +30,7 @@ const customerControllers = {
           
       `;
 
-      if (usertype?.toLowerCase().includes("cust")) {
+      if (usertype.toLowerCase().includes("cust")) {
         acid = parseInt(usertype?.split("-")[1]);
 
         sql += ` AND id = ${acid}`;
@@ -40,22 +40,16 @@ const customerControllers = {
         sql += ` AND MAIN = 'TRADE DEBTORS'`;
 
       // Add SPO filter only for non-ADMIN users (except for specific conditions)
-      if (
-        !isAdmin &&
-        username?.toLowerCase() !== "zain" &&
-        !usertype?.toLowerCase().includes("sm") &&
-        !usertype?.toLowerCase().includes("operator") &&
-        !usertype?.toLowerCase().includes("cust")
-      ) {
+      if (usertype?.toLowerCase() === "spo") {
         sql += ` AND SPO LIKE '%' + @name + '%'`;
       }
 
       // for SM userType
-      if (usertype?.toLowerCase() === `sm-kr`) {
+      if (usertype.toLowerCase() === `sm-kr`) {
         sql += ` AND Route LIKE 'kr%'`;
-      } else if (usertype?.toLowerCase() === `sm-sr`) {
+      } else if (usertype.toLowerCase() === `sm-sr`) {
         sql += ` AND Route LIKE 'sr%'`;
-      } else if (usertype?.toLowerCase() === `sm-classic`) {
+      } else if (usertype.toLowerCase() === `sm-classic`) {
         sql += ` AND SPO LIKE '%classic%'`;
       }
 

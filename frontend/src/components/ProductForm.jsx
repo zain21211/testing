@@ -4,12 +4,13 @@ import ProductSelectionGrid from "./ProductSelectionGrid";
 import ProductDetailsGrid from "./ProductDetailsGrid";
 
 export default function ProductForm(props) {
-    const { error, setError, selectedProduct } = props;
+    const { error, setError, selectedProduct, user } = props;
+    const userType = user?.userType?.toLowerCase();
 
     return (
         <>
             <ErrorAlert error={error} setError={setError} />
-            <ProductSelectionGrid {...props} />
+            <ProductSelectionGrid {...props} userType={userType} />
             {selectedProduct && <ProductDetailsGrid {...props} />}
         </>
     );

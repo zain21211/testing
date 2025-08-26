@@ -107,9 +107,10 @@ const DataTable = ({
     [enableDelete, onDelete, apiEndpoint]
   );
 
-  const handleDocumentClick = (docNo) => {
-    if (docNo) {
-      const url = isLedgerTable ? `/invoice/${docNo}` : `/pack/${docNo}`;
+  const handleDocumentClick = (row) => {
+    if (row) {
+      const doc = row.Doc || row.doc;
+      const url = isLedgerTable ? `/invoice/${doc}` : `/pack/${doc}`;
       navigate(url);
     }
   };
@@ -133,22 +134,6 @@ const DataTable = ({
             <DeleteIcon fontSize="small" />
           </IconButton>
         );
-      } else if ((column?.id?.toLowerCase().includes("doc") && row.Type?.toLowerCase().includes("sale")) && value) {
-        cellContent = (
-          <Typography
-            onClick={() => handleDocumentClick(value)}
-            align={row.align || "left"}
-
-            sx={{
-              color: row.status === "pending" ? "black" : (column?.id?.toLowerCase().includes("doc") && shouldHighlightRow) ? "white" : "primary.main",
-              fontWeight: "bold", fontSize: "1.2rem", textDecoration: "none",
-              "&:hover": { textDecoration: "underline", color: row.status === "pending" ? "white!important" : "" },
-              cursor: "pointer",
-            }}
-          >
-            {value}
-          </Typography>
-        );
       } else if (isLedgerTable && column?.id?.toLowerCase() === "date") {
         cellContent = formatDate(value);
       } else {
@@ -158,12 +143,12 @@ const DataTable = ({
       return (
         <TableCell
           key={column.id}
-          align={"left"}
+          align={column.align || "left"}
           sx={{
             border: "2px solid #000",
             color: shouldHighlightRow ? "white !important" : "black",
-            fontWeight: "bold", padding: "4px", letterSpacing: "normal", textTransform: "uppercase", boxSizing: "border-box",
-            fontSize: column.label.includes("ust") ? { xs: "2.5rem", sm: "2.5rem" } : { xs: "1.1rem", sm: "1.2rem" },
+            fontWeight: "bold", padding: isLedgerTable ? '5px' : "1px 1.1rem ", letterSpacing: "normal", textTransform: "uppercase", boxSizing: "border-box",
+            fontSize: column.label.includes("ust") ? { xs: "2.5rem", sm: "2.5 rem" } : { xs: "1.1rem", sm: "1.5rem" },
             fontFamily: 'Jameel Noori Nastaleeq, serif !important',
             ...(usage?.includes('coa')
               ? { // **VIRTUALIZED STYLES**
@@ -226,7 +211,7 @@ const DataTable = ({
 
   return (
     <Paper sx={{ width: "100%", overflow: "hidden", borderRadius: "7px", padding: 0, fontSize: "2rem", maxHeight: usage?.includes('coa') ? "80vh" : "auto" }}>
-      <TableContainer sx={{ maxHeight: "inherit", overflow: 'hidden' }}>
+      <TableContainer sx={{ maxHeight: "inherit", }}>
         <Table stickyHeader aria-label="sticky table" component={usage?.includes('coa') ? "div" : "table"} sx={{ fontFamily: '"Times New Roman", Times, serif', borderCollapse: "collapse", border: "1px solid #ddd" }}>
           <TableHead component={usage?.includes('coa') ? "div" : "thead"}>
             <TableRow component={usage?.includes('coa') ? "div" : "tr"} sx={{ display: usage?.includes('coa') ? 'flex' : 'table-row' }}>
@@ -250,7 +235,8 @@ const DataTable = ({
           </TableHead>
           <TableBody component={usage?.includes('coa') ? "div" : "tbody"}>
             {tableData.length === 0 ? (
-              <TableRow><TableCell colSpan={visibleColumns.length} align={"left"} sx={{ py: 5 }}><Skeleton height={30} width="80%" /></TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={visibleColumns.length} align={"left"} sx={{ py: 5 }}><Skeleton height={30} width="80%" /></TableCell></TableRow>
             ) : usage?.includes('coa') ? (
               <FixedSizeList height={tableHeight - 60} itemCount={tableData.length} itemSize={55} width="100%" innerElementType={InnerElementType}>
                 {VirtualizedRow}
@@ -259,7 +245,12 @@ const DataTable = ({
               tableData.map((row, index) => {
                 const { rowSx, shouldHighlightRow } = getRowStyles(row);
                 return (
-                  <TableRow hover sx={rowSx} role="checkbox" tabIndex={-1} key={rowKey ? row[rowKey] : index}>
+                  <TableRow hover sx={rowSx} onClick={
+                    row.Type?.toLowerCase().includes("sale")
+                      ? () => handleDocumentClick(row)
+                      : undefined
+                  }
+                    role="checkbox" tabIndex={-1} key={rowKey ? row[rowKey] : index}>
                     {renderRowCells(row, shouldHighlightRow)}
                   </TableRow>
                 );

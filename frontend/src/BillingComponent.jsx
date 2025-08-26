@@ -51,13 +51,13 @@ const theme = createTheme({
 });
 
 const productDetail = [
-  { label: "Product", size: 5, align: "left" },
-  { label: "B.Q", size: 1 },
-  { label: "FOC", size: 1 },
-  // { label: "T.Q", size: 1 },
-  { id: "R", label: "Rate", size: 1 },
+  { id: "Amount", label: "Amount", size: 3 },
   { label: "D%", size: 1 },
-  { id: "A", label: "Amount", size: 1 },
+  // { label: "T.Q", size: 1 },
+  { id: "Rate", label: "Rate", size: 1 },
+  { label: "FOC", size: 1 },
+  { label: "B.Q", size: 1 },
+  { label: "Product", size: 3, align: "left" },
 ];
 
 const invoiceAPI = `${import.meta.env.VITE_API_URL}/invoices`;
@@ -313,20 +313,20 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                     align: "center",
                     width:
                       field.label === "Product"
-                        ? "25%"
+                        ? "20%"
                         : field.label === "FOC"
                           ? "2%"
                           : field.label === "Price"
                             ? "10%"
                             : field.label === "Amount"
-                              ? "5%"
+                              ? "10%"
                               : "5%", // Reduced Amount column width to 8%
-                    minWidth: field.label === "Product" ? 300 : "5%", // Adjusted minimum width for Product column
+                    minWidth: field.label === "Product" ? 250 : "5%", // Adjusted minimum width for Product column
                     render: (value, row) => {
                       let displayValue = "";
                       if (!row) <Skeleton height={30} width="80%" />;
                       if (field.label === "Product") {
-                        displayValue = ` ${row.Company?.toUpperCase() || ""} - ${row.Product?.toUpperCase() || "error"
+                        displayValue = ` ${row.Category?.toUpperCase() || ""} - ${row.Company?.toUpperCase() || ""} - ${row.Product?.toUpperCase() || "error"
                           }`;
                       } else if (field.label === "B.Q") {
                         displayValue = row.BQ || "0";
@@ -334,18 +334,23 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                         displayValue = row.FOC || "0";
                       } else if (field.label === "T.Q") {
                         displayValue = row.TQ || "0";
-                      } else if (field.id === "R") {
+                      } else if (field.id === "Rate") {
                         displayValue = row.Price || "0";
                       } else if (field.label === "D%") {
                         displayValue = row.Disc2 || "0";
-                      } else if (field.id === "A") {
+                      } else if (field.id === "Amount") {
                         displayValue = formatCurrency(row.Amount) || "0";
                       }
 
                       return (
                         <TextField
                           variant="standard"
-                          value={displayValue}
+                          value={
+                            field.label === "Product"
+                              ? row.Product || "error" // ✅ don't duplicate, we'll show with adornment
+                              : displayValue
+                          }
+                          multiline={field.label === "Product"}   // ✅ only multiline for Product
                           type={
                             ["Quantity", "Price", "Discount"].includes(
                               field.label
@@ -355,16 +360,28 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                           }
                           InputProps={{
                             disableUnderline: true,
+                            startAdornment:
+                              field.label === "Product" ? (
+                                <div style={{ display: "flex", flexDirection: 'column', width: "50%" }}>
+                                  <div style={{ fontWeight: "bold" }} dir="ltr">
+                                    {row.Company?.toUpperCase() || ""}
+                                  </div>
+                                  <div style={{ fontWeight: "bold" }} dir="ltr">
+                                    {row.Category?.toUpperCase() || ""}
+                                  </div>
+                                </div>
+                              ) : null,
+                            sx: {},
                           }}
                           inputProps={{
                             style: {
-                              padding: field.label === "Product" ? "0px 5px" : "0px",
+                              // padding: field.label === "Product" ? "0px 1px" : "0px",
                               fontFamily: 'Jameel Noori Nastaleeq, serif',
                               fontWeight: "bold",
                               textAlign:
                                 field.label === "Product" ? "right" : "center",
                               fontSize:
-                                field.label === "Product" ? "1.3rem" : "1rem",
+                                field.label === "Product" ? "1.8rem" : "1rem",
                               whiteSpace: "normal", // Enable text wrapping
                               wordWrap: "break-word", // Break long words
                             },
@@ -383,6 +400,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                       border: "1px solid #ddd",
                       padding: ".25rem",
                       boxSizing: "border-box",
+                      overflowWrap: "anywhere",
                     },
                     width: "100%",
                     // tableLayout: "fixed",

@@ -6,7 +6,8 @@ function makeWildcardRegex(input) {
         const pattern = input
             .toLowerCase()
             .replace(/\*/g, ".*") // * as wildcard
-            .replace(/\?/g, "."); // ? as single char
+            .replace(/\?/g, ".") // ? as single char
+            .replace(/%/g, ".*"); // % → .* (multi-char wildcard)
         return new RegExp(pattern);
     } catch {
         return null; // invalid regex
@@ -42,7 +43,6 @@ export function useFilterAutocomplete(
         if (initialDataLoading) return [];
 
 
-        console.log("this is the product", productID)
         let filtered = [...products];
 
         // Filter by Company (must start with input)

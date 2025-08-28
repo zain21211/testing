@@ -18,7 +18,7 @@ function createCustomerState(key) {
     phoneNumber: loadFromStorage(`${key}_phoneNumber`, null),
     customerInput: loadFromStorage(`${key}_customerInput`, ""),
     ID: loadFromStorage(`${key}_ID`, null),
-    customerSuggestions: [],
+    // customerSuggestions: [],
     popperOpen: false,
   };
 }
@@ -72,6 +72,7 @@ const customerSearchSlice = createSlice({
     },
 
     setIDWithKey: (state, action) => {
+      console.log(action.payload);
       const { key, value } = action.payload;
       state.customers[key].ID = value;
       localStorage.setItem(`${key}_ID`, JSON.stringify(value));
@@ -89,7 +90,6 @@ const customerSearchSlice = createSlice({
 
     clearSelection: (state, action) => {
       const { key } = action.payload;
-      state.customers[key] = createCustomerState(key);
 
       // Clear from storage
       [
@@ -98,10 +98,11 @@ const customerSearchSlice = createSlice({
         `${key}_customerInput`,
         `${key}_phoneNumber`,
       ].forEach((k) => localStorage.removeItem(k));
+
+      state.customers[key] = createCustomerState(key);
     },
 
-    resetCustomerSearch: () => {
-      // Clear all keys in localStorage
+    resetCustomerSearch: (state) => {
       CUSTOMER_KEYS.forEach((key) => {
         [
           `${key}_selectedCustomer`,
@@ -109,14 +110,9 @@ const customerSearchSlice = createSlice({
           `${key}_customerInput`,
           `${key}_phoneNumber`,
         ].forEach((k) => localStorage.removeItem(k));
-      });
 
-      return {
-        customers: CUSTOMER_KEYS.reduce((acc, key) => {
-          acc[key] = createCustomerState(key);
-          return acc;
-        }, {}),
-      };
+        state.customers[key] = createCustomerState(key);
+      });
     },
   },
 });

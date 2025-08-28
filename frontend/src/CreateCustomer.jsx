@@ -1,20 +1,41 @@
-import React, { useCallback, useRef, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from "react";
 import debounce from "lodash.debounce";
 import {
-    TextField, Button, Card, CardContent, Typography, Box, Autocomplete, List,
+    TextField,
+    Button,
+    Card,
+    CardContent,
+    Typography,
+    Box,
+    Autocomplete,
+    List,
     ListItem,
     ListItemText,
     Tabs,
     Tab,
     Divider,
-} from '@mui/material';
-import axios from 'axios';
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+} from "@mui/material";
+import axios from "axios";
 
-const fields = ["Name", "Urdu name", 'Address', "Route", 'Phone Number', 'Whatsapp', "Credit Days", "Credit Limit"];
-const discountOptions = ['d1', 'd2']; // example options
+const fields = [
+    "Name",
+    "Urdu name",
+    "Address",
+    "Route",
+    "Phone Number",
+    "Whatsapp",
+    "Credit Days",
+    "Credit Limit",
+];
+const discountOptions = ["d1", "d2"]; // example options
+const types = ["Customer", "Prospect", "Workshop",];
 
-const cleanString = string => {
-    const cleaned = string?.toLowerCase().replace(/\s/g, '');
+const cleanString = (string) => {
+    const cleaned = string?.toLowerCase().replace(/\s/g, "");
     return cleaned;
 };
 
@@ -22,11 +43,7 @@ function TabPanel(props) {
     const { children, value, index, ...other } = props;
 
     return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            {...other}
-        >
+        <div role="tabpanel" hidden={value !== index} {...other}>
             {value === index && (
                 <Box sx={{ p: 2 }}>
                     <Typography>{children}</Typography>
@@ -36,20 +53,28 @@ function TabPanel(props) {
     );
 }
 
-
-export function MyAutocomplete({ field, accounts, handleChange, cleanString, errors, urdu }) {
+export function MyAutocomplete({
+    field,
+    accounts,
+    handleChange,
+    cleanString,
+    errors,
+    urdu,
+}) {
     const [inputValue, setInputValue] = useState("");
     const [urduInputValue, setUrduInputValue] = useState("");
     const [filteredOptions, setFilteredOptions] = useState([]);
 
     useEffect(() => {
+
         if (inputValue.length > 2) {
             // Debounce filtering by 300ms
             const timeout = setTimeout(() => {
                 setFilteredOptions(
-                    accounts?.filter(acc =>
-                        acc.toLowerCase().includes(inputValue.toLowerCase()) ||
-                        acc.toLowerCase().includes(urduInputValue.toLowerCase())
+                    accounts?.filter(
+                        (acc) =>
+                            acc.toLowerCase().includes(inputValue.toLowerCase()) ||
+                            acc.toLowerCase().includes(urduInputValue.toLowerCase())
                     ) ?? []
                 );
             }, 300);
@@ -60,15 +85,13 @@ export function MyAutocomplete({ field, accounts, handleChange, cleanString, err
         }
     }, [inputValue, accounts]);
 
-    // for urdu names 
+    // for urdu names
     useEffect(() => {
         if (urduInputValue.length > 2) {
             // Debounce filtering by 300ms
             const timeout = setTimeout(() => {
                 setFilteredOptions(
-                    urdu?.filter(acc =>
-                        acc?.includes(urduInputValue)
-                    ) ?? []
+                    urdu?.filter((acc) => acc?.includes(urduInputValue)) ?? []
                 );
             }, 300);
 
@@ -77,17 +100,11 @@ export function MyAutocomplete({ field, accounts, handleChange, cleanString, err
             setFilteredOptions([]);
         }
     }, [urdu, urduInputValue]);
-    // Debounced form updater
-    const debouncedHandleChange = useRef(
-        debounce((name, value) => {
-            handleChange({ target: { name, value } });
-        }, 500) // 0.5s delay
-    ).current;
 
     return (
         <Autocomplete
             freeSolo
-            key={field}
+            // key={field}
             sx={{ gridColumn: "span 2" }}
             options={filteredOptions}
             inputValue={field.includes("name") ? urduInputValue : inputValue}
@@ -97,7 +114,9 @@ export function MyAutocomplete({ field, accounts, handleChange, cleanString, err
                 } else {
                     setInputValue(newValue);
                 }
-                debouncedHandleChange(cleanString(field), newValue);
+                // debouncedHandleChange(cleanString(field), newValue);
+                handleChange({ target: { name: cleanString(field), value: newValue } });
+
             }}
             onChange={(_, newValue) => {
                 handleChange({ target: { name: cleanString(field), value: newValue } });
@@ -112,15 +131,16 @@ export function MyAutocomplete({ field, accounts, handleChange, cleanString, err
                         ...params.InputProps,
                         sx: {
                             fontSize: field.includes("name") ? "2rem" : "1.3rem",
-                            fontFamily: field.includes("name") ? 'Jameel Noori Nastaleeq, serif !important' : '',
+                            fontFamily: field.includes("name")
+                                ? "Jameel Noori Nastaleeq, serif !important"
+                                : "",
                             dir: field.includes("name") ? "rtl" : "ltr",
                             textAlign: field.includes("name") ? "right" : "left",
-                        }
-
+                        },
                     }}
                     disablePortal
                     ListboxProps={{
-                        style: { maxHeight: '200px', overflow: 'auto' }
+                        style: { maxHeight: "200px", overflow: "auto" },
                     }}
                     PopperProps={{
                         sx: { zIndex: 1300 }, // Above dialogs
@@ -133,7 +153,7 @@ export function MyAutocomplete({ field, accounts, handleChange, cleanString, err
                         },
                     }}
                     InputLabelProps={{
-                        sx: { fontSize: "1.3rem" }
+                        sx: { fontSize: "1.3rem" },
                     }}
                     fullWidth
                     required
@@ -144,26 +164,25 @@ export function MyAutocomplete({ field, accounts, handleChange, cleanString, err
     );
 }
 
-
 const tabStyle = {
     // my: 1,
-    padding: '0 1rem',
-    color: '#000',
+    padding: "0 1rem",
+    color: "#000",
     // fontSize: '1rem',
-    minWidth: 'unset',
-    fontWeight: 'bold',
-    textTransform: 'uppercasse',
-    transition: 'all 0.3s ease-in',
-    gridColumn: 'span 1',
-    '&.Mui-selected': {
-        color: '#000',
-        borderRadius: '2rem',
+    minWidth: "unset",
+    fontWeight: "bold",
+    textTransform: "uppercasse",
+    transition: "all 0.3s ease-in",
+    gridColumn: "span 1",
+    "&.Mui-selected": {
+        color: "#000",
+        borderRadius: "2rem",
         backgroundColor: "#f0f0f0!important",
-        border: '0px solid #ccc',
+        border: "0px solid #ccc",
         boxShadow:
-            '0 2px 4px rgba(112, 112, 112, 0.14), 0 -2px 4px rgba(112, 112, 112, 0.14)',
+            "0 2px 4px rgba(112, 112, 112, 0.14), 0 -2px 4px rgba(112, 112, 112, 0.14)",
     },
-}
+};
 
 const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
     const [formData, setFormData] = useState({});
@@ -174,38 +193,38 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
     const [discountList, setDiscountList] = useState([]);
     const [tabValue, setTabValue] = useState(0);
     const [filteredOptions, setFilteredOptions] = useState([]);
-    const [inputValue, setInputValue] = useState('');
-    const [urduInputValue, setUrduInputValue] = useState('');
+    const [inputValue, setInputValue] = useState("");
+    const [urduInputValue, setUrduInputValue] = useState("");
 
     const handleTabChange = (event) => {
         const value = event.target.textContent.toLowerCase();
-        setTabValue(value === 'create' ? 0 : 1);
+        setTabValue(value === "create" ? 0 : 1);
     };
 
-
-
     useEffect(() => {
-        setCompanyOptions(["fit", "excel", 'strong']);
-        setListOptions(['A', 'B']);
-
+        setCompanyOptions(["fit", "excel", "strong"]);
+        setListOptions(["A", "B"]);
     }, []);
 
     const discountFields = [
         {
-            label: 'Company',
-            options: companyOptions
+            label: "Company",
+            options: companyOptions,
         },
         {
             label: "List",
-            options: listOptions
+            options: listOptions,
         },
     ];
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-        setErrors({ ...errors, [name]: '' });
+        setFormData(prev => {
+            return { ...prev, [name]: value };   // ✅ merges safely
+        });
+        setErrors(prev => ({ ...prev, [name]: "" }));
     };
+
 
     const handleDiscount = (e) => {
         const { name, value } = e.target;
@@ -213,43 +232,42 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
     };
 
     const handleAdd = () => {
-        if (discount && Object.values(discount).some(v => v)) {
+        if (discount && Object.values(discount).some((v) => v)) {
             // Define your key order
             const keyOrder = ["company", "list", "d1", "d2"];
 
             // Reorder the discount object
             const ordered = {};
-            keyOrder.forEach(key => {
+            keyOrder.forEach((key) => {
                 if (key in discount) {
                     ordered[key] = discount[key];
                 }
             });
 
             // Add to the list
-            setDiscountList(prev => [...prev, ordered]);
+            setDiscountList((prev) => [...prev, ordered]);
 
             // Reset for next entry
             setDiscount(null);
         }
     };
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const finalFormData = { ...formData, discounts: discountList };
             console.log(finalFormData);
-            await axios.post('http://localhost:3001/api/customers', finalFormData, {
+            await axios.post("http://localhost:3001/api/customers", finalFormData, {
                 headers: {
-                    'Content-Type': 'application/json',
-                }
+                    "Content-Type": "application/json",
+                },
             });
             onCustomerCreated();
             setFormData({});
             setDiscountList([]);
         } catch (error) {
-            console.error('Error creating customer:', error);
-            alert('Failed to create account.');
+            console.error("Error creating customer:", error);
+            alert("Failed to create account.");
         }
     };
 
@@ -262,9 +280,10 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
             // Debounce filtering by 300ms
             const timeout = setTimeout(() => {
                 setFilteredOptions(
-                    accounts?.filter(acc =>
-                        acc.toLowerCase().includes(inputValue.toLowerCase()) ||
-                        acc.toLowerCase().includes(urduInputValue.toLowerCase())
+                    accounts?.filter(
+                        (acc) =>
+                            acc.toLowerCase().includes(inputValue.toLowerCase()) ||
+                            acc.toLowerCase().includes(urduInputValue.toLowerCase())
                     ) ?? []
                 );
             }, 300);
@@ -277,28 +296,28 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
     return (
         <Card sx={{ boxShadow: 2, borderRadius: 2 }}>
             <CardContent sx={{ p: 2 }}>
-
                 {/* add tabs */}
-                <Tabs value={tabValue} onChange={handleTabChange}
-                    TabIndicatorProps={{ style: { display: 'none' } }}
+                <Tabs
+                    value={tabValue}
+                    onChange={handleTabChange}
+                    TabIndicatorProps={{ style: { display: "none" } }}
                     sx={{
                         mb: 2,
                         borderRadius: "2rem",
-                        backgroundColor: '#e0e0e0',
+                        backgroundColor: "#e0e0e0",
                         boxShadow: `
                 inset 0 2px 4px rgba(112, 112, 112, 0.14),
                 inset 0 -2px 4px rgba(112, 112, 112, 0.14)
                 `,
-                        '& .MuiTabs-flexContainer': {
-                            display: 'flex',
-                            justifyContent: 'space-between', // space tabs evenly
+                        "& .MuiTabs-flexContainer": {
+                            display: "flex",
+                            justifyContent: "space-between", // space tabs evenly
                         },
-                        '& .MuiTab-root': {
+                        "& .MuiTab-root": {
                             flex: 1, // make each tab take equal width
-                            maxWidth: 'none', // remove default max width
-                        }
+                            maxWidth: "none", // remove default max width
+                        },
                     }}
-
                 >
                     <Tab label="create" sx={tabStyle} disableRipple />
                     <Tab label="update" sx={tabStyle} disableRipple />
@@ -311,64 +330,37 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                     </Typography>
                     <Box component="form" onSubmit={handleSubmit}>
                         {/* Customer Fields */}
-                        <Box sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: 1.5
-                        }}>
-                            {fields.map(field => {
-                                return field.toLocaleLowerCase().includes('name') ? (
-                                    <MyAutocomplete field={field} accounts={accounts} handleChange={handleChange} cleanString={cleanString} urdu={urdu} errors={!!errors[cleanString(field)]} />
-                                    // <Autocomplete
-                                    //     freeSolo
-                                    //     key={field}
-                                    //     sx={{ gridColumn: 'span 2' }}
-                                    //     options={filteredOptions}
-                                    //     inputValue={field.includes("name") ? urduInputValue : inputValue} // Use urduInputValue for name fields
-                                    //     onInputChange={(_, newValue) => {
-                                    //         field.includes("name") ? setUrduInputValue(newValue) : setInputValue(newValue)
-                                    //         debouncedHandleChange(cleanString(field), newValue);
-                                    //         // setTimeout(() => {
-                                    //         //     handleChange({ target: { name: cleanString(field), value: newValue } })
-                                    //         // }, 1000); // Delay to allow for autocomplete suggestions
-                                    //     }} // Only this handles typing
-                                    //     onChange={(_, newValue) => {
-                                    //         // Handle selection separately
-                                    //         handleChange({ target: { name: cleanString(field), value: newValue } });
-                                    //     }}
-                                    //     renderInput={(params) => (
-                                    //         <TextField
-                                    //             {...params}
-                                    //             label={field}
-                                    //             error={!!errors[cleanString(field)]}
-                                    //             helperText={errors[cleanString(field)]}
-                                    //             InputProps={{
-                                    //                 ...params.InputProps,
-                                    //                 sx: { fontSize: '1.3rem' }
-                                    //             }}
-                                    //             InputLabelProps={{
-                                    //                 sx: { fontSize: '1.3rem' }
-                                    //             }}
-                                    //             fullWidth
-                                    //             required
-                                    //             size="small"
-                                    //         />
-                                    //     )}
-                                    // />
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, 1fr)",
+                                gap: 1.5,
+                            }}
+                        >
+                            {fields.map((field) => {
+                                return field.toLocaleLowerCase().includes("name") ? (
+                                    <MyAutocomplete
+                                        field={field}
+                                        accounts={accounts}
+                                        handleChange={handleChange}
+                                        cleanString={cleanString}
+                                        urdu={urdu}
+                                        errors={!!errors[cleanString(field)]}
+                                    />
                                 ) : (
                                     <TextField
                                         key={field}
                                         label={field}
                                         name={cleanString(field)}
-                                        value={formData[cleanString(field)] || ''}
+                                        value={formData[cleanString(field)] || ""}
                                         onChange={handleChange}
                                         error={!!errors[cleanString(field)]}
                                         helperText={errors[cleanString(field)]}
                                         InputProps={{
-                                            sx: { fontSize: '1.3rem' }
+                                            sx: { fontSize: "1.3rem" },
                                         }}
                                         InputLabelProps={{
-                                            sx: { fontSize: '1.3rem' }
+                                            sx: { fontSize: "1.3rem" },
                                         }}
                                         fullWidth
                                         required
@@ -376,7 +368,24 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                                     />
                                 );
                             })}
+                        </Box>
+                        <Box sx={{ ...tabStyle, marginTop: 2 }}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel id="type-label">Type</InputLabel>
+                                <Select
+                                    labelId="type-label"
+                                    value={formData.type}
+                                    name="type"
+                                    onChange={handleChange}
+                                >
+                                    {types.map((type, index) => (
 
+                                        <MenuItem key={index} value={type} sx={{ borderBottom: index < types.length - 1 ? '1px solid black' : undefined, m: 1 }}>
+                                            {type}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                         </Box>
 
                         {/* Discount Section Divider */}
@@ -385,29 +394,46 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                         </Divider>
 
                         {/* Discount Input Fields */}
-                        <Box sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(5, 1fr)',
-                            gap: 1.5,
-                            alignItems: 'center',
-                            mb: 1.5,
-                        }}>
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(5, 1fr)",
+                                gap: 1.5,
+                                alignItems: "center",
+                                mb: 1.5,
+                            }}
+                        >
                             {discountFields.map((field, index) => (
                                 <Autocomplete
                                     key={index}
                                     freeSolo
                                     options={field.options}
-                                    value={discount?.[cleanString(field.label)] || ''}
+                                    value={discount?.[cleanString(field.label)] || ""}
                                     onChange={(event, newValue) => {
                                         // Fires when selecting an option or pressing Enter
-                                        handleDiscount({ target: { name: cleanString(field.label), value: newValue } });
+                                        handleDiscount({
+                                            target: {
+                                                name: cleanString(field.label),
+                                                value: newValue,
+                                            },
+                                        });
                                     }}
                                     onInputChange={(event, newInputValue) => {
                                         // Fires on typing, clearing, pasting, etc.
-                                        handleDiscount({ target: { name: cleanString(field.label), value: newInputValue } });
+                                        handleDiscount({
+                                            target: {
+                                                name: cleanString(field.label),
+                                                value: newInputValue,
+                                            },
+                                        });
                                     }}
                                     renderInput={(params) => (
-                                        <TextField {...params} label={field.label} fullWidth size="small" />
+                                        <TextField
+                                            {...params}
+                                            label={field.label}
+                                            fullWidth
+                                            size="small"
+                                        />
                                     )}
                                 />
                             ))}
@@ -416,30 +442,50 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                                     key={field}
                                     label={field}
                                     name={cleanString(field)}
-                                    value={discount?.[cleanString(field)] || ''}
+                                    value={discount?.[cleanString(field)] || ""}
                                     onChange={handleDiscount}
                                     fullWidth
                                     size="small"
                                 />
                             ))}
-                            <Button onClick={handleAdd} variant="contained" color="primary" sx={{ height: '40px' }}>
+                            <Button
+                                onClick={handleAdd}
+                                variant="contained"
+                                color="primary"
+                                sx={{ height: "40px" }}
+                            >
                                 Add
                             </Button>
                         </Box>
 
                         {/* Applied Discounts List */}
                         {discountList?.length > 0 && (
-                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>
+                            <Box sx={{ border: "1px solid #e0e0e0", borderRadius: 1, p: 1 }}>
                                 <List dense sx={{ py: 0 }}>
                                     {discountList.map((item, index) => (
                                         <React.Fragment key={index}>
                                             <ListItem sx={{ py: 0.5 }}>
                                                 <ListItemText
                                                     primary={
-                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem 1rem' }}>
+                                                        <Box
+                                                            sx={{
+                                                                display: "flex",
+                                                                flexWrap: "wrap",
+                                                                gap: "0.25rem 1rem",
+                                                            }}
+                                                        >
                                                             {Object.entries(item).map(([key, value]) => (
-                                                                <Typography component="span" variant="body2" key={key} sx={{ textTransform: 'uppercase' }}>
-                                                                    <Typography variant="body2" component="span" sx={{ fontWeight: 'bold', }}>
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="body2"
+                                                                    key={key}
+                                                                    sx={{ textTransform: "uppercase" }}
+                                                                >
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        component="span"
+                                                                        sx={{ fontWeight: "bold" }}
+                                                                    >
                                                                         {key}:
                                                                     </Typography>
                                                                     {` ${String(value)}`}
@@ -449,7 +495,9 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                                                     }
                                                 />
                                             </ListItem>
-                                            {index < discountList.length - 1 && <Divider component="li" />}
+                                            {index < discountList.length - 1 && (
+                                                <Divider component="li" />
+                                            )}
                                         </React.Fragment>
                                     ))}
                                 </List>
@@ -458,9 +506,14 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
 
                         <DualCameraUpload />
 
-
                         {/* Submit Button */}
-                        <Button type="submit" sx={{ mt: 2, fontWeight: 'bold', fontSize: "1.2rem" }} variant="contained" color="primary" fullWidth>
+                        <Button
+                            type="submit"
+                            sx={{ mt: 2, fontWeight: "bold", fontSize: "1.2rem" }}
+                            variant="contained"
+                            color="primary"
+                            fullWidth
+                        >
                             Create Account
                         </Button>
                     </Box>
@@ -472,18 +525,21 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                         Update Customer
                     </Typography>
                     <Box component="form" onSubmit={handleSubmit}>
+
                         {/* Customer Fields */}
-                        <Box sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: 1.5
-                        }}>
-                            {["ACID", ...fields,].map(field => (
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, 1fr)",
+                                gap: 1.5,
+                            }}
+                        >
+                            {["ACID", ...fields].map((field) => (
                                 <TextField
                                     key={field}
                                     label={field}
                                     name={cleanString(field)}
-                                    value={formData[cleanString(field)] || ''}
+                                    value={formData[cleanString(field)] || ""}
                                     onChange={handleChange}
                                     error={!!errors[cleanString(field)]}
                                     helperText={errors[cleanString(field)]}
@@ -499,29 +555,46 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                         </Divider>
 
                         {/* Discount Input Fields */}
-                        <Box sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(5, 1fr)',
-                            gap: 1.5,
-                            alignItems: 'center',
-                            mb: 1.5,
-                        }}>
+                        <Box
+                            sx={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(5, 1fr)",
+                                gap: 1.5,
+                                alignItems: "center",
+                                mb: 1.5,
+                            }}
+                        >
                             {discountFields.map((field, index) => (
                                 <Autocomplete
                                     key={index}
                                     freeSolo
                                     options={field.options}
-                                    value={discount?.[cleanString(field.label)] || ''}
+                                    value={discount?.[cleanString(field.label)] || ""}
                                     onChange={(event, newValue) => {
                                         // Fires when selecting an option or pressing Enter
-                                        handleDiscount({ target: { name: cleanString(field.label), value: newValue } });
+                                        handleDiscount({
+                                            target: {
+                                                name: cleanString(field.label),
+                                                value: newValue,
+                                            },
+                                        });
                                     }}
                                     onInputChange={(event, newInputValue) => {
                                         // Fires on typing, clearing, pasting, etc.
-                                        handleDiscount({ target: { name: cleanString(field.label), value: newInputValue } });
+                                        handleDiscount({
+                                            target: {
+                                                name: cleanString(field.label),
+                                                value: newInputValue,
+                                            },
+                                        });
                                     }}
                                     renderInput={(params) => (
-                                        <TextField {...params} label={field.label} fullWidth size="small" />
+                                        <TextField
+                                            {...params}
+                                            label={field.label}
+                                            fullWidth
+                                            size="small"
+                                        />
                                     )}
                                 />
                             ))}
@@ -530,30 +603,50 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                                     key={field}
                                     label={field}
                                     name={cleanString(field)}
-                                    value={discount?.[cleanString(field)] || ''}
+                                    value={discount?.[cleanString(field)] || ""}
                                     onChange={handleDiscount}
                                     fullWidth
                                     size="small"
                                 />
                             ))}
-                            <Button onClick={handleAdd} variant="contained" color="primary" sx={{ height: '40px' }}>
+                            <Button
+                                onClick={handleAdd}
+                                variant="contained"
+                                color="primary"
+                                sx={{ height: "40px" }}
+                            >
                                 Add
                             </Button>
                         </Box>
 
                         {/* Applied Discounts List */}
                         {discountList?.length > 0 && (
-                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>
+                            <Box sx={{ border: "1px solid #e0e0e0", borderRadius: 1, p: 1 }}>
                                 <List dense sx={{ py: 0 }}>
                                     {discountList.map((item, index) => (
                                         <React.Fragment key={index}>
                                             <ListItem sx={{ py: 0.5 }}>
                                                 <ListItemText
                                                     primary={
-                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem 1rem' }}>
+                                                        <Box
+                                                            sx={{
+                                                                display: "flex",
+                                                                flexWrap: "wrap",
+                                                                gap: "0.25rem 1rem",
+                                                            }}
+                                                        >
                                                             {Object.entries(item).map(([key, value]) => (
-                                                                <Typography component="span" variant="body2" key={key} sx={{ textTransform: 'uppercase' }}>
-                                                                    <Typography variant="body2" component="span" sx={{ fontWeight: 'bold', }}>
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="body2"
+                                                                    key={key}
+                                                                    sx={{ textTransform: "uppercase" }}
+                                                                >
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        component="span"
+                                                                        sx={{ fontWeight: "bold" }}
+                                                                    >
                                                                         {key}:
                                                                     </Typography>
                                                                     {` ${String(value)}`}
@@ -563,7 +656,9 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                                                     }
                                                 />
                                             </ListItem>
-                                            {index < discountList.length - 1 && <Divider component="li" />}
+                                            {index < discountList.length - 1 && (
+                                                <Divider component="li" />
+                                            )}
                                         </React.Fragment>
                                     ))}
                                 </List>
@@ -571,13 +666,19 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
                         )}
 
                         {/* Submit Button */}
-                        <Button type="submit" sx={{ mt: 2, fontWeight: 'bold' }} variant="contained" color="primary" fullWidth>
+                        <Button
+                            type="submit"
+                            sx={{ mt: 2, fontWeight: "bold" }}
+                            variant="contained"
+                            color="primary"
+                            fullWidth
+                        >
                             Create Account
                         </Button>
                     </Box>
                 </TabPanel>
             </CardContent>
-        </Card >
+        </Card>
     );
 };
 
@@ -587,12 +688,13 @@ export function DualCameraUpload() {
     const [images, setImages] = useState({
         customer: null,
         shop: null,
+        agreement: null,
     });
 
     const handleImageChange = (event, type) => {
         if (event.target.files && event.target.files[0]) {
             const file = event.target.files[0];
-            setImages(prev => ({
+            setImages((prev) => ({
                 ...prev,
                 [type]: URL.createObjectURL(file),
             }));
@@ -601,7 +703,9 @@ export function DualCameraUpload() {
 
     return (
         <Box display="flex" flexDirection="column" gap={3} alignItems="center">
-            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, width: '100%' }}>
+            <Box
+                sx={{ display: "flex", flexDirection: "row", gap: 2, width: "100%" }}
+            >
                 {/* Customer photo input */}
                 <input
                     accept="image/*"
@@ -612,8 +716,15 @@ export function DualCameraUpload() {
                     onChange={(e) => handleImageChange(e, "customer")}
                 />
                 <label htmlFor="customer-upload">
-                    <Button variant="contained" component="span" color="primary" fontSize="1.2rem" width="100%" sx={{ fontSize: '1.2rem' }}>
-                        Take Customer Photo
+                    <Button
+                        variant="contained"
+                        component="span"
+                        color="primary"
+                        fontSize="1.2rem"
+                        width="100%"
+                        sx={{ fontSize: { xs: "1.2rem", sm: "" } }}
+                    >
+                        Customer Photo
                     </Button>
                 </label>
 
@@ -627,14 +738,48 @@ export function DualCameraUpload() {
                     onChange={(e) => handleImageChange(e, "shop")}
                 />
                 <label htmlFor="shop-upload">
-                    <Button variant="contained" component="span" color="secondary" width="100%" fontSize="1.2rem" sx={{ fontSize: '1.2rem' }}>
-                        Take Shop Photo
+                    <Button
+                        variant="contained"
+                        component="span"
+                        color="secondary"
+                        width="100%"
+                        fontSize="1.2rem"
+                        sx={{ fontSize: { xs: "1.2rem", sm: "" } }}
+                    >
+                        Shop Photo
+                    </Button>
+                </label>
+                {/* Agreement photo input */}
+                <input
+                    accept="image/*"
+                    capture="environment" // back camera for shop image
+                    style={{ display: "none" }}
+                    id="agreement-upload"
+                    type="file"
+                    onChange={(e) => handleImageChange(e, "agreement")}
+                />
+                <label htmlFor="agreement-upload">
+                    <Button
+                        variant="contained"
+                        component="span"
+                        color="secondary"
+                        width="100%"
+                        fontSize="1.2rem"
+                        sx={{ fontSize: { xs: "1.2rem", sm: "" } }}
+                    >
+                        Agreement Photo
                     </Button>
                 </label>
             </Box>
 
             {/* Preview */}
-            <Box mt={2} display="flex" flexDirection="row" gap={2} alignItems="center">
+            <Box
+                mt={2}
+                display="flex"
+                flexDirection="row"
+                gap={2}
+                alignItems="center"
+            >
                 {images.customer && (
                     <Box>
                         <h3>Customer Photo:</h3>
@@ -656,9 +801,17 @@ export function DualCameraUpload() {
                         />
                     </Box>
                 )}
+                {images.agreement && (
+                    <Box>
+                        <h3>Agreement Photo:</h3>
+                        <img
+                            src={images.agreement}
+                            alt="shop"
+                            style={{ maxWidth: "200px", borderRadius: "8px" }}
+                        />
+                    </Box>
+                )}
             </Box>
         </Box>
     );
 }
-
-

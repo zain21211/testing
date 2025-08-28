@@ -32,8 +32,6 @@ const turnoverReport = require("./routes/turnOverReport");
 const app = express();
 const port = 3000;
 
-const server = http.createServer(app); // create HTTP server
-
 setInterval(async () => {
   try {
     const pool = await dbConnection();
@@ -44,12 +42,23 @@ setInterval(async () => {
   }
 }, 30000); // every 45 seconds
 
+const server = http.createServer(app); // create HTTP server
+
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
   },
 });
+
+// store io inside express app
+app.set("io", io);
+
+// listen for socket connections
+io.on("connection", (socket) => {
+  console.log("🔌 Client connected:", socket.id);
+});
+
 // Middleware
 // app.use(cors({
 //   origin: ['http://localhost:5173', 'https://thin-signs-marry.loca.lt', "http://100.72.169.90:5173"], // include tunnel URL

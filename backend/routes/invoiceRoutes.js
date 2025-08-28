@@ -1,13 +1,17 @@
-const express = require('express');
-const invoiceControllers = require('../controllers/invoiceControllers');
+const express = require("express");
+const invoiceControllers = require("../controllers/invoiceControllers");
 
 const router = express.Router();
 
 // Route to get all invoices
-router.get('/', invoiceControllers.getInvoice);
+router.get("/", invoiceControllers.getInvoice);
 
 // Route to get a single invoice by ID
-router.get('/:id', invoiceControllers.getInvoiceByID);
-router.put('/:id/update', invoiceControllers.updateInvoice);
+router.get("/:id", invoiceControllers.getInvoiceByID);
+router.put("/:id/update", invoiceControllers.updateInvoice);
+
+// for locking/unlocking
+router.put("/:id/lock", invoiceControllers.lockInovice);
+router.put("/:id/unlock", invoiceControllers.unlockInvoice);
 
 module.exports = router;

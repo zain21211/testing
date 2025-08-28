@@ -19,9 +19,13 @@ import { useSearchParams } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
 // Importing Storage for localStorage management
 // import { useLocation } from "react-router-dom"; // Removed unused import
-
+import { useDispatch } from "react-redux";
 import DataTable from "./table";
 import LedgerSearchForm from "./CustomerSearch";
+import {
+  clearSelection,
+  setIDWithKey
+} from "./store/slices/CustomerSearch";
 
 // User specified formatCurrency with 0 decimal places - NOT CHANGING THIS
 const formatCurrency = (value) => {
@@ -102,6 +106,8 @@ const Ledger = () => {
   const [customerName, setCustomerName] = useState("");
   const storageKey = `accountID-/ledger`; // Unique key based on route
   const [ID, setID] = useLocalStorageState(storageKey, null);  // Use state for ID to allow updates
+  const usage = "ledger"
+  const dispatch = useDispatch()
 
   const [balanceInc, setBalanceInc] = useState(true); // State to track if balance is increasing
   // Safely parse userData and provide a default empty object if null or invalid
@@ -377,6 +383,11 @@ const Ledger = () => {
 
     // Only attempt fetch if acid is present in URL params
     if (acid) {
+      dispatch(clearSelection({ key: usage }));
+      setTimeout(() => {
+        dispatch(setIDWithKey({ key: usage, value: acid }));
+      }, 0);
+
       const params = {
         acid: acid,
         startDate: startDate,

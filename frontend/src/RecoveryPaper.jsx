@@ -16,7 +16,7 @@ import { takeScreenShot } from "./fuctions";
 import { useSelector } from "react-redux";
 import {
   setSelectedCustomer,
-  resetCustomerSearch,
+  clearSelection,
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
 import { useDispatch } from "react-redux";
@@ -120,7 +120,7 @@ const textBoxStyle = {
 const RecoveryPaper = () => {
   const dispatch = useDispatch();
   const { selectedCustomer } =
-    useSelector((state) => state.customerSearch.customers['recovery']);
+    useSelector((state) => state.customerSearch.customers['recovery'] || []);
 
   const [route, setRoute] = useLocalStorageState("recoveryPaperRoute", "");
   // const [accountID, setAccountID] = useLocalStorageState(
@@ -159,7 +159,7 @@ const RecoveryPaper = () => {
   const storageKey = `accountID-${routePath}`; // Unique key based on route
   const [accountID, setAccountID] = Storage(storageKey, null); // Use state for ID to allow updates
   const [searchParams] = useSearchParams();
-
+  const flag = true
   // const name = searchParams.get('name');
   const acid = searchParams.get('acid');
 
@@ -261,6 +261,7 @@ const RecoveryPaper = () => {
     salesBonus: { value: salesBonusExpense, setter: setSalesBonusExpense },
   };
 
+
   const cashInputRef = useRef(null);
   const navigate = useNavigate(); // Use navigate for routing
   const acidInputRef = useRef(null);
@@ -280,6 +281,10 @@ const RecoveryPaper = () => {
   // ["exp", "salary", "Sales Bonus" ]  ARIF
   // ["exp", "salary", "Sales Bonus" ]  salaman
 
+
+  useEffect(() => {
+    console.log("on reload", selectedCustomer)
+  }, [selectedCustomer])
 
   const handleSubmitExpenses = async () => {
     setIsLoading(true);
@@ -643,7 +648,7 @@ const RecoveryPaper = () => {
     }
 
     const newEntry = {
-      id: accountID,
+      id: selectedCustomer?.acid,
       name: selectedCustomer.name,
       UrduName: selectedCustomer.UrduName,
       description,
@@ -692,7 +697,7 @@ const RecoveryPaper = () => {
     setOnlineAmount("");
     setMeezanBankAmount("");
 
-    dispatch(resetCustomerSearch());
+    dispatch(clearSelection({ key: 'recovery' }));
     searchInputRef.current?.focus();
 
     // Clean up
@@ -756,7 +761,7 @@ const RecoveryPaper = () => {
 
   const makeExpenseEntry = async (entry) => {
     try {
-      const { amounts, custId: custId, userName, userType } = entry;
+      const { amounts, custId, userName, userType } = entry;
 
       console.log("makeExpenseEntry called with:", {
         amounts,
@@ -806,9 +811,8 @@ const RecoveryPaper = () => {
           custId,
           receivedAmount: amount,
           userName,
-          userType, // Pass userType; the API will use it if needed
-          // You might want to pass the date from the frontend if it's user-selectable
-          // date: new Date().toISOString(),
+          userType,
+          date: new Date().toISOString(),
         };
 
         if (KNOWN_EXPENSE_METHODS.includes(lowerMethodKey)) {
@@ -1131,195 +1135,187 @@ const RecoveryPaper = () => {
             </Box>
           </Box>
           {/* Customer Details Section */}
-          {accountID && (
-            <Box
-              sx={{
-                minHeight: "3em",
-                border: "1px solid #eee",
-                p: 1,
-                borderRadius: 1,
-                mt: 1,
-              }}
-            >
-              {(isLoading || loadingFinancials) && !error && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  display="flex"
-                  alignItems="center"
-                  gap={1}
-                >
-                  <CircularProgress size={16} /> Loading customer...
-                </Typography>
-              )}
-              {error && !isLoading && (
-                <Alert severity="error" sx={{ fontSize: "0.9rem", py: 0.5 }}>
-                  {error}
-                </Alert>
-              )}
-
-              {!isLoading && !error && selectedCustomer && (
-                <>
-
-                </>
-              )}
-              {!isLoading && !error && !selectedCustomer && accountID && (
-                <Typography variant="body2" color="textSecondary">
-                  Enter valid Account ID or search.
-                </Typography>
-              )}
-
-              {/* This Box now correctly wraps Description, Balance, and Remaining for layout as per original */}
-              <Box
-                display="grid"
-                gridTemplateColumns="repeat(6, 1fr)" // Original: 4 columns
-                alignItems={"center"}
-                gap={2}
+          <Box
+            sx={{
+              minHeight: "3em",
+              border: "1px solid #eee",
+              p: 1,
+              borderRadius: 1,
+              mt: 1,
+            }}
+          >
+            {(isLoading || loadingFinancials) && !error && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                display="flex"
+                alignItems="center"
+                gap={1}
               >
-                {/* Ledger Button — only if customer is selected */}
-                {selectedCustomer && (
-                  <Box
+                <CircularProgress size={16} /> Loading customer...
+              </Typography>
+            )}
+            {error && !isLoading && (
+              <Alert severity="error" sx={{ fontSize: "0.9rem", py: 0.5 }}>
+                {error}
+              </Alert>
+            )}
+
+            {!isLoading && !error && !selectedCustomer && accountID && (
+              <Typography variant="body2" color="textSecondary">
+                Enter valid Account ID or search.
+              </Typography>
+            )}
+
+            {/* This Box now correctly wraps Description, Balance, and Remaining for layout as per original */}
+            <Box
+              display="grid"
+              gridTemplateColumns="repeat(6, 1fr)" // Original: 4 columns
+              alignItems={"center"}
+              gap={2}
+            >
+              {/* Ledger Button — only if customer is selected */}
+              {selectedCustomer && (
+                <Box
+                  sx={{
+                    gridColumn: {
+                      xs: "span 2", // Half width on xs
+                      sm: "span 2",
+                      md: "span 2",
+                      xl: "span 2",
+                    },
+                    height: "100%", // Full height of the grid cell
+                  }}
+                >
+                  <Button
+                    onClick={handleLedgerClick}
+                    variant="contained"
+                    color="primary"
+                    fullWidth
                     sx={{
-                      gridColumn: {
-                        xs: "span 2", // Half width on xs
-                        sm: "span 2",
-                        md: "span 2",
-                        xl: "span 2",
+                      height: "90%", // Make button fill container height
+                      transition: "background-color 0.3s, color 0.3s",
+                      letterSpacing: "0.25em",
+                      "&:hover": {
+                        backgroundColor: "primary.dark", // Darker shade on hover
+                        color: "white",
+                        borderColor: "primary",
                       },
-                      height: "100%", // Full height of the grid cell
                     }}
                   >
-                    <Button
-                      onClick={handleLedgerClick}
-                      variant="contained"
-                      color="primary"
+                    LEDGER
+                  </Button>
+                </Box>
+              )}
+
+              {/* for description */}
+              <TextField
+                label="Description" // Original: "description"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                sx={{ gridColumn: { xs: "span 4", sm: "span 4" } }} // Adjusted to span appropriately
+              />
+
+              {/* Balance and Remaining (side by side) */}
+              {balance !== null && balance !== "" && selectedCustomer && (
+                <Box
+                  display="grid"
+                  gridTemplateColumns="repeat(3, 1fr)"
+                  gridColumn={{ xs: "span 6", sm: "span 6" }}
+                  alignItems="center"
+                  gap={2}
+                >
+                  <TextField
+                    label="Balance"
+                    type="text"
+                    value={balance}
+                    disabled
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiInputBase-input.Mui-disabled": {
+                        fontWeight: "bold",
+                        textAlign: "right",
+                        WebkitTextFillColor: "red !important",
+                        fontSize: "1.5rem",
+                      },
+                    }}
+                  />
+                  <TextField
+                    label="Remaining"
+                    type="text"
+                    value={remainingBalance}
+                    disabled
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiInputBase-input.Mui-disabled": {
+                        fontWeight: "bold",
+                        textAlign: "right",
+                        WebkitTextFillColor: "green !important",
+                        fontSize: "1.5rem",
+                      },
+                    }}
+                  />
+                  {/* OVERDUE Field */}
+                  {overDue !== null && (
+                    <TextField
+                      label="OVERDUE"
+                      type="text"
+                      value={overDue}
+                      disabled
                       fullWidth
-                      sx={{
-                        height: "90%", // Make button fill container height
-                        transition: "background-color 0.3s, color 0.3s",
-                        letterSpacing: "0.25em",
-                        "&:hover": {
-                          backgroundColor: "primary.dark", // Darker shade on hover
-                          color: "white",
-                          borderColor: "primary",
+                      InputLabelProps={{
+                        shrink: true,
+                        sx: {
+                          color: "black !important",
+                          fontWeight: "bold !important",
+                          backgroundColor: "white !important",
+                          paddingRight: 2,
+                          paddingLeft: "7px",
+                          borderRadius: "4px",
+                          fontSize: "1rem",
                         },
                       }}
-                    >
-                      LEDGER
-                    </Button>
-                  </Box>
-                )}
-
-                {/* for description */}
-                <TextField
-                  label="Description" // Original: "description"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  sx={{ gridColumn: { xs: "span 4", sm: "span 4" } }} // Adjusted to span appropriately
-                // size="small"
-                />
-
-                {/* Balance and Remaining (side by side) */}
-                {/* Balance and Remaining (side by side) */}
-                {balance !== null && balance !== "" && selectedCustomer && (
-                  <Box
-                    display="grid"
-                    gridTemplateColumns="repeat(3, 1fr)"
-                    gridColumn={{ xs: "span 6", sm: "span 6" }}
-                    alignItems="center"
-                    gap={2}
-                  >
-                    <TextField
-                      label="Balance"
-                      type="text"
-                      value={balance}
-                      disabled
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
+                      InputProps={{
+                        sx: {
+                          "& input.Mui-disabled": {
+                            WebkitTextFillColor:
+                              overDue !== "0.00"
+                                ? "white"
+                                : "black !important",
+                            textAlign: "right",
+                            fontWeight: "bold",
+                            fontSize: "1.5rem",
+                          },
+                        },
+                      }}
                       sx={{
-                        "& .MuiInputBase-input.Mui-disabled": {
-                          fontWeight: "bold",
-                          textAlign: "right",
-                          WebkitTextFillColor: "red !important",
-                          fontSize: "1.5rem",
+                        width: { xs: "100%", md: "150px" },
+                        "& .MuiOutlinedInput-root": {
+                          backgroundColor:
+                            overDue !== "0.00" ? "red" : "transparent",
+                          "& fieldset": {
+                            borderColor:
+                              overDue !== "0.00" ? "red" : undefined,
+                          },
+                          "&:hover fieldset": {
+                            borderColor:
+                              overDue !== "0.00" ? "red" : undefined,
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor:
+                              overDue !== "0.00" ? "red" : undefined,
+                          },
                         },
                       }}
                     />
-                    <TextField
-                      label="Remaining"
-                      type="text"
-                      value={remainingBalance}
-                      disabled
-                      size="small"
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        "& .MuiInputBase-input.Mui-disabled": {
-                          fontWeight: "bold",
-                          textAlign: "right",
-                          WebkitTextFillColor: "green !important",
-                          fontSize: "1.5rem",
-                        },
-                      }}
-                    />
-                    {/* OVERDUE Field */}
-                    {overDue !== null && (
-                      <TextField
-                        label="OVERDUE"
-                        type="text"
-                        value={overDue}
-                        disabled
-                        fullWidth
-                        InputLabelProps={{
-                          shrink: true,
-                          sx: {
-                            color: "black !important",
-                            fontWeight: "bold !important",
-                            backgroundColor: "white !important",
-                            paddingRight: 2,
-                            paddingLeft: "7px",
-                            borderRadius: "4px",
-                            fontSize: "1rem",
-                          },
-                        }}
-                        InputProps={{
-                          sx: {
-                            "& input.Mui-disabled": {
-                              WebkitTextFillColor:
-                                overDue !== "0.00"
-                                  ? "white"
-                                  : "black !important",
-                              textAlign: "right",
-                              fontWeight: "bold",
-                              fontSize: "1.5rem",
-                            },
-                          },
-                        }}
-                        sx={{
-                          width: { xs: "100%", md: "150px" },
-                          "& .MuiOutlinedInput-root": {
-                            backgroundColor:
-                              overDue !== "0.00" ? "red" : "transparent",
-                            "& fieldset": {
-                              borderColor:
-                                overDue !== "0.00" ? "red" : undefined,
-                            },
-                            "&:hover fieldset": {
-                              borderColor:
-                                overDue !== "0.00" ? "red" : undefined,
-                            },
-                            "&.Mui-focused fieldset": {
-                              borderColor:
-                                overDue !== "0.00" ? "red" : undefined,
-                            },
-                          },
-                        }}
-                      />
-                    )}
-                  </Box>
-                )}
-              </Box>
+                  )}
+                </Box>
+              )}
             </Box>
-          )}
+          </Box>
+
         </Box>
 
         {/* Payment Method Inputs */}
@@ -1529,7 +1525,9 @@ const RecoveryPaper = () => {
                 const amountDetails = [];
                 if (entry.amounts?.cash > 0)
                   amountDetails.push(
-                    `Cash: ${formatCurrency(entry.amounts.cash.toFixed(0))}`
+                    <span key="cash" style={{ fontWeight: "bold", color: 'black' }}>
+                      Cash: {formatCurrency(entry.amounts.cash.toFixed(0))}
+                    </span>
                   );
                 if (entry.amounts?.jazzcash > 0)
                   amountDetails.push(
@@ -1597,6 +1595,13 @@ const RecoveryPaper = () => {
                     <ListItemText
                       primary={
                         <Box component="span" display="inline-flex" alignItems="center" gap={1}>
+                          <span dir="ltr" style={{ fontSize: ".8rem" }}>
+                            {new Date(entry.timestamp).toLocaleString("en-GB", {
+                              timeZone: "Asia/Karachi",
+                              hour12: false,
+                            })}
+
+                          </span>
                           <span dir="ltr" style={{ fontSize: "1.5rem" }}>({entry.id})</span>
                           <span>{entry.UrduName || entry.name}</span>
                           <span dir="ltr">.{reversedIndex}</span>
@@ -1605,9 +1610,15 @@ const RecoveryPaper = () => {
 
 
                       secondary={
-                        amountDetails.length > 0
-                          ? `${amountDetails.join(" | ")}  |    Total: ${formatCurrency(entry.entryTotal?.toFixed(0))}`
-                          : `Total: ${formatCurrency(entry.entryTotal?.toFixed(0))}`
+                        <>
+                          {amountDetails.map((item, i) => (
+                            <React.Fragment key={i}>
+                              {item}
+                              {i < amountDetails.length - 1 && " | "}
+                            </React.Fragment>
+                          ))}
+                          {" | Total: "}{formatCurrency(entry.entryTotal?.toFixed(0))}
+                        </>
                       }
                       primaryTypographyProps={{
                         fontWeight: "bold",
@@ -1620,6 +1631,7 @@ const RecoveryPaper = () => {
                         fontSize: "1rem",
                         color: "text.secondary",
                         direction: "rtl", // optional for Urdu
+                        // fontWeight: entry.amounts?.cash ? "bold" : 'normal'
                       }}
                     />
 

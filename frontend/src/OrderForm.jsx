@@ -733,7 +733,13 @@ const OrderForm = () => {
                       disabled={loading}
                       size="small"
                     >
-                      <CloseIcon sx={{ color: "red", fontWeight: "bold" }} />
+                      <CloseIcon sx={{
+                        color: item.status
+                          ?.toLowerCase()
+                          .includes("short")
+                          ? "white" : "red",
+                        fontWeight: "bold"
+                      }} />
                     </IconButton>
                   }
                   sx={{

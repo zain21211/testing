@@ -11,7 +11,15 @@ import { formatCurrency } from "./utils/formatCurrency"; // if you have one
 import { useEffect } from "react";
 import { useLocalStorageState } from "./hooks/LocalStorage";
 
-export default function OrderPage({ selectedCustomer, user, userType, products, onAddProduct, companies, categories }) {
+export default function OrderPage({
+    selectedCustomer,
+    user,
+    userType,
+    products,
+    onAddProduct,
+    companies,
+    categories
+}) {
     // ------- State -------
     const [error, setError] = useState(null);
     const [productIDInput, setProductIDInput] = useLocalStorageState("productIDInput", "");
@@ -75,6 +83,14 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
             setProductInputValue('')
     }, [selectedProduct])
 
+    useEffect(() => {
+        if (companyFilter) return;
+        const userType = user?.userType?.toLowerCase();
+        if (userType.includes('cust'))
+            setCompanyFilter('fit');
+
+    }, [user, setCompanyFilter, companyFilter])
+
 
     // ------- Dummy handlers -------
     const debouncedSetCompanyFilter = (val) => setCompanyFilter(val);
@@ -82,7 +98,6 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
     const handleEnterkey = (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
-            console.log("Enter pressed");
             handleAddProductClick()
         }
     };
@@ -155,6 +170,7 @@ export default function OrderPage({ selectedCustomer, user, userType, products, 
         },
 
     }
+
     // ------- Loading state simulation -------
     const initialDataLoading = false;
     const hasStock = selectedProduct?.StockQty > 0;

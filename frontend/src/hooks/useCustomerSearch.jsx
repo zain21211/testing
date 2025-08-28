@@ -13,7 +13,6 @@ import {
     setCustomerSuggestions,
     setPopperOpen,
     clearSelection,
-    resetCustomerSearch,
 } from "../store/slices/CustomerSearch";
 import {
     fetchMasterCustomerList,
@@ -94,11 +93,16 @@ export const useCustomerSearch = ({
 
     // keep master list synced
     useEffect(() => {
-        console.log("this is the data ", fetchError)
         if (fetchError) return;
+
         if (data.length > 0 && !isEqual(data, masterCustomerList)) {
             const updated = [...data];
             dispatch(persistMasterCustomerList(updated));
+        }
+
+        if (masterCustomerList.length === 1) {
+            handleSelect(allCustomerOptions[0])
+            return;
         }
     }, [data, masterCustomerList, dispatch]);
 
@@ -209,7 +213,7 @@ export const useCustomerSearch = ({
 
     const handleReset = useCallback(() => {
         debouncedSetId.cancel();
-        dispatch(resetCustomerSearch()); // resets all
+        dispatch(clearSelection({ key: customerKey })); // resets all
         customerInputRef.current?.focus();
     }, [dispatch, debouncedSetId]);
 
@@ -293,3 +297,6 @@ export const useCustomerSearch = ({
         handleInputFocus,
     };
 };
+
+
+

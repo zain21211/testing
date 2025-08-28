@@ -70,6 +70,7 @@ const DataTable = ({
   isLedgerTable = false,
   usage = '',
   handleDoubleClick,
+  handleClick,
   tableHeight = 500,
 }) => {
   const navigate = useNavigate();
@@ -108,11 +109,16 @@ const DataTable = ({
   );
 
   const handleDocumentClick = (row) => {
-    if (row) {
-      const doc = row.Doc || row.doc;
-      const url = isLedgerTable ? `/invoice/${doc}` : `/pack/${doc}`;
+    const doc = row.Doc || row.doc;
+
+    if (row && isLedgerTable) {
+      const url = `/invoice/${doc}`;
       navigate(url);
+      return;
+
     }
+    // for packing
+    handleClick(doc);
   };
 
   const renderRowCells = (row, shouldHighlightRow) => {
@@ -154,7 +160,7 @@ const DataTable = ({
               ? { // **VIRTUALIZED STYLES**
                 flex: `0 0 ${resolvedCellWidth}px`, width: `${resolvedCellWidth}px`, display: 'flex',
                 alignItems: 'left', justifyContent: 'left', padding: "8px 10px", boxSizing: "border-box",
-                textWrap: "wrap", height: "auto", overflow: "hidden", minWidth: resolvedCellWidth, maxWidth: resolvedCellWidth,
+                textWrap: "wrap", height: "auto", minWidth: resolvedCellWidth, maxWidth: resolvedCellWidth,
               }
               : { // **STANDARD RESPONSIVE STYLES**
                 minWidth: column.minWidth, // Pass the responsive object {xs:.., md:..} directly to MUI

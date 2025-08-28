@@ -1,5 +1,5 @@
 // src/components/ProductSelectionGrid.jsx
-import { forwardRef, useEffect, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useState, useRef } from 'react';
 import {
     Box,
     TextField,
@@ -7,6 +7,11 @@ import {
     Checkbox,
     FormControlLabel,
     ListItemText,
+    useMediaQuery,
+    useTheme,
+    Popper,
+    Paper,
+    ClickAwayListener
 } from "@mui/material";
 
 const ProductSelectionGrid = forwardRef(({
@@ -34,7 +39,6 @@ const ProductSelectionGrid = forwardRef(({
     selectedProduct,
     setSelectedProduct,
     setProductID,
-    // setProductIDInput,
     setOrderQuantity,
     productInputRef,
     quantityInputRef,
@@ -45,6 +49,14 @@ const ProductSelectionGrid = forwardRef(({
     bigger
 }, ref) => {
 
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const [popupOpen, setPopupOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [keyboardOpen, setKeyboardOpen] = useState(false);
+    const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+    const popperRef = useRef(null);
+
     useImperativeHandle(ref, () => ({
         focus: () => {
             const input = productInputRef?.current?.querySelector('input');
@@ -52,7 +64,111 @@ const ProductSelectionGrid = forwardRef(({
         }
     }));
 
+    // Detect keyboard open/close
+    useEffect(() => {
+        const handleResize = () => {
+            const newViewportHeight = window.visualViewport?.height || window.innerHeight;
+            setViewportHeight(newViewportHeight);
+            // If viewport height is significantly reduced, keyboard is likely open
+            setKeyboardOpen(newViewportHeight < window.innerHeight * 0.8);
+        };
 
+        // Use visualViewport if available, otherwise fall back to window resize
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+        } else {
+            window.addEventListener('resize', handleResize);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize);
+            } else {
+                window.removeEventListener('resize', handleResize);
+            }
+        };
+    }, []);
+
+    // Adjust popper position when keyboard state changes
+    useEffect(() => {
+        if (popupOpen && popperRef.current && isMobile) {
+            const popper = popperRef.current;
+
+            if (keyboardOpen) {
+                // Position above keyboard
+                const keyboardHeight = window.innerHeight - viewportHeight;
+                popper.style.bottom = `${keyboardHeight + 10}px`;
+                popper.style.top = 'auto';
+                popper.style.maxHeight = `${viewportHeight - 20}px`;
+            } else {
+                // Center vertically
+                popper.style.top = '50%';
+                popper.style.bottom = 'auto';
+                popper.style.transform = 'translate(-50%, -50%)';
+                popper.style.maxHeight = '70vh';
+            }
+        }
+    }, [keyboardOpen, popupOpen, viewportHeight, isMobile]);
+
+    // Mobile popper with keyboard handling
+    const MobilePopper = ({ children, ...props }) => {
+        return (
+            <Popper
+                {...props}
+                ref={popperRef}
+                placement="bottom-start"
+                style={{
+                    position: 'fixed',
+                    width: '90vw',
+                    maxWidth: '90vw',
+                    zIndex: 1300,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    top: '50%',
+                    maxHeight: '70vh',
+                }}
+            >
+                <ClickAwayListener onClickAway={() => setPopupOpen(false)}>
+                    <Paper
+                        elevation={8}
+                        sx={{
+                            maxHeight: 'inherit',
+                            overflow: 'auto',
+                            WebkitOverflowScrolling: 'touch',
+                        }}
+                    >
+                        {children}
+                    </Paper>
+                </ClickAwayListener>
+            </Popper>
+        );
+    };
+
+    // Desktop popper remains the same
+    const DesktopPopper = ({ children, ...props }) => {
+        return (
+            <Popper
+                {...props}
+                placement="bottom-start"
+                style={{
+                    width: '100%',
+                    zIndex: 1300,
+                }}
+            >
+                <Paper
+                    elevation={8}
+                    sx={{
+                        maxHeight: '50vh',
+                        overflow: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        mt: 1,
+                    }}
+                >
+                    {children}
+                </Paper>
+            </Popper>
+        );
+    };
 
     return (
         <Box
@@ -88,6 +204,7 @@ const ProductSelectionGrid = forwardRef(({
                     labelTypographyProps={{ sx: { fontSize: biggerCheckboxLabelSize } }}
                 />
             </Box>
+
             {/* Product ID + Company */}
             <Box
                 sx={{
@@ -124,7 +241,8 @@ const ProductSelectionGrid = forwardRef(({
                             }}
                             renderInput={(params) => <TextField {...params} label="Company" />}
                             sx={{ ...bigger, flex: 1 }}
-                            disabled={initialDataLoading}
+                            disablePortal={isMobile}
+                            PopperComponent={isMobile ? MobilePopper : DesktopPopper}
                         />
                     </>
                 )}
@@ -138,11 +256,13 @@ const ProductSelectionGrid = forwardRef(({
                         debouncedSetCategoryFilter(val);
                     }}
                     renderInput={(params) => <TextField {...params} label="Model" />}
-                    disabled={initialDataLoading}
                     sx={{ ...bigger, flex: 1 }}
                     onFocus={(e) => e.target.select()}
+                    disablePortal={isMobile}
+                    PopperComponent={isMobile ? MobilePopper : DesktopPopper}
                 />
             </Box>
+
             {/* Product Autocomplete */}
             <Autocomplete
                 freeSolo
@@ -151,43 +271,35 @@ const ProductSelectionGrid = forwardRef(({
                         ? []
                         : filteredAutocompleteOptions ?? []
                 }
-
                 getOptionLabel={(option) => option?.Name || ""}
                 filterOptions={(x) => x}
                 isOptionEqualToValue={(option, value) => option?.ID === value?.ID}
                 inputValue={productInputValue}
                 value={selectedProduct}
-                // BUG FIX STARTS HERE
+                onOpen={(event) => {
+                    setPopupOpen(true);
+                    setAnchorEl(event.currentTarget);
+                }}
+                onClose={() => {
+                    setPopupOpen(false);
+                    setAnchorEl(null);
+                }}
                 onChange={(event, newValue) => {
-                    // This handler is triggered when a selection is made or cleared via the 'x'
                     setSelectedProduct(newValue);
                     if (newValue) {
-                        // On selection, update the input value and focus the next field
                         setProductInputValue(newValue.Name || "");
                         setOrderQuantity(0);
-                        // setError(null);
                         setTimeout(() => {
                             quantityInputRef.current?.focus();
                         }, 100);
                     } else {
-                        // If newValue is null (cleared with 'x'), ensure IDs are also cleared
                         setProductID(null);
                         setProductIDInput(null);
                     }
                 }}
                 onInputChange={(event, newInputValue, reason) => {
                     setProductInputValue(newInputValue);
-                    // If the user starts typing and the input no longer matches the selected product,
-                    // or if the user clears the input via backspace, we must clear the selection and IDs.
-                    if (reason === "input") {
-                        // if (selectedProduct && selectedProduct.Name !== newInputValue) {
-                        //     setSelectedProduct(null);
-                        //     setProductID(null);
-                        //     setProductIDInput(null);
-                        // }
-                    }
                 }}
-                // BUG FIX ENDS HERE
                 renderOption={(props, option, state) => {
                     return (
                         <Box component="li" {...props} key={option.ID}>
@@ -208,20 +320,16 @@ const ProductSelectionGrid = forwardRef(({
                                         </span>
                                     </>
                                 }
-                                primaryTypographyProps={{ noWrap: true, fontSize: "0.95rem" }} // ADJUSTED
+                                primaryTypographyProps={{ noWrap: true, fontSize: "0.95rem" }}
                                 secondaryTypographyProps={{
                                     noWrap: true,
                                     fontSize: "0.8rem",
-                                }} // ADJUSTED
+                                }}
                             />
                         </Box>
                     );
                 }}
-                slotProps={{
-                    popper: {
-                        sx: { minWidth: 350, width: "auto !important" },
-                    },
-                }}
+                PopperComponent={isMobile ? MobilePopper : DesktopPopper}
                 renderInput={(params) => (
                     <TextField
                         {...params}
@@ -243,7 +351,6 @@ const ProductSelectionGrid = forwardRef(({
                                 "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
                                     borderColor: isClaim ? "darkred !important" : undefined,
                                 },
-                                // Apply font size to the input element itself
                                 "& .MuiInputBase-input": { fontSize: biggerInputTextSize },
                             },
                         }}
@@ -252,13 +359,12 @@ const ProductSelectionGrid = forwardRef(({
                             sx: {
                                 ...params.InputLabelProps?.sx,
                                 color: isClaim ? "white" : undefined,
-                                // Apply font size to the label when shrunk
                                 "&.MuiInputLabel-shrink": { fontSize: biggerShrunkLabelSize },
                             },
                         }}
                         onKeyDown={(e) => {
                             if (
-                                (e.key === "Enter" || e.key === "Tab") &&
+                                (e.key === "Enter") &&
                                 !selectedProduct
                             ) {
                                 if (
@@ -281,10 +387,12 @@ const ProductSelectionGrid = forwardRef(({
                         }}
                     />
                 )}
-                sx={{ gridColumn: { xs: "span 3", sm: "span 3", md: "span 4" }, order: { xs: 1, sm: 1 }, }}
+                sx={{
+                    gridColumn: { xs: "span 3", sm: "span 3", md: "span 4" },
+                    order: { xs: 1, sm: 1 },
+                }}
                 disabled={initialDataLoading}
-                loading={initialDataLoading && !products?.length}
-            // noOptionsText={getNoOptionsText()}
+                disablePortal={isMobile}
             />
 
             {/* Urdu name */}
@@ -296,8 +404,6 @@ const ProductSelectionGrid = forwardRef(({
                     sx={{
                         gridColumn: "span 4",
                         order: { xs: 4, sm: 4 },
-
-                        // mt: 1,
                         "& .MuiInputBase-input.Mui-disabled": {
                             fontWeight: "bold",
                             fontFamily: "Jameel Noori Nastaleeq, serif",

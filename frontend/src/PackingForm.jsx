@@ -32,6 +32,7 @@ import {
     DeleteOutline,
     Print,
     SignalCellularNull,
+    TryOutlined,
 } from "@mui/icons-material";
 import CircularProgress from "@mui/material/CircularProgress";
 import Skeleton from "@mui/material/Skeleton";
@@ -513,28 +514,15 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
     }, [productDetail]);
 
     const handleUpdate = async () => {
+        if (!updatedInvoices[id]) {
+            alert("missing invoice data");
+            return;
+        }
         setLoading(true)
         const now = new Date();
         now.setHours(now.getHours() + 5); // ✅ Shift time first
 
         const time = now.toISOString().slice(0, 19).replace("T", " ");
-
-
-        // const emptyQtyPsids = products.filter((product) => {
-        //     const existing = updatedInvoice.find((u) => u.psid === product.psid);
-        //     return !existing || existing.qty === "" || existing.qty == null;
-        // });
-
-        // const firstMissing = emptyQtyPsids[0]?.psid;
-
-        // if (emptyQtyPsids.length > 0) {
-        //     // ✅ Focus the first empty input
-        //     if (firstMissing && rowRefs.current[firstMissing]) {
-        //         rowRefs.current[firstMissing].focus();
-        //     }
-        //     return;
-        // }
-
         if (!nug) {
             nugRef.current?.focus();
             return;
@@ -546,33 +534,38 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
 
         const body = {
             invoice: id,
-            updatedInvoices,
+            updatedInvoice: updatedInvoices[id],
             nug: nug[id] ?? "",
             tallyBy: person[id] ?? "",
             time,
             acid: customer?.Acid || "",
         }
 
+        try {
 
-        // Update api
-        const response = await axios.put(`${invoiceAPI}/${id}/update`, {
-            invoice: id,
-            updatedInvoices,
-            nug: nug[id] ?? "",
-            tallyBy: person[id] ?? "",
-            time,
-            acid: customer?.Acid || "",
-        });
 
-        console.log(response.data);
-        const data = response.data.invoiceData;
-        console.log("res data", data);
-        setUpdatedInvoices(data);
-        setLoading(false)
-        if (response.status === 200) {
+            // Update api
+            const response = await axios.put(`${invoiceAPI}/${id}/update`, body);
+
+            // unlock invoicce
+            const unlock = `/${id}/unlock`;
+            await axios.put(`${invoiceAPI}${unlock}`, body);
+
+            // SUCCEEDED
+            const data = [...updatedInvoices[id]];
+            delete data[id]
+
+            setUpdatedInvoices(data);
+            setLoading(false)
+
             alert("Packing updated successfully");
-            navigator("/pending")
-        };
+
+            navigator("/pending");
+
+        } catch (error) {
+            setLoading(false)
+            alert(error)
+        }
 
     };
 

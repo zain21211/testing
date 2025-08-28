@@ -59,7 +59,7 @@ const invoiceControllers = {
     const inv = req.params.id;
     const user = req.query.user;
     const type = req.query.type;
-    const page = req.query.page || ''; // Default to page 1 if not provided
+    const page = req.query.page || ""; // Default to page 1 if not provided
     const isAdmin = type && type.toLowerCase() === "admin";
 
     const queryCustomer = `
@@ -90,7 +90,7 @@ GROUP BY P.Doc, AC.Urduname,Ac.OCell, AC.CreditLimit, AC.Terms, AC.CreditDays,
          D.Vehicle, D.Description;
 
 `;
-let queryProducts = `
+    let queryProducts = `
 SELECT 
 p.id AS psid,
 p.prid AS prid,
@@ -126,16 +126,13 @@ WHERE P.Doc = @DocNumber
   AND P.Type = 'Sale' and P.QTY<>0
 `;
 
-
-
-
-if (page.includes("pack")) {
-  queryProducts += ` 
+    if (page.includes("pack")) {
+      queryProducts += ` 
      and p.tallyby is null
-     `
-}
+     `;
+    }
 
-queryProducts += ` ORDER BY pr.batch, pr.company`; // ✅ fix weird space in `pr.company`
+    queryProducts += ` ORDER BY pr.batch, pr.company`; // ✅ fix weird space in `pr.company`
 
     try {
       const pool = await dbConnection();
@@ -180,15 +177,14 @@ queryProducts += ` ORDER BY pr.batch, pr.company`; // ✅ fix weird space in `pr
     }
   },
   updateInvoice: async (req, res) => {
-    const { invoice, updatedInvoices, nug, tallyBy, time, acid } = req.body;
+    const { invoice, updatedInvoice, nug, tallyBy, time, acid } = req.body;
 
     let username;
-    const updatedInvoice = updatedInvoices[invoice] || [];
 
-    const emptyItems = updatedInvoice.filter(
+    const emptyItems = updatedInvoice?.filter(
       (item) => parseFloat(item.qty) === 0
     );
-    const changedItems = updatedInvoice.filter(
+    const changedItems = updatedInvoice?.filter(
       (item) => parseFloat(item.qty) !== 0
     );
 
@@ -292,7 +288,12 @@ queryProducts += ` ORDER BY pr.batch, pr.company`; // ✅ fix weird space in `pr
       // --- Update PSDetail and Ledgers (No changes needed here) ---
       const date = new Date(time.replace(" ", "T"));
       date.setHours(date.getHours() + 5);
-      await pool.request().input("DOC", sql.Int, invoice).input("NUG", sql.Int, parseInt(nug)).input("DateTime", sql.VarChar, time || 'null').input("PackedBy", sql.NVarChar, username || 'null').query(`
+      await pool
+        .request()
+        .input("DOC", sql.Int, invoice)
+        .input("NUG", sql.Int, parseInt(nug))
+        .input("DateTime", sql.VarChar, time || "null")
+        .input("PackedBy", sql.NVarChar, username || "null").query(`
        UPDATE PSDetail SET amount = rOUND((SELECT SUM(VIST) FROM PsProduct WHERE type = 'sale' AND doc = @DOC), 0) - ISNULL(Freight, 0), GrossProfit =ROUND ((SELECT SUM(Profit) FROM PsProduct WHERE type = 'sale' AND doc = @DOC), 0), 
 Status = case when (select count(*) from PsProduct where type='sale' and doc=@DOC and PackingDateTime is null) = 0 then 'INVOICE' else null end 
 , Shopper =  @NUG, 
@@ -303,25 +304,83 @@ end
 , PackedBy = @PackedBy WHERE type = 'sale' AND doc = @DOC
 `);
 
-      await pool.request().input("DOC", sql.Int, invoice).input("ACID", sql.Int, acid).query(`
+      await pool
+        .request()
+        .input("DOC", sql.Int, invoice)
+        .input("ACID", sql.Int, acid).query(`
         UPDATE Ledgers SET Debit = (SELECT amount FROM PSDetail WHERE type = 'sale' AND doc = @DOC), NARRATION = (SELECT description FROM PSDetail WHERE type = 'sale' AND doc = @DOC) WHERE type = 'sale' AND doc = @DOC AND acid = (SELECT TOP 1 acid FROM PsProduct WHERE type = 'sale' AND doc = @DOC);
         UPDATE Ledgers SET Credit = (SELECT amount FROM PSDetail WHERE type = 'sale' AND doc = @DOC), NARRATION = (SELECT description FROM PSDetail WHERE type = 'sale' AND doc = @DOC) WHERE type = 'sale' AND doc = @DOC AND acid = 4;
       `);
 
-      const invoiceData = { ...updatedInvoices };
-      // delete invoiceData[invoice];
       res.status(200).json({
         message: "Invoice update completed",
-        invoiceData,
         emptyItemsCount: emptyItems.length,
         changedItemsCount: changedItems.length,
       });
     } catch (err) {
       console.error("Error updating product:", err);
       // Send back the actual SQL error message for better debugging
-      res.status(500).json({ error: "Internal server error", sqlError: err.message });
+      res
+        .status(500)
+        .json({ error: "Internal server error", sqlError: err.message });
     }
   },
 
+  lockInovice: async (req, res) => {
+    const doc = req.params.id;
+
+    try {
+      const pool = await dbConnection();
+
+      await pool
+        .request()
+        .input("doc", sql.Int, doc)
+        .query(
+          "update psdetail set status = 'packing' where type = 'sale' and doc = @doc"
+        );
+
+      // Emit socket event
+      const io = req.app.get("io");
+      io.emit("invoiceLocked", { doc });
+
+      res.status(200).json({ msg: "successful" });
+    } catch (error) {
+      res.status(500).json({ msg: error.message });
+    }
+  },
+
+  unlockInvoice: async (req, res) => {
+    const doc = req.params.id;
+
+    try {
+      const pool = await dbConnection();
+
+      await pool.request().input("doc", sql.Int, doc).query(`
+      update psdetail set
+       status = case when(
+        select count(*) 
+        from PsProduct 
+        where type = 'sale' 
+        and doc = @DOC 
+        and PackingDateTime is null
+        ) = 0 
+      then
+       'INVOICE' 
+      else 
+        null 
+      end
+      where type = 'sale' 
+      and doc = @doc
+    `);
+
+      // Emit socket event
+      const io = req.app.get("io");
+      io.emit("invoiceUnlocked", { doc });
+
+      res.status(200).json({ msg: "successful" });
+    } catch (error) {
+      res.status(500).json({ msg: error.message });
+    }
+  },
 };
 module.exports = invoiceControllers;

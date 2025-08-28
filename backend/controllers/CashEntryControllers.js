@@ -168,28 +168,27 @@ const CashEntryController = {
       userName,
       userType, // Make sure this is provided if expense methods need it
       expenseMethod,
-      desc  = "",
+      desc = "",
+      time,
     } = req.body;
     const body = req.body;
 
     // Effective date of the transaction
-    const effectiveDate = getPakistanISODateString();
+    const effectiveDate = getPakistanISODateString(time);
     // Timestamp for when the entry is recorded in the system
     const systemTimestamp = getPakistanISODateString();
 
     console.log(`cash entry from ${userName} of ${custId} at `, effectiveDate);
 
     if (!paymentMethod || !custId || !receivedAmount || !userName) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "PaymentMethod, custId, receivedAmount, and userName are required.",
-          paymentMethod,
-          custId,
-          receivedAmount,
-          userName,
-        });
+      return res.status(400).json({
+        error:
+          "PaymentMethod, custId, receivedAmount, and userName are required.",
+        paymentMethod,
+        custId,
+        receivedAmount,
+        userName,
+      });
     }
 
     let selectedMethodConfig;
@@ -219,11 +218,9 @@ const CashEntryController = {
         expenseMethod === "repair"
       ) {
         if (!userType) {
-          return res
-            .status(400)
-            .json({
-              error: `UserType is required for expense method: ${expenseMethod}`,
-            });
+          return res.status(400).json({
+            error: `UserType is required for expense method: ${expenseMethod}`,
+          });
         }
       }
       selectedMethodConfig = {
@@ -235,20 +232,22 @@ const CashEntryController = {
     } else if (paymentMethod) {
       const lowerPaymentMethod = paymentMethod.toLowerCase();
       const paymentConfig = paymentModes[lowerPaymentMethod];
-      if (!paymentConfig ) {
-        return res.status(400).json({ error: "Invalid no payment or expense method." + body.paymentMethod });
+      if (!paymentConfig) {
+        return res
+          .status(400)
+          .json({
+            error: "Invalid no payment or expense method." + body.paymentMethod,
+          });
       }
       selectedMethodConfig = paymentConfig; // debitAcid is directly available
       narration = `${selectedMethodConfig.narrationPrefix} ${userName} ${desc}`;
     } else {
       // This case should ideally not be reached if the first check for paymentMethod is robust
       // and expenseMethod path is handled. Or, if expenseMethod is given, paymentMethod might be optional.
-      return res
-        .status(400)
-        .json({
-          error:
-            "Either a valid payment method or expense method must be provided.",
-        });
+      return res.status(400).json({
+        error:
+          "Either a valid payment method or expense method must be provided.",
+      });
     }
 
     if (!selectedMethodConfig) {
@@ -272,9 +271,9 @@ const CashEntryController = {
         .input("type", sql.VarChar, selectedMethodConfig.type)
         .query(
           ` UPDATE DocNumber
-    SET doc = doc + 1
-    OUTPUT DELETED.doc 
-    WHERE type = @type`
+            SET doc = doc + 1
+            OUTPUT DELETED.doc 
+            WHERE type = @type`
         );
 
       const nextDoc = docResult.recordset[0].doc;

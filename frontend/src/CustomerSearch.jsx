@@ -1,7 +1,7 @@
 // src/components/CustomerSearch.jsx
 import React from "react";
 import { useDateRange } from "./hooks/useDateRange";
-import { useCustomerSearch } from "./hooks/useCustomerData";
+import { useCustomerSearch } from "./hooks/useCustomerSearch";
 import CustomerSearchUI from "./components/CustomerSearchUI";
 
 const CustomerSearch = ({

@@ -313,15 +313,13 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                     align: "center",
                     width:
                       field.label === "Product"
-                        ? "20%"
+                        ? "25%"
                         : field.label === "FOC"
                           ? "2%"
-                          : field.label === "Price"
+                          : field.label === "Amount"
                             ? "10%"
-                            : field.label === "Amount"
-                              ? "10%"
-                              : "5%", // Reduced Amount column width to 8%
-                    minWidth: field.label === "Product" ? 250 : "5%", // Adjusted minimum width for Product column
+                            : "8%", // Reduced Amount column width to 8%
+                    // minWidth: field.label === "Product" ? 250 : 80, // Adjusted minimum width for Product column
                     render: (value, row) => {
                       let displayValue = "";
                       if (!row) <Skeleton height={30} width="80%" />;
@@ -362,32 +360,36 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                             disableUnderline: true,
                             startAdornment:
                               field.label === "Product" ? (
-                                <div style={{ display: "flex", flexDirection: 'column', width: "50%" }}>
+                                <div style={{ display: "flex", flexDirection: 'column', width: "25%" }}>
                                   <div style={{ fontWeight: "bold" }} dir="ltr">
                                     {row.Company?.toUpperCase() || ""}
                                   </div>
-                                  <div style={{ fontWeight: "bold" }} dir="ltr">
+                                  {/* <div style={{ fontWeight: "bold" }} dir="ltr">
                                     {row.Category?.toUpperCase() || ""}
-                                  </div>
+                                  </div> */}
                                 </div>
                               ) : null,
-                            sx: {},
+
                           }}
                           inputProps={{
-                            style: {
+                            sx: {
                               // padding: field.label === "Product" ? "0px 1px" : "0px",
                               fontFamily: 'Jameel Noori Nastaleeq, serif',
                               fontWeight: "bold",
+                              pt: 1,
                               textAlign:
                                 field.label === "Product" ? "right" : "center",
-                              fontSize:
-                                field.label === "Product" ? "1.8rem" : "1rem",
+                              fontSize: {
+                                xs: field.label?.toLowerCase() === "product" ? "1.5rem" : "1.3rem",
+                                sm: field.label?.toLowerCase() === "product" ? "2.5rem" : "1.2rem",
+                              },
                               whiteSpace: "normal", // Enable text wrapping
                               wordWrap: "break-word", // Break long words
                             },
                           }}
                           sx={{
                             width: "100%",
+
                           }}
                         />
                       );
@@ -398,7 +400,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                   sx={{
                     "& .MuiTableCell-root": {
                       border: "1px solid #ddd",
-                      padding: ".25rem",
+                      // padding: ".25rem",
                       boxSizing: "border-box",
                       overflowWrap: "anywhere",
                     },

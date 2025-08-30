@@ -47,7 +47,7 @@ export default function ProductDetailsGrid({
                 gridTemplateColumns: {
                     xs: "repeat(4, 1fr)",
                     sm: "repeat(4, 1fr)",
-                    md: "repeat(auto-fit, minmax(110px, 1fr))",
+                    md: "repeat(auto-fit, minmax(100px, 1fr))",
                 },
                 gap: 2,
                 alignItems: "center",
@@ -172,10 +172,10 @@ export default function ProductDetailsGrid({
 
                 onChange={(e) => setProductRemakes(e.target.value)}
             />
-            {(userType === "admin" ||
+            {(user.userType.toLowerCase() === "admin" ||
                 user?.username?.toLowerCase() === "zain") && (
                     <TextField
-                        label="Stock"
+                        label='Stock'
                         disabled
                         sx={bigger}
                         value={selectedProduct?.StockQty ?? 0}

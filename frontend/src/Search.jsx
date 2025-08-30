@@ -2,29 +2,41 @@ import React, { useState } from 'react';
 import { TextField, Button, Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import axios from 'axios';
 
+const url = import.meta.env.VITE_API_URL;
+
 const Search = ({ type, onSearch }) => {
+    const token = localStorage.getItem("authToken"); // always get fresh token
+
     const [name, setName] = useState('');
-    const [spo, setSpo] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [route, setRoute] = useState('');
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const handleSearch = async () => {
-        if (!name && !spo && !route) {
-            alert('At least one search parameter is required!');
-            return;
-        }
-        console.log('Searching with:', { type, name, spo, route });
         try {
-            const response = await axios.get(`/api/search`, {
-                params: { type, name, spo, route }
+            const search = {
+                name,
+                route,
+                phoneNumber,
+            };
+
+            const result = await axios.get(`${url}/customers`, {
+                params: search, // query string
+                headers: {
+                    Authorization: `Bearer ${token}`, // or your token string
+                    "Content-Type": "application/json",
+                },
             });
-            onSearch(response.data); // Pass the search results to the parent component
+
+            const filtered = result.data;
+            onSearch(filtered);
         } catch (error) {
-            console.error('Error searching:', error);
-            alert('Error searching');
+            console.error("Search failed:", error);
+            alert("Something went wrong while searching!");
         }
     };
+
 
     // Handle pressing Enter key
     const handleKeyPress = (event) => {
@@ -34,11 +46,8 @@ const Search = ({ type, onSearch }) => {
     };
 
     return (
-        <Paper
-            elevation={3}
-            sx={{
-                padding: { xs: '16px', sm: '20px' },
-            }}
+        <Box
+
         >
             <Box
                 sx={{
@@ -64,11 +73,11 @@ const Search = ({ type, onSearch }) => {
 
                 {/* Spo */}
                 <TextField
-                    label="Spo"
+                    label="Number"
                     variant="outlined"
                     fullWidth
-                    value={spo}
-                    onChange={(e) => setSpo(e.target.value)}
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     onKeyPress={handleKeyPress}
                     size={isMobile ? "small" : "medium"}
                 />
@@ -92,7 +101,7 @@ const Search = ({ type, onSearch }) => {
                     sx={{
                         gridColumn: { xs: "1 / -1", sm: "auto" }, // full row on mobile
                         width: { xs: "100%", sm: "auto" },
-                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                        fontSize: '1.2rem',
                     }}
                 >
                     Search
@@ -100,7 +109,7 @@ const Search = ({ type, onSearch }) => {
             </Box>
 
 
-        </Paper>
+        </Box>
     );
 };
 

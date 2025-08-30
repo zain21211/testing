@@ -1,4 +1,4 @@
-import { Typography, Skeleton, Grid, TextField } from "@mui/material";
+import { Typography, Skeleton, Grid, TextField, Box } from "@mui/material";
 
 const CustomerDetails = ({ customer }) => {
   return (
@@ -46,8 +46,8 @@ const CustomerDetails = ({ customer }) => {
           value={
             customer?.InvoiceDate
               ? new Date(customer.InvoiceDate)
-                  .toLocaleDateString("en-GB")
-                  .replace(/\//g, "-")
+                .toLocaleDateString("en-GB")
+                .replace(/\//g, "-")
               : ""
           }
           sx={{

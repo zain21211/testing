@@ -1,4 +1,4 @@
-import { Button, CircularProgress } from '@mui/material';
+import { Button, CircularProgress, Box } from '@mui/material';
 
 const UpdateButton = ({ loading, onClick }) => {
     return (

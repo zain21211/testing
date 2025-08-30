@@ -3,11 +3,12 @@ import axios from "axios";
 
 const invoiceAPI = `${import.meta.env.VITE_API_URL}/invoices`;
 
-export const useInvoiceData = (id) => {
+export const useInvoice = (id) => {
   const [invoice, setInvoice] = useState({ items: [] });
   const [customer, setCustomer] = useState({});
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const user = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
     const getInvoice = async () => {

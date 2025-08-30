@@ -17,6 +17,7 @@ import { useSelector } from "react-redux";
 import {
   setSelectedCustomer,
   clearSelection,
+  setIDWithKey,
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
 import { useDispatch } from "react-redux";
@@ -159,8 +160,6 @@ const RecoveryPaper = () => {
   const storageKey = `accountID-${routePath}`; // Unique key based on route
   const [accountID, setAccountID] = Storage(storageKey, null); // Use state for ID to allow updates
   const [searchParams] = useSearchParams();
-  const flag = true
-  // const name = searchParams.get('name');
   const acid = searchParams.get('acid');
 
   const [easypaisaAmount, setEasypaisaAmount] = useLocalStorageState(
@@ -283,8 +282,9 @@ const RecoveryPaper = () => {
 
 
   useEffect(() => {
-    console.log("on reload", selectedCustomer)
-  }, [selectedCustomer])
+    dispatch(setIDWithKey({ key: 'recovery', value: parseInt(acid) }))
+  }, [acid, dispatch])
+
 
   const handleSubmitExpenses = async () => {
     setIsLoading(true);

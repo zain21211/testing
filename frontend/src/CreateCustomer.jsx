@@ -325,9 +325,7 @@ const CreateCustomer = ({ onCustomerCreated, accounts, urdu }) => {
 
                 {/* for creating */}
                 <TabPanel value={tabValue} index={0}>
-                    <Typography variant="h6" component="h1" gutterBottom>
-                        Create New Customer
-                    </Typography>
+
                     <Box component="form" onSubmit={handleSubmit}>
                         {/* Customer Fields */}
                         <Box

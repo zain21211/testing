@@ -71,6 +71,8 @@ const ProductCell = ({ field, value, row, isEditable, onQuantityChange }) => {
                                 backgroundColor: companyColor,
                                 color: "white !important",
                                 fontSize: "1.2rem",
+                                borderRadius: '.5rem',
+
                             }}>
                                 {row.Company?.toUpperCase()}
                             </Typography>
@@ -118,6 +120,11 @@ const ProductCell = ({ field, value, row, isEditable, onQuantityChange }) => {
                 }}
                 sx={{ width: "100%" }}
             />
+            {field.label === "T.Q" && (
+                <Typography>
+                    ({row?.Size || '--'})
+                </Typography>
+            )}
             {field.label === "Product" && (
                 <Box sx={{
                     display: "flex",
@@ -125,15 +132,18 @@ const ProductCell = ({ field, value, row, isEditable, onQuantityChange }) => {
                     alignItems: "flex-end",
                     justifyContent: "space-between",
                     height: "100%",
+                    marginBottom: .5,
+
                 }}>
                     <Typography sx={{
                         fontWeight: "bold",
                         color: "black !important",
                         fontSize: "1rem",
                         minWidth: 120,
+                        borderRadius: '.5rem',
                         border: "1px solid black",
                     }}>
-                        {row.StockQTY || "0"} - ({row.Size || "--"})
+                        {row.StockQTY || "0"}
                     </Typography>
                     {row.SchPcs > 0 && (
                         <Typography sx={{
@@ -146,8 +156,10 @@ const ProductCell = ({ field, value, row, isEditable, onQuantityChange }) => {
                             {row.SchOn} + {row.SchPcs}
                         </Typography>
                     )}
+
                 </Box>
             )}
+
         </Box>
     );
 };
@@ -158,6 +170,7 @@ const ProductTable = ({
     onQuantityChange,
     onLoad
 }) => {
+
     const memoizedColumns = useMemo(() => {
         return productDetail.map((field) => ({
             id: field.label.toLowerCase(),
@@ -167,12 +180,11 @@ const ProductTable = ({
             minWidth: field.label === "Product" ? 178 : "5%",
             render: (value, row) => {
                 const isEditable = field.label === "qty";
-                const index = updatedInvoice.findIndex(
+
+                const updatedItem = updatedInvoice.find(
                     (item) => String(item.psid) === String(row.psid)
                 );
-                const currentValue = isEditable
-                    ? updatedInvoice[index]?.qty ?? ""
-                    : value;
+                const currentValue = isEditable ? updatedItem?.qty ?? "" : value;
 
                 return (
                     <ProductCell
@@ -182,6 +194,7 @@ const ProductTable = ({
                         isEditable={isEditable}
                         onQuantityChange={onQuantityChange}
                     />
+
                 );
             },
         }));

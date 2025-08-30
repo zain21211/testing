@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { takeScreenShot } from "./fuctions";
+import { takeScreenShot } from "../fuctions";
 
 export const useOrderCompletion = ({
   id,

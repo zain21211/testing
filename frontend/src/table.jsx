@@ -12,7 +12,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Typography, useTheme, useMediaQuery } from "@mui/material"; // Import useTheme and useMediaQuery
 import Skeleton from "@mui/material/Skeleton";
-import { FixedSizeList } from 'react-window';
+import { VariableSizeList } from "react-window";
 
 // --- Helper Components & Hooks ---
 
@@ -32,7 +32,7 @@ function useWidth() {
       // eslint-disable-next-line react-hooks/rules-of-hooks
       const matches = useMediaQuery(theme.breakpoints.up(key));
       return !output && matches ? key : output;
-    }, null) || 'xs'
+    }, null) || "xs"
   );
 }
 
@@ -40,11 +40,13 @@ function useWidth() {
 // This is ONLY used for the virtualized table.
 const getResolvedWidth = (minWidth, currentBreakpoint) => {
   // If minWidth is just a number, return it.
-  if (typeof minWidth === 'number') { return minWidth; }
+  if (typeof minWidth === "number") {
+    return minWidth;
+  }
 
   // If minWidth is a responsive object, find the correct value.
-  if (typeof minWidth === 'object' && minWidth !== null) {
-    const breakpointOrder = ['xl', 'lg', 'md', 'sm', 'xs'];
+  if (typeof minWidth === "object" && minWidth !== null) {
+    const breakpointOrder = ["xl", "lg", "md", "sm", "xs"];
     const startIndex = breakpointOrder.indexOf(currentBreakpoint);
 
     // Find the most specific width for the current screen size or smaller
@@ -58,7 +60,6 @@ const getResolvedWidth = (minWidth, currentBreakpoint) => {
   return 100; // Default fallback width
 };
 
-
 // --- Main DataTable Component ---
 
 const DataTable = ({
@@ -68,7 +69,7 @@ const DataTable = ({
   onDelete,
   apiEndpoint,
   isLedgerTable = false,
-  usage = '',
+  usage = "",
   handleDoubleClick,
   handleClick,
   tableHeight = 500,
@@ -82,6 +83,11 @@ const DataTable = ({
 
   const visibleColumns = columns;
 
+  const getItemSize = (index) => {
+    const row = tableData[index];
+    // measure based on text length, or just give larger default
+    return 80; // let it breathe more
+  };
   function formatDate(value) {
     const date = new Date(value);
     const day = String(date.getDate()).padStart(2, "0");
@@ -92,7 +98,9 @@ const DataTable = ({
 
   const handleDelete = useCallback(
     async (id) => {
-      if (!enableDelete || !id) { return; }
+      if (!enableDelete || !id) {
+        return;
+      }
       if (window.confirm("Are you sure you want to delete this item?")) {
         try {
           const deleteUrl = `http://localhost:3001/${apiEndpoint}/${id}`;
@@ -100,7 +108,8 @@ const DataTable = ({
           onDelete(id);
         } catch (error) {
           console.error("Error deleting item:", error);
-          const errorMsg = error.response?.data?.message || "Failed to delete item.";
+          const errorMsg =
+            error.response?.data?.message || "Failed to delete item.";
           alert(`Delete failed: ${errorMsg}`);
         }
       }
@@ -115,7 +124,6 @@ const DataTable = ({
       const url = `/invoice/${doc}`;
       navigate(url);
       return;
-
     }
     // for packing
     handleClick(doc);
@@ -128,15 +136,22 @@ const DataTable = ({
       if (column.id === "delete" && !enableDelete) return null;
       const value = row[column.id];
       // Get the single pixel width for the virtualized table
-      const resolvedCellWidth = getResolvedWidth(column.minWidth, currentBreakpoint);
+      const resolvedCellWidth = getResolvedWidth(
+        column.minWidth,
+        currentBreakpoint
+      );
 
       let cellContent;
       // Logic to determine cell content...
       if (column.render) {
         cellContent = column.render(value, row);
-      } else if (column.id === 'delete' && enableDelete) {
+      } else if (column.id === "delete" && enableDelete) {
         cellContent = (
-          <IconButton onClick={() => handleDelete(rowId)} disabled={!rowId} size="small">
+          <IconButton
+            onClick={() => handleDelete(rowId)}
+            disabled={!rowId}
+            size="small"
+          >
             <DeleteIcon fontSize="small" />
           </IconButton>
         );
@@ -152,21 +167,41 @@ const DataTable = ({
           align={column.align || "left"}
           sx={{
             border: "2px solid #000",
+            height: 'auto',
+            // lineHeight: "1.4",         // better spacing
+            verticalAlign: "top",
             color: shouldHighlightRow ? "white !important" : "black",
-            fontWeight: "bold", padding: isLedgerTable ? '5px' : "1px 1.1rem ", letterSpacing: "normal", textTransform: "uppercase", boxSizing: "border-box",
-            fontSize: column.label.includes("ust") ? { xs: "2.5rem", sm: "2.5 rem" } : { xs: "1.1rem", sm: "1.5rem" },
-            fontFamily: 'Jameel Noori Nastaleeq, serif !important',
-            ...(usage?.includes('coa')
-              ? { // **VIRTUALIZED STYLES**
-                flex: `0 0 ${resolvedCellWidth}px`, width: `${resolvedCellWidth}px`, display: 'flex',
-                alignItems: 'left', justifyContent: 'left', padding: "8px 10px", boxSizing: "border-box",
-                textWrap: "wrap", height: "auto", minWidth: resolvedCellWidth, maxWidth: resolvedCellWidth,
+            fontWeight: "bold",
+            padding: isLedgerTable ? "5px" : "10px 1.1rem ",
+            letterSpacing: "normal",
+            textTransform: "uppercase",
+            wordBreak: "break-word",   // ✅ breaks long words onto next line
+            whiteSpace: "normal",      // ✅ allows wrapping
+            boxSizing: "border-box",
+            fontSize: (column.label.includes("ust") || column.label.includes("rod"))
+              ? { xs: "2.5rem", sm: "2.5 rem" }
+              : { xs: "1.1rem", sm: "1.5rem" },
+            fontFamily: "Jameel Noori Nastaleeq, serif !important",
+            ...(usage?.includes("coa")
+              ? {
+                // **VIRTUALIZED STYLES**
+                flex: `0 0 ${resolvedCellWidth}px`,
+                width: `${resolvedCellWidth}px`,
+                display: "flex",
+                alignItems: "left",
+                justifyContent: "left",
+                padding: "8px 10px",
+                boxSizing: "border-box",
+                textWrap: "wrap",
+                height: "auto",
+                minWidth: resolvedCellWidth,
+                maxWidth: resolvedCellWidth,
               }
-              : { // **STANDARD RESPONSIVE STYLES**
+              : {
+                // **STANDARD RESPONSIVE STYLES**
                 minWidth: column.minWidth, // Pass the responsive object {xs:.., md:..} directly to MUI
                 width: column.width,
-              }
-            )
+              }),
           }}
         >
           {cellContent}
@@ -179,7 +214,14 @@ const DataTable = ({
     const row = tableData[index];
     const { shouldHighlightRow } = getRowStyles(row);
     return (
-      <TableRow component="div" hover style={style} sx={getRowStyles(row).rowSx} role="checkbox" tabIndex={-1}>
+      <TableRow
+        component="div"
+        hover
+        style={style}
+        sx={getRowStyles(row).rowSx}
+        role="checkbox"
+        tabIndex={-1}
+      >
         {renderRowCells(row, shouldHighlightRow)}
       </TableRow>
     );
@@ -188,75 +230,176 @@ const DataTable = ({
   const getRowStyles = (row) => {
     const rowDate = new Date(row.date);
     const today = new Date();
-    rowDate.setHours(0, 0, 0, 0); today.setHours(0, 0, 0, 0);
+    rowDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
     const dayDiff = (today - rowDate) / (24 * 60 * 60 * 1000);
     const delayed = dayDiff >= 1;
 
     const shouldHighlightRow =
       Object.entries(row).some(([key, val]) => {
-        const isEstimateOrPending = typeof val === "string" && isLedgerTable && (val.toLowerCase() === "estimate" || val.toLowerCase().includes("pending"));
-        const isFullDiscount = key.toLowerCase().includes("dis") && typeof val === "number" && val === 100;
+        const isEstimateOrPending =
+          typeof val === "string" &&
+          isLedgerTable &&
+          (val.toLowerCase() === "estimate" ||
+            val.toLowerCase().includes("pending"));
+        const isFullDiscount =
+          key.toLowerCase().includes("dis") &&
+          typeof val === "number" &&
+          val === 100;
         return isEstimateOrPending || isFullDiscount;
       }) || delayed;
 
     const rowSx = {
-      display: usage?.includes('coa') ? 'flex' : 'table-row',
-      touchAction: "manipulation", userSelect: "none",
-      backgroundColor: row.status === "pending" ? "yellow" : row.claimStatus === 1 ? "rgb(211, 211, 211)" : shouldHighlightRow ? "red" : "white",
-      "& td": { color: row.status === "pending" ? "black !important" : shouldHighlightRow ? "white" : "inherit" },
-      color: row.status === "pending" ? "black!important" : shouldHighlightRow ? "white" : "inherit",
+      display: usage?.includes("coa") ? "flex" : "table-row",
+      touchAction: "manipulation",
+      userSelect: "none",
+      backgroundColor:
+        row.status === "pending"
+          ? "yellow"
+          : row.claimStatus === 1
+            ? "rgb(211, 211, 211)"
+            : shouldHighlightRow
+              ? "red"
+              : "white",
+      "& td": {
+        color:
+          row.status === "pending"
+            ? "black !important"
+            : shouldHighlightRow
+              ? "white"
+              : "inherit",
+      },
+      color:
+        row.status === "pending"
+          ? "black!important"
+          : shouldHighlightRow
+            ? "white"
+            : "inherit",
       transition: "background-color 0.3s ease, color 0.3s ease",
       "&:hover": {
-        backgroundColor: shouldHighlightRow ? "rgba(24, 24, 24, 0.85)!important" : "rgba(189, 236, 252, 1)!important",
-        color: row.status === "pending" ? "white!important" : shouldHighlightRow ? "white" : "inherit",
-        "& td": { color: row.status === "pending" ? "white !important" : shouldHighlightRow ? "white" : "inherit" },
+        backgroundColor: shouldHighlightRow
+          ? "rgba(24, 24, 24, 0.85)!important"
+          : "rgba(189, 236, 252, 1)!important",
+        color:
+          row.status === "pending"
+            ? "white!important"
+            : shouldHighlightRow
+              ? "white"
+              : "inherit",
+        "& td": {
+          color:
+            row.status === "pending"
+              ? "white !important"
+              : shouldHighlightRow
+                ? "white"
+                : "inherit",
+        },
       },
     };
     return { rowSx, shouldHighlightRow };
   };
 
   return (
-    <Paper sx={{ width: "100%", overflow: "hidden", borderRadius: "7px", padding: 0, fontSize: "2rem", maxHeight: usage?.includes('coa') ? "80vh" : "auto" }}>
-      <TableContainer sx={{ maxHeight: "inherit", }}>
-        <Table stickyHeader aria-label="sticky table" component={usage?.includes('coa') ? "div" : "table"} sx={{ fontFamily: '"Times New Roman", Times, serif', borderCollapse: "collapse", border: "1px solid #ddd" }}>
-          <TableHead component={usage?.includes('coa') ? "div" : "thead"}>
-            <TableRow component={usage?.includes('coa') ? "div" : "tr"} sx={{ display: usage?.includes('coa') ? 'flex' : 'table-row' }}>
+    <Paper
+      sx={{
+        width: "100%",
+        overflow: "hidden",
+        borderRadius: "7px",
+        padding: 0,
+        fontSize: "2rem",
+        maxHeight: usage?.includes("coa") ? "80vh" : "auto",
+      }}
+    >
+      <TableContainer sx={{ maxHeight: "inherit" }}>
+        <Table
+          stickyHeader
+          aria-label="sticky table"
+          component={usage?.includes("coa") ? "div" : "table"}
+          sx={{
+            fontFamily: '"Times New Roman", Times, serif',
+            borderCollapse: "collapse",
+            border: "1px solid #ddd",
+          }}
+        >
+          <TableHead component={usage?.includes("coa") ? "div" : "thead"}>
+            <TableRow
+              component={usage?.includes("coa") ? "div" : "tr"}
+              sx={{ display: usage?.includes("coa") ? "flex" : "table-row" }}
+            >
               {visibleColumns.map((column) => {
                 if (column.id === "delete" && !enableDelete) return null;
-                const resolvedCellWidth = getResolvedWidth(column.minWidth, currentBreakpoint);
+                const resolvedCellWidth = getResolvedWidth(
+                  column.minWidth,
+                  currentBreakpoint
+                );
                 return (
-                  <TableCell key={column.id} align={column.align || "left"} sx={{
-                    fontSize: { xs: "1rem", sm: "1.3rem" }, textAlign: "center", fontWeight: "bold", textTransform: "uppercase",
-                    color: "#fff", backgroundColor: "rgba(24, 24, 24, 0.85)", border: "2px solid #ddd", padding: "8px 10px", boxSizing: "border-box",
-                    ...(usage?.includes('coa')
-                      ? { flex: `0 0 ${resolvedCellWidth}px`, width: `${resolvedCellWidth}px` }
-                      : { minWidth: column.minWidth, width: column.width } // Pass responsive object
-                    )
-                  }}>
-                    {(column.label.includes("Amo") || column.label.includes("Rate")) ? column.id : column.label}
+                  <TableCell
+                    key={column.id}
+                    align={column.align || "left"}
+                    sx={{
+                      fontSize: { xs: "1rem", sm: "1.3rem" },
+                      textAlign: "center",
+                      fontWeight: "bold",
+                      textTransform: "uppercase",
+                      color: "#fff",
+                      backgroundColor: "rgba(24, 24, 24, 0.85)",
+                      border: "2px solid #ddd",
+                      padding: "8px 10px",
+                      boxSizing: "border-box",
+                      ...(usage?.includes("coa")
+                        ? {
+                          flex: `0 0 ${resolvedCellWidth}px`,
+                          width: `${resolvedCellWidth}px`,
+                        }
+                        : { minWidth: column.minWidth, width: column.width }), // Pass responsive object
+                    }}
+                  >
+                    {column.label.includes("Amo") ||
+                      column.label.includes("Rate")
+                      ? column.id
+                      : column.label}
                   </TableCell>
                 );
               })}
             </TableRow>
           </TableHead>
-          <TableBody component={usage?.includes('coa') ? "div" : "tbody"}>
+          <TableBody component={usage?.includes("coa") ? "div" : "tbody"}>
             {tableData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleColumns.length} align={"left"} sx={{ py: 5 }}><Skeleton height={30} width="80%" /></TableCell></TableRow>
-            ) : usage?.includes('coa') ? (
-              <FixedSizeList height={tableHeight - 60} itemCount={tableData.length} itemSize={55} width="100%" innerElementType={InnerElementType}>
+                <TableCell
+                  colSpan={visibleColumns.length}
+                  align={"left"}
+                  sx={{ py: 5 }}
+                >
+                  <Skeleton height={30} width="80%" />
+                </TableCell>
+              </TableRow>
+            ) : usage?.includes("coa") ? (
+              <VariableSizeList
+                height={tableHeight - 60}
+                itemCount={tableData.length}
+                itemSize={getItemSize}
+                width="100%"
+                innerElementType={InnerElementType}
+              >
                 {VirtualizedRow}
-              </FixedSizeList>
+              </VariableSizeList>
             ) : (
               tableData.map((row, index) => {
                 const { rowSx, shouldHighlightRow } = getRowStyles(row);
                 return (
-                  <TableRow hover sx={rowSx} onClick={
-                    row.Type?.toLowerCase().includes("sale")
-                      ? () => handleDocumentClick(row)
-                      : undefined
-                  }
-                    role="checkbox" tabIndex={-1} key={rowKey ? row[rowKey] : index}>
+                  <TableRow
+                    hover
+                    sx={rowSx}
+                    onClick={
+                      row.Type?.toLowerCase().includes("sale")
+                        ? () => handleDocumentClick(row)
+                        : undefined
+                    }
+                    role="checkbox"
+                    tabIndex={-1}
+                    key={rowKey ? row[rowKey] : index}
+                  >
                     {renderRowCells(row, shouldHighlightRow)}
                   </TableRow>
                 );

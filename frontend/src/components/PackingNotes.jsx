@@ -6,7 +6,8 @@ const PackingNotes = ({
     onNugChange,
     onPersonChange,
     nugRef,
-    packedByRef
+    packedByRef,
+    persons
 }) => {
     return (
         <>
@@ -55,7 +56,7 @@ const PackingNotes = ({
                     },
                 }}
             >
-                {persons.map((name, index) => (
+                {persons?.map((name, index) => (
                     <MenuItem
                         key={index}
                         value={name}

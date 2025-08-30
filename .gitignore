@@ -17,5 +17,8 @@ yarn-error.log*
 Thumbs.db
 
 # Optional: VSCode specific files if they are user-specific
-# .vscode/settings.json
-# .vscode/launch.json
+.vscode/settings.json
+.vscode/launch.json
+
+# Ignore vite config
+vite.config.js

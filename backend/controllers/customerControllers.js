@@ -4,9 +4,11 @@ const dbConnection = require("../database/connection"); // Import your database 
 const customerControllers = {
   getCustomers: async (req, res) => {
     try {
-      console.log(req.query);
+      console.log(req.query.search);
       const pool = await dbConnection();
-      const searchTerm = req.query.search || "";
+      const name = req.query.name || "";
+      const route = req.query.route || "";
+      const phoneNumber = req.query.phoneNumber || "";
       const username = req.user.username; // Get username from authenticated user token
       const usertype = req.query.usertype || req.user.userType || ""; // Try multiple keys for usertype
       const rawUser = req.user; // Log raw user object for debugging
@@ -26,7 +28,9 @@ const customerControllers = {
           route,
           SPO
         FROM coa
-        WHERE Subsidary LIKE '%' + @searchTerm + '%'
+        WHERE Subsidary LIKE '%' + @subsibary + '%'
+        and route like '%' + @route + '%'
+        and OCell like '%' + @number + '%'
           
       `;
 
@@ -57,9 +61,12 @@ const customerControllers = {
 
       const request = pool.request();
 
-      request.input("searchTerm", mssql.NVarChar, searchTerm);
+      request
+        .input("subsibary", mssql.NVarChar, name)
+        .input("route", mssql.NVarChar, route)
+        .input("number", mssql.NVarChar, phoneNumber);
 
-      if (!isAdmin) {
+      if (!isAdmin && username?.toLowerCase() !== "zain") {
         request.input("name", mssql.NVarChar, username);
       }
 

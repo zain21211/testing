@@ -53,28 +53,19 @@ const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight }) => {
       id: 'name',
       label: 'Name',
       minWidth: { xs: 200, md: 500, lg: 500, xl: 750 }, // Give the name column more space
-      align: 'left'
     },
     {
       id: 'SPO',
       label: 'SPO',
-      minWidth: 170 // A medium width
+      minWidth: 200 // A medium width
     },
     {
       id: 'route',
       label: 'Route',
-      minWidth: 150
+      minWidth: 150,
+      align: 'center'
     },
-    {
-      id: 'delete',
-      label: 'Delete',
-      minWidth: 80, // A narrow column for the icon
-      render: (value, row) => (
-        <IconButton onClick={() => handleDelete(row.customerId)} aria-label="delete">
-          <DeleteIcon />
-        </IconButton>
-      )
-    }
+
   ];
 
   return (
@@ -82,7 +73,7 @@ const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight }) => {
       <CardContent>
         <Search type="customer" onSearch={handleCustomerSearch} />
         <div ref={listRef} style={{ overflowY: isOverflowing ? 'scroll' : 'auto' }}>
-          {filteredCustomers.length === 0 ? (
+          {filteredCustomers?.length === 0 ? (
             <Typography variant="body2">No customers available</Typography>
           ) : (
             <Box sx={{ overflow: 'hidden', marginY: 2 }}>

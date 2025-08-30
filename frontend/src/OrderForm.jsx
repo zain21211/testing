@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import debounce from "lodash.debounce";
 
@@ -38,7 +38,9 @@ import InactiveItems from "./components/InactiveItems.jsx";
 import LedgerSearchForm from "./CustomerSearch.jsx";
 import ProductSelectionForm from "./ProductSelectionForm.jsx";
 import {
+  setIDWithKey,
   setSelectedCustomer,
+  clearSelection,
   resetCustomerSearch,
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
@@ -122,7 +124,8 @@ const OrderForm = () => {
   const [open, setOpen] = useState(true);
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
-
+  const [searchParams] = useSearchParams()
+  const acid = searchParams.get('acid');
   // --- Refs ---
   const customerInputRef = useRef(null);
 
@@ -153,6 +156,10 @@ const OrderForm = () => {
   }, [today]);
 
   // --- Effects ---
+
+  useEffect(() => {
+    dispatch(setIDWithKey({ key: 'recovery', value: parseInt(acid) }))
+  }, [acid, dispatch])
 
   // Ensure selected date is not in the past on initial load
   useEffect(() => {
@@ -423,7 +430,7 @@ const OrderForm = () => {
       resetProductInputs();
       setBalance(null);
       setOverDue(null);
-      dispatch(resetCustomerSearch());
+      dispatch(clearSelection({ key: 'orderForm' }));
     } catch (err) {
       setInvoice(payload);
       setOrderItems([]);

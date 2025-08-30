@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, useMemo } from "react";
 const DataTable = React.lazy(() => import("./table"));
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useParams, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import TextInput from "./Textfield";
 import {
     Container,
@@ -125,6 +125,10 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
     const [person, setPerson] = useLocalStorageState("person", {});
     const [nug, setNug] = useLocalStorageState('nug', {});
     const rowRefs = useRef({}); // Ref for the first row input
+
+
+    const navigationType = useNavigationType();
+
     useEffect(() => {
         const invoiceURL = location.pathname;
 
@@ -158,6 +162,28 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
         const whatsappURL = `https://wa.me/${phoneNumber}?text=${message}`;
         window.open(whatsappURL, "_blank");
     }, [cameFromOrderPage, isReady, location.pathname, customer]);
+
+    useEffect(() => {
+        return () => {
+            // ✅ This runs when the user navigates away (back/forward or to another route)
+            console.log("User left MyPage");
+            // unlock invoicce
+            handleUnlock(id)
+        };
+    }, [id]);
+
+    useEffect(() => {
+        if (navigationType === "POP") {
+            // This fires on back/forward
+            console.log("Back/Forward pressed on MyPage");
+            handleUnlock(id);
+        }
+    }, [navigationType, id, location]);
+
+    const handleUnlock = async (id) => {
+        const unlock = `/${id}/unlock`;
+        await axios.put(`${invoiceAPI}${unlock}`);
+    }
 
     useEffect(() => {
         const freight = customer?.Frieght || 0;
@@ -542,14 +568,8 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
         }
 
         try {
-
-
             // Update api
-            const response = await axios.put(`${invoiceAPI}/${id}/update`, body);
-
-            // unlock invoicce
-            const unlock = `/${id}/unlock`;
-            await axios.put(`${invoiceAPI}${unlock}`, body);
+            await axios.put(`${invoiceAPI}/${id}/update`, body);
 
             // SUCCEEDED
             const data = [...updatedInvoices[id]];

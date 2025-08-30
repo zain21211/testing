@@ -372,7 +372,6 @@ const PackingList = () => {
     useEffect(() => {
         handleSubmit();
 
-
         socket.on("invoiceLocked", () => {
             console.log("locked")
             handleSubmit(); // 🔄 will be called on every socket emission

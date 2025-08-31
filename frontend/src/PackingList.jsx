@@ -8,6 +8,7 @@ import DataTable from './table';
 import axios from 'axios';
 import useLocalStorageState from 'use-local-storage-state';
 import io from "socket.io-client";
+import { useNavigate } from 'react-router-dom';
 
 
 // GLOBAL CONSTANTS
@@ -34,17 +35,24 @@ function unformatNumber(formattedValue) {
 }
 
 // navigator hook
-const HandleNavigate = async (doc) => {
-    try {
-        const pack = `/pack/${doc}`;
-        const lock = `/invoices/${doc}/lock`;
-        await axios.put(`${url}${lock}`);
-        window.location.href = pack;
+const useHandleNavigate = () => {
+    const navigate = useNavigate()
 
-    } catch (error) {
-        console.log(error)
-    }
-}
+    const handleNavigate = async (doc) => {
+        try {
+            // Lock the invoice
+            const lock = `/invoices/${doc}/lock`;
+            await axios.put(`${url}${lock}`);
+
+            // Navigate inside SPA (no reload)
+            navigate(`/pack/${doc}`);
+        } catch (error) {
+            console.error("Failed to lock invoice:", error);
+        }
+    };
+
+    return { handleNavigate };
+};
 
 
 function formatDate(isoString) {
@@ -296,7 +304,7 @@ const SummarySection = ({ tableData, amount, isAllowed }) => {
 
 // Results Table Component
 const ResultsTable = ({ data, columns }) => {
-
+    const { handleNavigate } = useHandleNavigate()
     return (
         <Box sx={{ fontSize: "2rem" }}>
             <DataTable
@@ -304,7 +312,7 @@ const ResultsTable = ({ data, columns }) => {
                 columns={columns}
                 rowKey={uniqueRowKey}
                 showPagination={true}
-                handleClick={HandleNavigate}
+                handleClick={handleNavigate}
                 rowsPerPageOptions={[5, 10, 25]}
                 sx={{
                     '& .MuiDataGrid-cell': {

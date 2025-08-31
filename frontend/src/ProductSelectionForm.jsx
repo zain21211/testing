@@ -173,7 +173,7 @@ export default function OrderPage({
 
     // ------- Loading state simulation -------
     const initialDataLoading = false;
-    const hasStock = selectedProduct?.StockQty > 0;
+    const hasStock = selectedProduct?.StockQty >= orderQuantity;
     const isAllowed = true;
 
     // ------- Filtered options (replace with useFilter hook later) -------

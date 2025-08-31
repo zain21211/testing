@@ -14,6 +14,7 @@ export default function ProductDetailsGrid({
     handleEnterkey,
     schPc,
     quantity,
+    Sch,
     schOn,
     setPrice,
     price,
@@ -104,7 +105,7 @@ export default function ProductDetailsGrid({
                 type="number"
                 sx={bigger}
                 disabled
-                value={schPc}
+                value={Sch ? schPc : 0}
             />
             <TextField
                 label="TQ"
@@ -119,7 +120,8 @@ export default function ProductDetailsGrid({
                 value={schText || 'NA'}
                 onChange={(e) => setPrice(e.target.value)}
                 sx={bigger}
-                disabled={!isAllowed}
+                disabled
+
             />
             <TextField
                 label="Price"
@@ -128,7 +130,7 @@ export default function ProductDetailsGrid({
                 sx={bigger}
                 onChange={(e) => setPrice(e.target.value)}
                 InputLabelProps={{ shrink: true }}
-                disabled={!isAllowed}
+                disabled
             />
             <TextField
                 label="Sug.price"
@@ -168,10 +170,9 @@ export default function ProductDetailsGrid({
                     ...bigger,
                     gridColumn: 'span 2',
                 }}
-
-
                 onChange={(e) => setProductRemakes(e.target.value)}
             />
+
             {(user.userType.toLowerCase() === "admin" ||
                 user?.username?.toLowerCase() === "zain") && (
                     <TextField

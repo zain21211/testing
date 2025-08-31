@@ -89,6 +89,8 @@ export function useScheme(selectedProduct, orderQuantity = 0) {
         schPc,
         schOn,
         quantity,
+        setQuantity,
+        setSchPc,
         price,
         baseSchPc,
         baseSchOn,

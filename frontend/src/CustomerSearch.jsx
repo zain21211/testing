@@ -12,6 +12,7 @@ const CustomerSearch = ({
   disabled = false,
   ledgerLoading = false,
 }) => {
+
   // 1. Call the date hook
   const dateHookData = useDateRange("3-Months");
 

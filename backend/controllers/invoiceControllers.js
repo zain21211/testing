@@ -294,12 +294,47 @@ WHERE P.Doc = @DocNumber
         .input("NUG", sql.Int, parseInt(nug))
         .input("DateTime", sql.VarChar, time || "null")
         .input("PackedBy", sql.NVarChar, username || "null").query(`
-       UPDATE PSDetail SET amount = rOUND((SELECT SUM(VIST) FROM PsProduct WHERE type = 'sale' AND doc = @DOC), 0) - ISNULL(Freight, 0), GrossProfit =ROUND ((SELECT SUM(Profit) FROM PsProduct WHERE type = 'sale' AND doc = @DOC), 0), 
-Status = case when (select count(*) from PsProduct where type='sale' and doc=@DOC and PackingDateTime is null) = 0 then 'INVOICE' else null end 
+       UPDATE PSDetail SET 
+       amount = rOUND(
+       (
+       SELECT SUM(VIST)
+        FROM PsProduct 
+        WHERE type = 'sale' 
+        AND doc = @DOC
+        ),
+         0) - ISNULL(Freight, 0),
+        GrossProfit =ROUND (
+        (
+        SELECT SUM(Profit)
+         FROM PsProduct 
+         WHERE type = 'sale' 
+         AND doc = @DOC
+        ), 
+        0), 
+Status = case when (
+select count(*)
+ from PsProduct 
+ where type='sale' 
+ and doc=@DOC
+  and PackingDateTime is null
+) = 0 
+ then
+  'INVOICE' 
+  else 
+    null
+   end 
 , Shopper =  @NUG, 
-description= case when (select count(*) from PsProduct where type='sale' and doc=@DOC and PackingDateTime is null) = 0
-then N' Packed by: ' + @PackedBy + ', ' +@DateTime 
-else N' Pending Packed by: '  + @PackedBy + ', ' +@DateTime 
+description = case when (
+select count(*) 
+from PsProduct
+ where type='sale' 
+ and doc=@DOC 
+ and PackingDateTime is null
+ ) = 0
+then 
+N' Packed by: ' + @PackedBy + ', ' +@DateTime 
+else 
+  N' Pending Packed by: '  + @PackedBy + ', ' +@DateTime 
 end
 , PackedBy = @PackedBy WHERE type = 'sale' AND doc = @DOC
 `);

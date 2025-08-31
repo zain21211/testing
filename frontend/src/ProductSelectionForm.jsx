@@ -91,6 +91,13 @@ export default function OrderPage({
 
     }, [user, setCompanyFilter, companyFilter])
 
+    useEffect(() => {
+        if (Sch) return;
+
+        setQuantity(orderQuantity);
+        setSchPc(0)
+
+    }, [Sch])
 
     // ------- Dummy handlers -------
     const debouncedSetCompanyFilter = (val) => setCompanyFilter(val);

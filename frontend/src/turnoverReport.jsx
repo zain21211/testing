@@ -85,7 +85,14 @@ const formatCurrency = (value) => {
 
 const StatusFilter = ({ handleChange }) => {
     const [filter, setFilter] = useState('pending');
-
+    const FilterValues = [
+        'Pending',
+        "Done",
+        'Payments',
+        'Orders',
+        'Remaks',
+        'All'
+    ]
     useEffect(() => {
         handleChange(filter);
     }, [filter, handleChange]);
@@ -100,9 +107,10 @@ const StatusFilter = ({ handleChange }) => {
                 label="Status"
                 onChange={(e) => setFilter(e.target.value)}
             >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="done">Done</MenuItem>
-                <MenuItem value="all">All</MenuItem>
+                {FilterValues.map(value => (
+                    <MenuItem value={value}>{value}</MenuItem>
+                ))}
+
             </Select>
         </FormControl>
     );
@@ -342,6 +350,9 @@ const TurnoverReport = () => {
     const location = useLocation()
     const [pending, setPending] = useState([])
     const [done, setDone] = useState([])
+    const [payments, setPayments] = useState([])
+    const [orders, setOrders] = useState([])
+    const [remarks, setRemarks] = useState([])
     const [all, setAll] = useState([])
     const [total, setTotal] = useState([]); // for all trader data
     const [filter, setFilter] = useState('pending');
@@ -360,6 +371,12 @@ const TurnoverReport = () => {
             setTotal(all);
         } else if (value === 'done') {
             setTotal(done);
+        } else if (value === 'orders') {
+            setTotal(orders);
+        } else if (value === 'payment') {
+            setTotal(payments);
+        } else if (value === 'remarks') {
+            setTotal(remarks);
         } else {
             setTotal(pending);
         }
@@ -377,32 +394,35 @@ const TurnoverReport = () => {
             const pending = data.filter(item => !(item.payment || item.remarks || item.orderAmount))
             const overdue = data.reduce((sum, item) => sum + (parseFloat(item.Overdue) || 0), 0);
             const payment = data.reduce((sum, item) => sum + (parseFloat(item.payment) || 0), 0);
+            const recovery = data.filter((item) => item.payment);
+            const remarks = data.filter((item) => item.remarks);
+            const orders = data.filter((item) => item.orderAmount);
             const fit = data.reduce((sum, item) => sum + (parseFloat(item.FitOrderAmount) || 0), 0);
             const other = total.reduce((sum, item) => sum + (parseFloat(item.OtherOrderAmount) || 0), 0);
             const action = done.length
 
+
             setAll(data)
             setDone(done)
+            setTotalFit(fit)
+            setOrders(orders)
             setActions(action)
             setPending(pending)
+            setRemarks(remarks)
+            setTotalOther(other)
+            setPayments(recovery)
             setTotalOverdue(overdue)
             setTotalPayment(payment)
-            setTotalFit(fit)
-            setTotalOther(other)
         }
 
     }, [turnoverData, location, filter])
 
     useEffect(() => {
-
         if (turnoverData) {
             setTotal(turnoverData);
         }
     }, [turnoverData, location]);
 
-    useEffect(() => {
-        console.log("totalr Data:", total);
-    }, [total]);
 
     const fetchReport = async () => {
         setIsLoading(true); // Set loading to true

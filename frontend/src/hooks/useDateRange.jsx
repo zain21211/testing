@@ -1,5 +1,6 @@
 // src/hooks/useDateRange.js
 import { useState, useEffect, useMemo } from "react";
+import useLocalStorageState from "use-local-storage-state";
 
 const formatDateForInput = (date) => {
     if (!date) return "";
@@ -23,7 +24,7 @@ export const useDateRange = (initialRange = "3-Months") => {
     }, []);
 
     const [dates, setDates] = useState(initialDates);
-    const [dateRangeType, setDateRangeType] = useState(initialRange);
+    const [dateRangeType, setDateRangeType] = useLocalStorageState('dateType', initialRange);
 
     useEffect(() => {
         const today = new Date();

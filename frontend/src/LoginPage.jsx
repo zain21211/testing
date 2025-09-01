@@ -141,7 +141,6 @@ const Login = () => {
 
 
     try {
-      console.log("api")
       const response = await axios.post(
         `${url}/login`,
         {
@@ -257,6 +256,15 @@ const Login = () => {
                 Packing List
               </Button>
             )}
+            <Button
+              component={RouterLink}
+              to="/coa"
+              variant="contained"
+              size="large"
+              sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold  " }}
+            >
+              COA
+            </Button>
             {(forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
               <Button
                 component={RouterLink}

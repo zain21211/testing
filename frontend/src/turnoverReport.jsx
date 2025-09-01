@@ -94,11 +94,12 @@ const StatusFilter = ({ handleChange }) => {
         'All'
     ]
     useEffect(() => {
+        console.log(filter)
         handleChange(filter);
     }, [filter, handleChange]);
 
     return (
-        <FormControl sx={{}}>
+        <FormControl sx={{ minWidth: 120 }}>
             <InputLabel id="status-filter-label">Status</InputLabel>
             <Select
                 labelId="status-filter-label"
@@ -107,12 +108,14 @@ const StatusFilter = ({ handleChange }) => {
                 label="Status"
                 onChange={(e) => setFilter(e.target.value)}
             >
-                {FilterValues.map(value => (
-                    <MenuItem value={value}>{value}</MenuItem>
+                {FilterValues.map((value, index) => (
+                    <MenuItem key={index} value={value}>
+                        {value}
+                    </MenuItem>
                 ))}
-
             </Select>
         </FormControl>
+
     );
 };
 
@@ -364,18 +367,19 @@ const TurnoverReport = () => {
     const [showBox, setShowBox] = useState(true);
 
     const onChange = (value) => {
-        if (nameFilter) return; // Don't filter if nameFilter is set
+        // if (nameFilter) return; // Don't filter if nameFilter is set
         setFilter(value);
         // alert(`Showing ${value} customers. spo ${userType}`);
-        if (value === 'all') {
+        if (value === 'All') {
             setTotal(all);
-        } else if (value === 'done') {
+        } else if (value === 'Done') {
+            console.log('done', done || 'non')
             setTotal(done);
-        } else if (value === 'orders') {
+        } else if (value === 'Orders') {
             setTotal(orders);
-        } else if (value === 'payment') {
+        } else if (value === 'Payment') {
             setTotal(payments);
-        } else if (value === 'remarks') {
+        } else if (value === 'Remarks') {
             setTotal(remarks);
         } else {
             setTotal(pending);
@@ -422,6 +426,7 @@ const TurnoverReport = () => {
             setTotal(turnoverData);
         }
     }, [turnoverData, location]);
+
 
 
     const fetchReport = async () => {

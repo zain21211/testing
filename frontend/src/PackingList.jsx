@@ -359,15 +359,15 @@ const PackingList = () => {
     // Memoized columns
     const memoizedColumns = useMemo(() => {
         return [
-            { label: "Route", id: "route", minWidth: 40, align: 'center' },
+            { label: "Route", id: "route", minWidth: 150, align: 'center' },
             { label: "Customer", id: "UrduName", minWidth: 250, align: "right" },
-            { label: "DOC #", id: "doc", minWidth: 80, align: 'center' },
-            { label: "#", id: "rn", minWidth: 40, align: 'center' },
-            { label: "DATE", id: "date", minWidth: 40, align: 'center' },
+            { label: "DOC #", id: "doc", minWidth: 100, align: 'center' },
+            { label: "#", id: "rn", minWidth: 60, align: 'center' },
+            { label: "DATE", id: "date", minWidth: 150, align: 'center' },
             ...(isAllowed
                 ? [
-                    { label: "USER", id: "UserName", maxWidth: 10, align: 'center' },
-                    { label: "AMOUNT", id: "amount", maxWidth: 20, align: "right" },
+                    { label: "USER", id: "UserName", minWidth: 180, align: 'center' },
+                    { label: "AMOUNT", id: "amount", minWidth: 50, align: "right" },
                 ]
                 : []),
         ];

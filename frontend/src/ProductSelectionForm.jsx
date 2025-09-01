@@ -152,7 +152,7 @@ export default function OrderPage({
     };
 
     // ------- Sizes (can move to theme or constants) -------
-    const biggerInputTextSize = '1.5rem'; // For text inside input fields
+    const biggerInputTextSize = '1.4rem'; // For text inside input fields
     const biggerShrunkLabelSize = '0.9rem';  // For labels when they shrink (float above)
     const biggerCheckboxLabelSize = '1rem'; // For checkbox labels
     const bigger = {
@@ -161,16 +161,42 @@ export default function OrderPage({
         "& .MuiInputBase-input.Mui-disabled": {
             textAlign: "center",
             fontWeight: "bold",
+            fontFamily: "'Poppins', sans-serif",
             WebkitTextFillColor: "black !important",
             fontSize: biggerInputTextSize,
+            "&::-webkit-outer-spin-button": {
+                WebkitAppearance: "none",
+                margin: 0,
+            },
+            "&::-webkit-inner-spin-button": {
+                WebkitAppearance: "none",
+                margin: 0,
+            },
+            "&[type=number]": {
+                MozAppearance: "textfield", // Firefox
+            },
         },
         "& .MuiInputLabel-root.Mui-disabled": {
             fontSize: biggerShrunkLabelSize,
+            fontFamily: "'Poppins', sans-serif",
             color: "rgba(0, 0, 0, 0.6)" // Default disabled label color
         },
         "& .MuiInputBase-input": {
             fontSize: biggerInputTextSize,
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            fontFamily: "'Poppins', sans-serif",
+            // fontFamily: "'Roboto Mono', monospace",
+            "&::-webkit-outer-spin-button": {
+                WebkitAppearance: "none",
+                margin: 0,
+            },
+            "&::-webkit-inner-spin-button": {
+                WebkitAppearance: "none",
+                margin: 0,
+            },
+            "&[type=number]": {
+                MozAppearance: "textfield", // Firefox
+            },
         },
         '& .MuiInputLabel-root.MuiInputLabel-shrink': {
             fontSize: biggerShrunkLabelSize
@@ -181,7 +207,7 @@ export default function OrderPage({
     // ------- Loading state simulation -------
     const initialDataLoading = false;
     const hasStock = selectedProduct?.StockQty >= orderQuantity;
-    const isAllowed = true;
+    const isAllowed = !user.userType.toLowerCase().includes('spo');
 
     // ------- Filtered options (replace with useFilter hook later) -------
     const filteredAutocompleteOptions = useFilterAutocomplete(products, {

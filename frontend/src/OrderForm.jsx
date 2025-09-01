@@ -45,6 +45,7 @@ import {
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
 import { useDispatch } from "react-redux";
+import { useInvoiceSync } from "./hooks/useInvoiceSync.js";
 
 // --- Constants & Configuration ---
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -143,7 +144,6 @@ const OrderForm = () => {
   );
 
   // --- Derived State & Memoized Values ---
-  const co = useGeolocation();
   const today = useMemo(() => new Date(), []);
   const minDate = useMemo(() => {
     const d = new Date(today);
@@ -155,6 +155,7 @@ const OrderForm = () => {
     return d.toISOString().split("T")[0];
   }, [today]);
 
+  const { retryInvoices } = useInvoiceSync(invoice, setInvoice, token);
   // --- Effects ---
 
   useEffect(() => {
@@ -270,42 +271,8 @@ const OrderForm = () => {
     setOrderItemsTotalQuantity(newTotalQuantity);
   }, [orderItems, setOrderItemsTotalQuantity]);
 
-  useEffect(() => {
-    const handleOnline = async () => {
-      if (invoice?.length > 0 && navigator.onLine) {
-        try {
-          const results = await Promise.allSettled(
-            invoice.map((inv) =>
-              axios.post(
-                `${API_BASE_URL}/create-order`,
-                inv,
-                { headers: { Authorization: `Bearer ${token}` } }
-              )
-            )
-          );
 
-          const successfulIndexes = results
-            .map((res, idx) => (res.status === "fulfilled" ? idx : null))
-            .filter((idx) => idx !== null);
 
-          if (successfulIndexes.length > 0) {
-            setInvoice((prev) =>
-              prev.filter((_, idx) => !successfulIndexes.includes(idx))
-            );
-          }
-
-          console.log("automatically Posting results:", results);
-        } catch (err) {
-          console.error("Batch retry failed:", err);
-        }
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    handleOnline(); // Initial check
-
-    return () => window.removeEventListener("online", handleOnline);
-  }, [invoice, setInvoice, token]);
 
 
   // --- Event Handlers & Callbacks ---
@@ -433,22 +400,32 @@ const OrderForm = () => {
       setOverDue(null);
       dispatch(clearSelection({ key: 'orderForm' }));
     } catch (err) {
-      setInvoice(payload);
-      setOrderItems([]);
-      setSelectedCustomer(null);
-      resetProductInputs();// Save payload for retry if offline
+      // Errors
       const errorMessage =
         err.response?.data?.message || "Failed to create order.";
-      dispatch(resetCustomerSearch());
+      dispatch(clearSelection({ key: 'orderForm' }));
       console.error(
         "Order creation failed:",
         err.response?.data || err.message || err
       );
       setError(`${errorMessage} Please check details and try again.`);
+
+      // for sync
+      const confirmed = window.confirm("Are you sure you want to delete this and let it post automatically?");
+      if (!confirmed) return;
+      setInvoice(prev => [...prev, payload]);
+      setOrderItems([]);
+      setSelectedCustomer(null);
+      resetProductInputs();// Save payload for retry if offline
+
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    console.log('the incoices to retry', invoice)
+  }, [invoice])
 
   const handlePendingItems = async () => {
     try {
@@ -497,7 +474,7 @@ const OrderForm = () => {
   return (
     <Container maxWidth={false} sx={{ all: "unset" }}>
       {(success || error) && (
-        <Box sx={{ my: 2 }}>
+        <Box >
           <Fade in={!!error}>
             <Alert severity="error" onClose={() => setError(null)}>
               {error}
@@ -513,7 +490,7 @@ const OrderForm = () => {
 
       <Box
         sx={{
-          mb: 2,
+          mb: 1,
           display: "grid",
           gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" },
           alignItems: "center",
@@ -538,7 +515,7 @@ const OrderForm = () => {
             gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
             gap: 2,
             alignItems: "center",
-            height: { xs: "auto", md: "77px" },
+            // height: { xs: "auto", md: "77px" },
           }}
         >
           <TextField
@@ -558,7 +535,7 @@ const OrderForm = () => {
               color="primary"
               fullWidth
               sx={{
-                fontSize: "2rem",
+                fontSize: "1.6rem",
                 transition: "background-color 0.3s",
                 "&:hover": { backgroundColor: "primary.dark" },
               }}
@@ -672,7 +649,14 @@ const OrderForm = () => {
             alignItems: "center",
           }}
         >
-          <Typography variant="h6">Add Product</Typography>
+          <Typography
+            variant="h5"
+            fontWeight="bold"
+            sx={{ fontFamily: "'Poppins', sans-serif" }}
+          >
+            Add Product
+          </Typography>
+
           {selectedCustomer && (
             <Button
               variant="contained"
@@ -680,6 +664,16 @@ const OrderForm = () => {
               onClick={handlePendingItems}
             >
               Pending Items
+            </Button>
+          )}
+          {invoice.length > 0 && (
+            <Button
+              variant="contained"
+              color="error"
+              sx={{ height: "100%", fontSize: "1rem" }}
+              onClick={retryInvoices}
+            >
+              Retry Invoices ( {invoice.length} )
             </Button>
           )}
         </Box>

@@ -67,25 +67,51 @@ export default function ProductDetailsGrid({
                     inputProps={{ enterKeyHint: "done" }}
                     sx={{
                         gridColumn: { xs: "span 1", sm: "span 1", md: "auto" },
-                        width: { xs: "100%", md: "120px" }, // INCREASED width
+                        // width: { xs: "100%", md: "120px" },
+                        backgroundColor: !isClaim && selectedProduct ? (hasStock ? "green" : "red") : undefined,
+                        borderRadius: "4px", // ✅ Rounded corners
+
                         "& .MuiOutlinedInput-root": {
+                            borderRadius: "12px", // ✅ Rounded corners for the input
                             "& fieldset": {
-                                borderColor: !isClaim && selectedProduct ? (hasStock ? "green" : "red") : undefined,
+                                border: "none", // ✅ Remove default border/outline
+                                borderColor: "transparent", // fallback
                             },
                             "&:hover fieldset": {
-                                borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                                border: "none", // Remove hover border
+                                borderColor: "transparent",
                             },
                             "&.Mui-focused fieldset": {
-                                borderColor: !isClaim && selectedProduct ? (hasStock ? "darkgreen" : "darkred") : undefined,
+                                border: "none", // Remove focus border
+                                borderColor: "transparent",
                             },
                         },
-                        "& .MuiInputBase-input": { // Target input directly
-                            color: "black !important",
+
+                        "& .MuiInputBase-input": {
+                            color: "white !important",
                             textAlign: "center",
+                            fontWeight: "bold",
                             fontSize: biggerInputTextSize,
+                            "&::-webkit-outer-spin-button": {
+                                WebkitAppearance: "none",
+                                margin: 0,
+                            },
+                            "&::-webkit-inner-spin-button": {
+                                WebkitAppearance: "none",
+                                margin: 0,
+                            },
+                            "&[type=number]": {
+                                MozAppearance: "textfield", // Firefox
+                            },
                         },
-                        '& .MuiInputLabel-root.MuiInputLabel-shrink': { fontSize: biggerShrunkLabelSize },
+                        "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+                            fontSize: biggerShrunkLabelSize,
+                            backgroundColor: 'white',
+                            paddingX: 1,
+                            borderRadius: 2,
+                        },
                     }}
+
                     onChange={(e) => {
                         const value = e.target.value;
                         if (value === "" || value === "-") {
@@ -119,9 +145,26 @@ export default function ProductDetailsGrid({
                 type="text"
                 value={schText || 'NA'}
                 onChange={(e) => setPrice(e.target.value)}
-                sx={bigger}
+                sx={{
+                    ...bigger,
+                    "& .MuiInputBase-input": {
+                        ...bigger["& .MuiInputBase-input"],
+                        fontSize: "1.5rem", // override only input font size
+                    },
+                    "& .MuiInputBase-input.Mui-disabled": {
+                        ...bigger["& .MuiInputBase-input.Mui-disabled"],
+                        fontSize: "1rem", // override disabled input font size
+                    },
+                    "& .MuiInputLabel-root.Mui-disabled": {
+                        ...bigger["& .MuiInputLabel-root.Mui-disabled"],
+                        fontSize: "0.8rem", // override disabled label
+                    },
+                    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+                        ...bigger['& .MuiInputLabel-root.MuiInputLabel-shrink'],
+                        fontSize: "0.8rem", // override shrunk label
+                    },
+                }}
                 disabled
-
             />
             <TextField
                 label="Price"
@@ -135,10 +178,19 @@ export default function ProductDetailsGrid({
             <TextField
                 label="Sug.price"
                 type="number"
-                sx={bigger}
+                sx={{
+                    ...bigger,
+                    "& .MuiInputBase-input": {
+                        ...bigger["& .MuiInputBase-input"],
+                        textAlign: "right", // override only input alignment
+                    },
+                }}
+
                 value={suggestedPrice}
                 InputLabelProps={{ shrink: true }}
                 onChange={(e) => setSuggestedPrice(e.target.value)}
+                onKeyDown={(e) => handleEnterkey(e)}
+
             />
             <TextField
                 label="D1 (%)"
@@ -146,6 +198,8 @@ export default function ProductDetailsGrid({
                 sx={bigger}
                 value={discount1}
                 onChange={(e) => setDiscount1(e.target.value)}
+                onKeyDown={(e) => handleEnterkey(e)}
+                disabled={!isAllowed}
             />
             <TextField
                 label="D2 (%)"
@@ -153,7 +207,12 @@ export default function ProductDetailsGrid({
                 value={discount2}
                 sx={bigger}
                 onChange={(e) => setDiscount2(e.target.value)}
+                onKeyDown={(e) => handleEnterkey(e)}
+                disabled={!isAllowed}
+
+
             />
+
             <TextField
                 label="Amount"
                 disabled
@@ -163,6 +222,7 @@ export default function ProductDetailsGrid({
                 }}
                 value={formatCurrency(calculatedAmount)}
             />
+
             <TextField
                 label="Remakes"
                 value={productRemakes}
@@ -170,6 +230,7 @@ export default function ProductDetailsGrid({
                     ...bigger,
                     gridColumn: 'span 2',
                 }}
+                onKeyDown={(e) => handleEnterkey(e)}
                 onChange={(e) => setProductRemakes(e.target.value)}
             />
 
@@ -186,10 +247,14 @@ export default function ProductDetailsGrid({
                 variant="contained"
                 onClick={handleAddProductClick}
                 startIcon={<AddIcon />}
-                sx={{ height: "56px" }}
+                sx={{
+                    height: "56px",
+                    display: { xs: "flex", sm: "flex", md: "none" }, // ✅ only show on mobile
+                }}
             >
                 Add
             </Button>
+
         </Box>
     );
 }

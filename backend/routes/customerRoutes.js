@@ -8,6 +8,9 @@ const router = express.Router();
 // Route to get all customers
 router.get("/", authenticateToken, customerController.getCustomers);
 router.get("/search", customerController.getCustomers);
+router.post("/create", customerController.createCustomer);
+router.post("/createImages", customerController.createImages);
+router.get("/newAcid", customerController.getAcid);
 router.get("/inactive", customerController.getInactiveProducts);
 router.get("/debit", byUser.getDebitCusts); // Use the getDebitCusts method from byUser controller
 router.get("/credit", byUser.getCreditCusts); // Use the getCreditCusts method from byUser controller

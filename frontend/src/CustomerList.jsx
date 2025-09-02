@@ -69,14 +69,14 @@ const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight }) => {
   ];
 
   return (
-    <Card sx={{ boxShadow: 3, borderRadius: 2, height: '100%', width: '100%', }}>
+    <Card sx={{ boxShadow: 3, borderRadius: 2, height: '100%', }}>
       <CardContent>
         <Search type="customer" onSearch={handleCustomerSearch} />
         <div ref={listRef} style={{ overflowY: isOverflowing ? 'scroll' : 'auto' }}>
           {filteredCustomers?.length === 0 ? (
             <Typography variant="body2">No customers available</Typography>
           ) : (
-            <Box sx={{ overflow: 'hidden', marginY: 2 }}>
+            <Box sx={{ marginY: 2, overflow: 'scroll' }}>
               <DataTable
                 data={filteredCustomers}
                 columns={customerColumns}

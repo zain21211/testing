@@ -81,7 +81,7 @@ export default function MyAutocomplete({ field, formData, accounts, urdu, handle
                         },
                     }}
                     InputLabelProps={{
-                        sx: { fontSize: "1.3rem" },
+                        // sx: { fontSize: "1.3rem" },
                     }}
                     fullWidth
                     required

@@ -90,11 +90,11 @@ const StatusFilter = ({ handleChange }) => {
         "Done",
         'Payments',
         'Orders',
-        'Remaks',
+        'Remarks',
         'All'
     ]
     useEffect(() => {
-        console.log(filter)
+
         handleChange(filter);
     }, [filter, handleChange]);
 
@@ -377,7 +377,7 @@ const TurnoverReport = () => {
             setTotal(done);
         } else if (value === 'Orders') {
             setTotal(orders);
-        } else if (value === 'Payment') {
+        } else if (value === 'Payments') {
             setTotal(payments);
         } else if (value === 'Remarks') {
             setTotal(remarks);
@@ -394,17 +394,33 @@ const TurnoverReport = () => {
     useEffect(() => {
         if (turnoverData) {
             const data = turnoverData;
-            const done = data.filter(item => item.payment || item.remarks || item.orderAmount || item.FitOrderAmount || item.OtherOrderAmount);
-            const pending = data.filter(item => !(item.payment || item.remarks || item.orderAmount))
-            const overdue = data.reduce((sum, item) => sum + (parseFloat(item.Overdue) || 0), 0);
-            const payment = data.reduce((sum, item) => sum + (parseFloat(item.payment) || 0), 0);
-            const recovery = data.filter((item) => item.payment);
-            const remarks = data.filter((item) => item.remarks);
-            const orders = data.filter((item) => item.orderAmount);
-            const fit = data.reduce((sum, item) => sum + (parseFloat(item.FitOrderAmount) || 0), 0);
-            const other = total.reduce((sum, item) => sum + (parseFloat(item.OtherOrderAmount) || 0), 0);
-            const action = done.length
+            const done = data.filter(item =>
+                item.payment || item.remarks || item.orderAmount || item.FitOrderAmount || item.OtherOrderAmount
+            );
 
+            const pending = data.filter(item =>
+                !(item.payment || item.remarks || item.orderAmount || item.FitOrderAmount || item.OtherOrderAmount)
+            );
+
+            const overdue = data.reduce((sum, item) => sum + (parseFloat(item.Overdue) || 0), 0);
+
+            const payment = data.reduce((sum, item) => sum + (parseFloat(item.payment) || 0), 0);
+
+            const recovery = data.filter(item => item.payment);
+
+            const remarks = data.filter(item => item.remarks);
+
+            const orders = data.filter(item => item.orderAmount);
+
+            const fit = data.reduce((sum, item) => sum + (parseFloat(item.FitOrderAmount) || 0), 0);
+
+            const other = data.reduce((sum, item) => sum + (parseFloat(item.OtherOrderAmount) || 0), 0);
+
+            const action = done.length;
+
+            console.table(payment)
+            console.table(orders)
+            console.table(remarks)
 
             setAll(data)
             setDone(done)

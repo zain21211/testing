@@ -8,7 +8,7 @@ import React, {
 import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import debounce from "lodash.debounce";
+// import debounce from "lodash.debounce";
 
 // --- Material-UI Imports ---
 import {
@@ -33,7 +33,7 @@ import CloseIcon from "@mui/icons-material/Close";
 // --- Custom Hooks & Components ---
 import { useLocalStorageState } from "./hooks/LocalStorage";
 import { useIndexedDBState } from "./hooks/indexDBHook";
-import useGeolocation from "./hooks/geolocation";
+// import useGeolocation from "./hooks/geolocation";
 import InactiveItems from "./components/InactiveItems.jsx";
 import LedgerSearchForm from "./CustomerSearch.jsx";
 import ProductSelectionForm from "./ProductSelectionForm.jsx";
@@ -41,7 +41,6 @@ import {
   setIDWithKey,
   setSelectedCustomer,
   clearSelection,
-  resetCustomerSearch,
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
 import { useDispatch } from "react-redux";
@@ -60,22 +59,22 @@ const formatCurrency = (value) => {
   });
 };
 
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+// function escapeRegExp(string) {
+//   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// }
 
-function makeWildcardRegex(filter) {
-  if (!filter || filter.trim() === "") return null;
-  const lowerFilter = filter.toLowerCase().trim();
-  const terms = lowerFilter.split(/[%\s]+/).map(escapeRegExp);
-  const pattern = `^${terms[0]}.*${terms.slice(1).join(".*")}`;
-  try {
-    return new RegExp(pattern, "i");
-  } catch (e) {
-    console.error("Invalid regex:", pattern, e);
-    return null;
-  }
-}
+// function makeWildcardRegex(filter) {
+//   if (!filter || filter.trim() === "") return null;
+//   const lowerFilter = filter.toLowerCase().trim();
+//   const terms = lowerFilter.split(/[%\s]+/).map(escapeRegExp);
+//   const pattern = `^${terms[0]}.*${terms.slice(1).join(".*")}`;
+//   try {
+//     return new RegExp(pattern, "i");
+//   } catch (e) {
+//     console.error("Invalid regex:", pattern, e);
+//     return null;
+//   }
+// }
 
 // --- Styled Components ---
 const BigTextField = styled(TextField)({
@@ -155,7 +154,8 @@ const OrderForm = () => {
     return d.toISOString().split("T")[0];
   }, [today]);
 
-  const { retryInvoices } = useInvoiceSync(invoice, setInvoice, token);
+  // custom hooks
+  const { retryInvoices, loading: syncing } = useInvoiceSync(invoice, setInvoice, token);
   // --- Effects ---
 
   useEffect(() => {
@@ -666,14 +666,17 @@ const OrderForm = () => {
               Pending Items
             </Button>
           )}
-          {invoice.length > 0 && (
+          {invoice?.length > 0 && (
             <Button
               variant="contained"
               color="error"
               sx={{ height: "100%", fontSize: "1rem" }}
               onClick={retryInvoices}
+              disabled={syncing}
             >
-              Retry Invoices ( {invoice.length} )
+              {syncing ? `Syncing`
+                : `Retry Invoices ( ${invoice.length} )`
+              }
             </Button>
           )}
         </Box>

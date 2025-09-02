@@ -107,14 +107,14 @@ export default function CreateCustomer({ onCustomerCreated, accounts, urdu }) {
         <Card sx={{ boxShadow: 2, borderRadius: 2 }}>
             <CardContent sx={{ p: 2 }}>
                 {/* Tabs */}
-                <Tabs
+                {/* <Tabs
                     value={tabValue}
                     onChange={(_, newValue) => setTabValue(newValue)}
                     TabIndicatorProps={{ style: { display: "none" } }}
                 >
                     <Tab label="create" />
                     <Tab label="update" />
-                </Tabs>
+                </Tabs> */}
 
                 {/* CREATE */}
                 <TabPanel value={tabValue} index={0}>
@@ -140,15 +140,15 @@ export default function CreateCustomer({ onCustomerCreated, accounts, urdu }) {
                                         name={cleanString(field)}
                                         value={formData[cleanString(field)] || ""}
                                         onChange={handleChange}
-                                        fullWidth
-                                        size="small"
+                                    // fullWidth
+                                    // size="small"
                                     />
                                 )
                             )}
                         </Box>
 
                         {/* Type */}
-                        <FormControl fullWidth size="small" sx={{ mt: 2 }}>
+                        <FormControl fullWidth sx={{ mt: 2 }}>
                             <InputLabel id="type-label">Type</InputLabel>
                             <Select
                                 labelId="type-label"
@@ -182,15 +182,20 @@ export default function CreateCustomer({ onCustomerCreated, accounts, urdu }) {
                         {/* Upload */}
                         <DualCameraUpload images={images} handleImageChange={handleImageChange} />
 
-                        {/* Submit */}
-                        <Button
-                            // onClick={handlePost}
-                            type="submit"
-                            variant="contained"
-                            fullWidth
-                            sx={{ mt: 2 }}>
-                            Create Account
-                        </Button>
+                        <Box
+                            sx={{ display: 'flex', justifyContent: 'center' }}
+                        >
+                            {/* Submit */}
+                            <Button
+                                // onClick={handlePost}
+                                type="submit"
+                                variant="contained"
+                                fullWidth
+
+                                sx={{ mt: 2, width: '50%', fontWeight: 'bold', fontSize: '1.5rem', margin: 'auto' }}>
+                                Create Account
+                            </Button>
+                        </Box>
                     </Box>
                 </TabPanel>
             </CardContent>

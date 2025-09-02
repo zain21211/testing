@@ -302,15 +302,15 @@ const DataTable = ({
   return (
     <Paper
       sx={{
-        width: "100%",
-        overflow: "hidden",
+        // width: "100%",
+        overflow: "scroll",
         borderRadius: "7px",
         padding: 0,
         fontSize: "2rem",
-        maxHeight: usage?.includes("coa") ? "80vh" : "auto",
+        // maxHeight: usage?.includes("coa") ? "80vh" : "auto",
       }}
     >
-      <TableContainer sx={{ maxHeight: "inherit" }}>
+      <TableContainer sx={{ maxHeight: "inherit", overflowX: 'auto' }}>
         <Table
           stickyHeader
           aria-label="sticky table"

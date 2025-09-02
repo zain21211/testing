@@ -1,13 +1,20 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import axios from "axios";
 
 export const useInvoiceSync = (invoice, setInvoice, token) => {
+  const [loading, setLoading] = useState(false);
   // Retry function
   const retryInvoices = useCallback(async () => {
-    if (invoice.length === 0) return;
+    setLoading(true);
 
-    // const invoices = [invoice];
+    if (invoice?.length === 0 || invoice?.[0] === null) {
+      setInvoice([]);
+      return;
+    }
+
+    if (!Array.isArray(invoice)) setInvoice((prev) => [prev]);
+
     try {
       const results = await Promise.allSettled(
         invoice.map((inv) =>
@@ -35,11 +42,15 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
       }
     } catch (err) {
       console.error("Retry failed:", err);
+    } finally {
+      setLoading(false);
     }
   }, [invoice, token, setInvoice]);
 
   // Automatic retries
   useEffect(() => {
+    if (!invoice || invoice?.length === 0 || invoice?.[0] === null) return;
+
     const interval = setInterval(retryInvoices, 5000);
     window.addEventListener("online", retryInvoices);
 
@@ -50,5 +61,5 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
   }, [retryInvoices]);
 
   // Return the retry function for manual triggering
-  return { retryInvoices };
+  return { retryInvoices, loading };
 };

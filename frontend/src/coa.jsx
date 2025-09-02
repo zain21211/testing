@@ -5,6 +5,7 @@ import CreateCustomer from './CreateCustomer';
 import CustomerList from './CustomerList';
 import axios from 'axios';
 import useWindowDimensions from './useWindowDimensions'; // Import the custom hook
+import table from './table';
 
 const COA = () => {
     const [accounts, setAccounts] = useState([]);
@@ -43,14 +44,24 @@ const COA = () => {
             // Adjust the subtraction value based on your layout's top margin and other elements
             setTableHeight(height - containerTop - 100);
         }
+
     }, [height]);
+
+    useEffect(() => {
+        console.log("tableHeight", tableHeight);
+
+    }, [tableHeight])
 
     return (
         <Box
             ref={containerRef}
             sx={{
+                width: '100%',
                 my: 2,
-                display: 'grid',
+                display: { xs: 'flex', sm: 'grid' },
+                flexDirection: 'column',
+                // overflow: 'hidden',
+
                 gridTemplateColumns: {
                     xs: '1fr',       // mobile → single column
                     md: '1fr 2fr',   // desktop → 1/3 + 2/3

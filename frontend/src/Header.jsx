@@ -53,6 +53,11 @@ const profileMenuItems = [
 ];
 let drawerMenuItems = [
   {
+    label: "Accounts",
+    icon: ReceiptSharpIcon,
+    path: "/coa",
+  },
+  {
     label: "Order",
     icon: ReceiptSharpIcon,
     path: "/order",

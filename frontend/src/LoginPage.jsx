@@ -261,9 +261,9 @@ const Login = () => {
               to="/coa"
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold  " }}
+              sx={{ py: 1.5, height: "60px", bgcolor: "#610051ff", fontWeight: "Bold  " }}
             >
-              COA
+              Accounts
             </Button>
             {(forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
               <Button

@@ -81,10 +81,10 @@ app.use(cors());
 // ✅ Must handle OPTIONS
 // app.options('/*', cors());
 
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 app.use(express.static(__dirname)); // For serving frontend
-app.use(express.json({ limit: "1mb" })); // or more, if needed
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+app.use(express.json({ limit: "100mb" })); // or more, if needed
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
 // Handle preflight OPTIONS requests globally
 // app.options('*', cors());

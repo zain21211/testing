@@ -8,10 +8,14 @@ export function useCamera(
   const handleImageChange = (event, type) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      setImages((prev) => ({
-        ...prev,
-        [type]: URL.createObjectURL(file),
-      }));
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImages((prev) => ({
+          ...prev,
+          [type]: reader.result, // <-- this will be "data:image/jpeg;base64,..."
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 

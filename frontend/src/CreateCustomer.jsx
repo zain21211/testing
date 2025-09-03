@@ -103,6 +103,10 @@ export default function CreateCustomer({ onCustomerCreated, accounts, urdu }) {
         }
     };
 
+    useEffect(() => {
+        console.log(formData)
+    }, [formData])
+
     return (
         <Card sx={{ boxShadow: 2, borderRadius: 2 }}>
             <CardContent sx={{ p: 2 }}>
@@ -125,7 +129,7 @@ export default function CreateCustomer({ onCustomerCreated, accounts, urdu }) {
                                 field.toLowerCase().includes("name") ? (
                                     <MyAutocomplete
                                         key={field}
-                                        formData={{ name: formData.name, urduname: formData.urduname }}
+                                        formData={{ name: formData.name ?? '', urduname: formData.urduname ?? '' }}
                                         field={field}
                                         accounts={accounts}
                                         urdu={urdu}

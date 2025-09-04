@@ -2,6 +2,14 @@ const mssql = require("mssql");
 const dbConnection = require("../database/connection"); // Import your database connection
 const imageDb = require("../database/imagedb"); // Import your database connection
 
+function cleanNumbers(input) {
+  console.log(input);
+  const cleaned = input.replace(/[^0-9]/g, ""); // keep only digits
+  const num = cleaned ? parseFloat(cleaned) : 0; // convert to number
+  console.log(num);
+  return num;
+}
+
 function convertImages(record) {
   const imageObj = {};
 
@@ -48,7 +56,9 @@ const customerControllers = {
           SPO,
           creditlimit,
           creditdays,
-          ACCATEGORY as type
+          ACCATEGORY as type, 
+          worth as monthlytransaction,
+          buyingsource
         FROM coa
         WHERE Subsidary LIKE '%' + @subsibary + '%'
         and route like '%' + @route + '%'
@@ -211,6 +221,10 @@ const customerControllers = {
         creditdays,
         creditlimit,
         phonenumber,
+        longitude,
+        latitude,
+        monthlytransaction: worth,
+        buyingsource,
         discounts = [],
       } = payload;
 
@@ -241,14 +255,17 @@ INSERT INTO coa
 (
     Id, Date, Category, ACCATEGORY, Main, Subsidary, UrduName, SPO,
     OCell, OAddress, Balance, Status, Balance_Date,
-    route, creditlimit, creditdays,active, acType, RunsDate, OCELLWA
+    route, creditlimit, creditdays, active, acType, RunsDate, OCELLWA,
+    Longitude, Latitude, Worth, BuyingSource
 )
 VALUES
 (
     @Id, GETDATE(), 'BALANCE SHEET', @ACCATEGORY, 'TRADE DEBTORS', @Subsidary, @UrduName, @spo,
     @OCell, @OAddress, 0, 'Active', GETDATE(),
-    @route, @creditlimit, @creditdays, 1, @acType, GETDATE(), @OCELLWA
+    @route, @creditlimit, @creditdays, 1, @acType, GETDATE(), @OCELLWA,
+    @Longitude, @Latitude, @Worth, @BuyingSource
 );
+
 
     `;
 
@@ -265,6 +282,10 @@ VALUES
         .input("creditlimit", mssql.Int, creditlimit)
         .input("creditdays", mssql.Int, creditdays)
         .input("acType", mssql.Int, 5)
+        .input("Longitude", mssql.Float, longitude)
+        .input("Latitude", mssql.Float, latitude)
+        .input("Worth", mssql.Int, cleanNumbers(worth))
+        .input("Buyingsource", mssql.VarChar, buyingsource)
         .input("OCELLWA", mssql.VarChar, whatsapp)
         .query(query);
 
@@ -272,7 +293,7 @@ VALUES
       // [{ acid, d1, d2, pricelist, company }, {...}, ...]
 
       await Promise.all(
-        discounts.map(({ d1, d2, list, company }) =>
+        (discounts ?? []).map(({ d1, d2, list, company }) =>
           pool
             .request()
             .input("acid", mssql.Int, acid)
@@ -312,6 +333,8 @@ VALUES
         discounts = [],
         username,
         acid,
+        monthlytransaction: worth,
+        buyingsource,
       } = payload;
 
       if (!acid) {
@@ -344,7 +367,9 @@ SET
     creditlimit = @creditlimit,
     creditdays = @creditdays,
     acType = @acType,
-    OCELLWA = @OCELLWA
+    OCELLWA = @OCELLWA,
+    worth = @Worth,
+    buyingsource = @Buyingsource
 WHERE Id = @Id;
 
     `;
@@ -363,10 +388,12 @@ WHERE Id = @Id;
         .input("creditdays", mssql.Int, creditdays)
         .input("acType", mssql.Int, 5)
         .input("OCELLWA", mssql.VarChar, whatsapp)
+        .input("Worth", mssql.Int, cleanNumbers(worth))
+        .input("Buyingsource", mssql.VarChar, buyingsource)
         .query(query);
 
       await Promise.all(
-        discounts?.map(({ d1, d2, list, company }) =>
+        (discounts ?? []).map(({ d1, d2, list, company }) =>
           pool
             .request()
             .input("acid", mssql.Int, acid)

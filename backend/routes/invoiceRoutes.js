@@ -11,7 +11,7 @@ router.get("/:id", invoiceControllers.getInvoiceByID);
 router.put("/:id/update", invoiceControllers.updateInvoice);
 
 // for locking/unlocking
-router.put("/:id/lock", invoiceControllers.lockInovice);
+router.put("/:id/lock", invoiceControllers.lockInvoice);
 router.put("/:id/unlock", invoiceControllers.unlockInvoice);
 router.post("/:id/unlock", invoiceControllers.unlockInvoice);
 

@@ -26,6 +26,7 @@ export default function DualCameraUpload({ images, handleImageChange }) {
                         color="primary"
                         fontSize="1.2rem"
                         width="100%"
+                        fullWidth
 
                         sx={{ fontSize: '1.2rem' }}
                     >
@@ -66,6 +67,7 @@ export default function DualCameraUpload({ images, handleImageChange }) {
                 <label htmlFor="agreement-upload">
 
                     <Button
+                        fullWidth
                         variant="contained"
                         component="span"
                         color="secondary"

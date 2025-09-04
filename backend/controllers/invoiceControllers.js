@@ -2,6 +2,8 @@
 // const dbConnection = require('../database/dbConnection');
 const sql = require("mssql");
 const dbConnection = require("../database/connection"); // Import your database connection
+// Keep timers in memory
+const lockTimers = new Map();
 
 const invoiceControllers = {
   getInvoice: async (req, res) => {
@@ -361,7 +363,8 @@ end
     }
   },
 
-  lockInovice: async (req, res) => {
+  // Lock invoice
+  lockInvoice: async (req, res) => {
     const doc = req.params.id;
 
     try {
@@ -374,6 +377,39 @@ end
           "update psdetail set status = 'packing' where type = 'sale' and doc = @doc"
         );
 
+      // clear any old timer
+      if (lockTimers.has(doc)) clearTimeout(lockTimers.get(doc));
+
+      // start unlock timer (e.g. 5 minutes)
+      const timer = setTimeout(async () => {
+        try {
+          const pool2 = await dbConnection();
+          await pool2.request().input("doc", sql.Int, doc).query(`
+          update psdetail set
+            status = case when(
+              select count(*) 
+              from PsProduct 
+              where type = 'sale' 
+              and doc = @doc 
+              and PackingDateTime is null
+            ) = 0 
+            then 'INVOICE' 
+            else null 
+          end
+          where type = 'sale' and doc = @doc
+        `);
+
+          // Emit socket event
+          const io = req.app.get("io");
+          io.emit("invoiceUnlocked", { doc });
+          console.log(`Auto-unlocked invoice ${doc}`);
+        } catch (err) {
+          console.error("Auto-unlock failed", err);
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+
+      lockTimers.set(doc, timer);
+
       // Emit socket event
       const io = req.app.get("io");
       io.emit("invoiceLocked", { doc });
@@ -384,6 +420,7 @@ end
     }
   },
 
+  // Unlock invoice manually
   unlockInvoice: async (req, res) => {
     const doc = req.params.id;
 
@@ -396,7 +433,7 @@ end
         select count(*) 
         from PsProduct 
         where type = 'sale' 
-        and doc = @DOC 
+        and doc = @doc 
         and PackingDateTime is null
         ) = 0 
       then
@@ -407,6 +444,12 @@ end
       where type = 'sale' 
       and doc = @doc
     `);
+
+      // clear timer if exists
+      if (lockTimers.has(doc)) {
+        clearTimeout(lockTimers.get(doc));
+        lockTimers.delete(doc);
+      }
 
       // Emit socket event
       const io = req.app.get("io");

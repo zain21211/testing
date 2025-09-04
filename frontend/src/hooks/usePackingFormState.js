@@ -20,7 +20,6 @@ export const usePackingFormState = (id) => {
   const [person, setPerson] = useLocalStorageState("person", {});
 
   const updateQuantity = (row, qty) => {
-    console.log("row:", row, qty);
     const now = new Date();
     now.setHours(now.getHours() + 5);
     const dateTime = now.toISOString().slice(0, 19).replace("T", " ");
@@ -71,8 +70,8 @@ export const usePackingFormState = (id) => {
     updatedInvoices,
     setUpdatedInvoice,
     setUpdatedInvoices,
-    nug: nug[id] || "",
-    person: person[id] || "",
+    nug: nug?.[id] || "",
+    person: person?.[id] || "",
     updateQuantity,
     updateNug,
     updatePerson,

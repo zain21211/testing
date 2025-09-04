@@ -13,5 +13,6 @@ router.put("/:id/update", invoiceControllers.updateInvoice);
 // for locking/unlocking
 router.put("/:id/lock", invoiceControllers.lockInovice);
 router.put("/:id/unlock", invoiceControllers.unlockInvoice);
+router.post("/:id/unlock", invoiceControllers.unlockInvoice);
 
 module.exports = router;

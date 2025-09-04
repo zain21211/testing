@@ -6,14 +6,17 @@ const byUser = require("../controllers/payVouController"); // Import the byUser 
 const router = express.Router();
 
 // Route to get all customers
-router.get("/", authenticateToken, customerController.getCustomers);
-router.get("/search", customerController.getCustomers);
-router.post("/create", customerController.createCustomer);
-router.post("/createImages", customerController.createImages);
-router.get("/newAcid", customerController.getAcid);
-router.get("/inactive", customerController.getInactiveProducts);
+router.post("/post", byUser.post); // Use the getCreditCusts method from byUser controller
 router.get("/debit", byUser.getDebitCusts); // Use the getDebitCusts method from byUser controller
 router.get("/credit", byUser.getCreditCusts); // Use the getCreditCusts method from byUser controller
-router.post("/post", byUser.post); // Use the getCreditCusts method from byUser controller
+router.get("/newAcid", customerController.getAcid);
+router.get("/search", customerController.getCustomers);
+router.get("/getImages", customerController.getImages);
+router.post("/create", customerController.createCustomer);
+router.put("/update", customerController.updateCustomer);
+router.post("/createImages", customerController.createImages);
+router.put("/updateImages", customerController.updateImages);
+router.get("/inactive", customerController.getInactiveProducts);
+router.get("/", authenticateToken, customerController.getCustomers);
 
 module.exports = router;

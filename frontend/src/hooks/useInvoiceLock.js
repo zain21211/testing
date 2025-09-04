@@ -6,21 +6,28 @@ const invoiceAPI = `${import.meta.env.VITE_API_URL}/invoices`;
 export const useInvoiceLock = (id) => {
   const unlockedRef = useRef(false);
 
-  const handleUnlock = async (invoiceId) => {
-    if (!invoiceId || unlockedRef.current) return;
+  const handleUnlock = async () => {
+    console.log("handleunclock");
+
+    if (!id || unlockedRef.current) return;
     unlockedRef.current = true;
     try {
-      await axios.put(`${invoiceAPI}/${invoiceId}/unlock`);
-      console.log(`Invoice ${invoiceId} unlocked`);
+      await axios.post(`${invoiceAPI}/${id}/unlock`);
     } catch (err) {
       console.error("Error unlocking invoice:", err);
     }
   };
 
-  // Unlock whenever this page unmounts (back, forward, or going elsewhere)
   useEffect(() => {
+    if (!id) return;
+    unlockedRef.current = false;
+
+    // window.addEventListener("beforeunload", handleUnlock);
+    window.addEventListener("pagehide", handleUnlock);
+
     return () => {
-      handleUnlock(id);
+      window.removeEventListener("pagehide", handleUnlock);
+      handleUnlock(); // unlock on normal unmount
     };
   }, [id]);
 

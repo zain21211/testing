@@ -1,208 +1,103 @@
-import React, { useState, useEffect } from "react";
+// coa.jsx
+import axios from 'axios';
+import { Box } from '@mui/material';
+import { useState, useEffect, useRef } from 'react';
+import useWindowDimensions from './useWindowDimensions'; // Import the custom hook
+
+// REDUX STATES FUNCTIONS
 import {
-    Card,
-    CardContent,
-    Tabs,
-    Tab,
-    Box,
-    Typography,
-    TextField,
-    Button,
-    Divider,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-} from "@mui/material";
-import axios from "axios";
-const url = import.meta.env.VITE_API_URL;
+    persistMasterCustomerList,
+} from "./store/slices/CustomerData";
 
-import TabPanel from "./components/TabPanel";
-import MyAutocomplete from "./components/MyAutocomplete";
-import DiscountForm from "./components/DiscountForm";
-import DiscountList from "./components/DiscountList";
-import DualCameraUpload from "./components/DualCameraUpload";
-import { cleanString } from "./utils/cleanString";
-import { useLocalStorageState } from "./hooks/LocalStorage";
-import { useCamera } from "./hooks/useCamera";
+// COMPONENTS
+import CustomerForm from './components/CustomerForm';
+import CustomerList from './components/CustomerList';
+import { useMasterCustomerList } from './hooks/useMasterCustomerList';
 
-const fields = ["Name", "Urdu name", "Address", "Route", "Phone Number", "Whatsapp", "Credit Days", "Credit Limit"];
-const discountOptions = ["d1", "d2"];
-const types = ["Customer", "Prospect", "Workshop"];
+// PARENT COMPONENT
+const CreateCustomer = () => {
 
-export default function CreateCustomer({ onCustomerCreated, accounts, urdu }) {
-    const [formData, setFormData] = useLocalStorageState('coaform', {})
-    const [errors, setErrors] = useState({});
-    const [companyOptions, setCompanyOptions] = useState([]);
-    const [listOptions, setListOptions] = useState([]);
-    const [discount, setDiscount] = useState(null);
-    const [discountList, setDiscountList] = useState([]);
-    const [tabValue, setTabValue] = useState(0);
+    // CUSTOM HOOKS
+    const { masterCustomerList } = useMasterCustomerList();
+
+    // LOCAL STATES
     const user = JSON.parse(localStorage.getItem("user"));
+    const token = useState(localStorage.getItem("authToken"));
+    const { height } = useWindowDimensions(); // Get window height
+    const containerRef = useRef(null);
+    const [tableHeight, setTableHeight] = useState(0);
+    const names = masterCustomerList.map(account => account.name);
+    const urdu = masterCustomerList.map(account => account.UrduName);
 
-    const { images, handleImageChange, resetImages } = useCamera()
+    // useEffects
+    // FOR TABLE HEIGHT
     useEffect(() => {
-        setCompanyOptions(["fit", "excel", "strong"]);
-        setListOptions(["A", "B"]);
-    }, []);
-
-    const discountFields = [
-        { label: "Company", options: companyOptions },
-        { label: "List", options: listOptions },
-    ];
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-        setErrors((prev) => ({ ...prev, [name]: "" }));
-    };
-
-    const handleAddDiscount = () => {
-        if (discount && Object.values(discount).some((v) => v)) {
-            const keyOrder = ["company", "list", "d1", "d2"];
-            const ordered = {};
-            keyOrder.forEach((key) => {
-                if (key in discount) ordered[key] = discount[key];
-            });
-            setDiscountList((prev) => [...prev, ordered]);
-            setDiscount(null);
+        if (containerRef.current) {
+            const containerTop = containerRef.current.getBoundingClientRect().top;
+            // Adjust the subtraction value based on your layout's top margin and other elements
+            setTableHeight(height - containerTop - 100);
         }
-    };
 
-    const handlePost = async (e) => {
-        e.preventDefault();
+    }, [height]);
+
+    // FUNCTIONS
+    const handleUpdate = async () => {
         try {
-            // 1. Ask backend for the new id
-            const { data } = await axios.get(`${url}/customers/newAcid`);
-            const acid = data.acid;
 
-            console.log("acid", acid, data)
-            const finalFormData = {
-                ...formData,
-                discounts: discountList,
-                username: user.username,
-                acid,
-            };
+            // FETCH API
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/customers`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    params: { form: "COA", username: user.username },
+                }
+            );
 
-            // 2. Call both APIs in parallel with the same id
-            await Promise.all([
-                await axios.post(`${url}/customers/create`, finalFormData, {
-                    headers: { "Content-Type": "application/json" },
-                }),
-                axios.post(`${url}/customers/createImages`, { ...images, acid }),
-            ]);
+            const data = Array.isArray(response.data) ? response.data : [];
+            dispatch(persistMasterCustomerList(data))
 
-
-            resetImages()
-            onCustomerCreated();
-            setFormData({});
-            setDiscountList([]);
         } catch (error) {
-            console.error("Error creating customer:", error);
-            alert("Failed to create account.");
+            console.error('Error fetching customers:', error);
         }
     };
 
-    useEffect(() => {
-        console.log(formData)
-    }, [formData])
-
+    // RENDERING
     return (
-        <Card sx={{ boxShadow: 2, borderRadius: 2 }}>
-            <CardContent sx={{ p: 2 }}>
-                {/* Tabs */}
-                {/* <Tabs
-                    value={tabValue}
-                    onChange={(_, newValue) => setTabValue(newValue)}
-                    TabIndicatorProps={{ style: { display: "none" } }}
-                >
-                    <Tab label="create" />
-                    <Tab label="update" />
-                </Tabs> */}
+        <Box
+            ref={containerRef}
+            sx={{
+                width: '100%',
+                my: 2,
+                display: { xs: 'flex', sm: 'grid' },
+                flexDirection: 'column',
+                // overflow: 'hidden',
 
-                {/* CREATE */}
-                <TabPanel value={tabValue} index={0}>
-                    <Box component="form" onSubmit={handlePost}>
-                        {/* Fields */}
-                        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }}>
-                            {fields.map((field) =>
-                                field.toLowerCase().includes("name") ? (
-                                    <MyAutocomplete
-                                        key={field}
-                                        formData={{ name: formData.name ?? '', urduname: formData.urduname ?? '' }}
-                                        field={field}
-                                        accounts={accounts}
-                                        urdu={urdu}
-                                        errors={errors}
-                                        cleanString={cleanString}
-                                        handleChange={handleChange}
-                                    />
-                                ) : (
-                                    <TextField
-                                        key={field}
-                                        label={field}
-                                        name={cleanString(field)}
-                                        value={formData[cleanString(field)] || ""}
-                                        onChange={handleChange}
-                                    // fullWidth
-                                    // size="small"
-                                    />
-                                )
-                            )}
-                        </Box>
+                gridTemplateColumns: {
+                    xs: '1fr',       // mobile → single column
+                    md: '1fr 2fr',   // desktop → 1/3 + 2/3
+                },
+                gap: { xs: 1, md: 3 }, // reduce mobile gaps
+            }}
+        >
+            {/* Left panel: CUSTOMER FORM */}
+            <Box sx={{ position: { md: 'sticky' }, alignSelf: "start" }}>
+                <CustomerForm
+                    onCustomerCreated={handleUpdate}
+                    accounts={names}
+                    urdu={urdu}
+                />
+            </Box>
 
-                        {/* Type */}
-                        <FormControl fullWidth sx={{ mt: 2 }}>
-                            <InputLabel id="type-label">Type</InputLabel>
-                            <Select
-                                labelId="type-label"
-                                value={formData.type || ""}
-                                name="type"
-                                onChange={handleChange}
-                            >
-                                {types.map((t, i) => (
-                                    <MenuItem key={i} value={t}>
-                                        {t}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+            {/* Right panel: CUSTOMER LIST */}
+            <Box>
+                <CustomerList
+                    customer={masterCustomerList}
+                    onAccountDeleted={handleUpdate}
+                    tableHeight={tableHeight}
+                />
+            </Box>
+        </Box>
 
-                        {/* Discounts */}
-                        <Divider sx={{ my: 2 }}>
-                            <Typography variant="body1">Discounts</Typography>
-                        </Divider>
-
-                        <DiscountForm
-                            discount={discount}
-                            setDiscount={setDiscount}
-                            discountFields={discountFields}
-                            discountOptions={discountOptions}
-                            handleAdd={handleAddDiscount}
-                            cleanString={cleanString}
-                        />
-                        <DiscountList discountList={discountList} />
-
-                        {/* Upload */}
-                        <DualCameraUpload images={images} handleImageChange={handleImageChange} />
-
-                        <Box
-                            sx={{ display: 'flex', justifyContent: 'center' }}
-                        >
-                            {/* Submit */}
-                            <Button
-                                // onClick={handlePost}
-                                type="submit"
-                                variant="contained"
-                                fullWidth
-
-                                sx={{ mt: 2, width: '50%', fontWeight: 'bold', fontSize: '1.5rem', margin: 'auto' }}>
-                                Create Account
-                            </Button>
-                        </Box>
-                    </Box>
-                </TabPanel>
-            </CardContent>
-        </Card>
     );
-}
+};
+
+export default CreateCustomer;

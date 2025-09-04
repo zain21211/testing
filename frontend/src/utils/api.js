@@ -29,6 +29,11 @@ export const fetchDiscount = async (acid, company) => {
   return data;
 };
 
+export const fetchDiscountAll = async (acid) => {
+  const { data } = await client.get("/discount", { params: { acid } });
+  return data;
+};
+
 // Fetch scheme details
 export const fetchScheme = async (productCode, orderQty, date) => {
   const { data } = await client.get("/scheme/all", {

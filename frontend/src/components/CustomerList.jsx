@@ -2,9 +2,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, Typography, IconButton, Divider, Box } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import axios from 'axios';
 import Search from './Search';
-import DataTable from './table';
+import DataTable from '../table';
 
 const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight }) => {
   const listRef = useRef(null);
@@ -28,13 +27,6 @@ const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight }) => {
 
     return () => window.removeEventListener('resize', handleResize);
   }, [customer]);
-
-  // ✅ Function to handle deletion
-  const handleDelete = (id) => {
-    setFilteredCustomers((prevCustomers) =>
-      prevCustomers.filter((customer) => customer.customerId !== id)
-    );
-  };
 
 
   const handleCustomerSearch = (filteredCustomers) => {

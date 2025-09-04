@@ -1,13 +1,12 @@
 import { Box, Button } from "@mui/material";
 
-
 export default function DualCameraUpload({ images, handleImageChange }) {
 
     return (
-        <Box display="flex" flexDirection="column" gap={3} alignItems="center">
+        <Box display="flex" flexDirection="column" gap={3} marginTop={5} alignItems="center">
             {" "}
             <Box
-                sx={{ display: "flex", flexDirection: "row", gap: 2, width: "100%" }}
+                sx={{ display: "grid", gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, width: "100%" }}
             >
                 {" "}
                 {/* Customer photo input */}
@@ -18,22 +17,22 @@ export default function DualCameraUpload({ images, handleImageChange }) {
                     id="customer-upload"
                     type="file"
                     onChange={(e) => handleImageChange(e, "customer")}
-                />{" "}
+                />
                 <label htmlFor="customer-upload">
-                    {" "}
+
                     <Button
                         variant="contained"
                         component="span"
                         color="primary"
                         fontSize="1.2rem"
                         width="100%"
-                        sx={{ fontSize: { xs: "1.2rem", sm: "" } }}
+
+                        sx={{ fontSize: '1.2rem' }}
                     >
-                        {" "}
-                        Customer Photo{" "}
-                    </Button>{" "}
-                </label>{" "}
-                {/* Shop photo input */}{" "}
+                        Customer
+                    </Button>
+                </label>
+                {/* Shop photo input */}
                 <input
                     accept="image/*"
                     capture="environment" // back camera for shop image
@@ -41,21 +40,20 @@ export default function DualCameraUpload({ images, handleImageChange }) {
                     id="shop-upload"
                     type="file"
                     onChange={(e) => handleImageChange(e, "shop")}
-                />{" "}
+                />
                 <label htmlFor="shop-upload">
-                    {" "}
                     <Button
                         variant="contained"
                         component="span"
                         color="secondary"
                         width="100%"
                         fontSize="1.2rem"
-                        sx={{ fontSize: { xs: "1.2rem", sm: "" } }}
+                        fullWidth
+                        sx={{ fontSize: '1.2rem', justifySelf: 'stretch' }}
                     >
-                        {" "}
-                        Shop Photo{" "}
-                    </Button>{" "}
-                </label>{" "}
+                        Shop
+                    </Button>
+                </label>
                 {/* Agreement photo input */}
                 <input
                     accept="image/*"
@@ -64,23 +62,23 @@ export default function DualCameraUpload({ images, handleImageChange }) {
                     id="agreement-upload"
                     type="file"
                     onChange={(e) => handleImageChange(e, "agreement")}
-                />{" "}
+                />
                 <label htmlFor="agreement-upload">
-                    {" "}
+
                     <Button
                         variant="contained"
                         component="span"
                         color="secondary"
                         width="100%"
                         fontSize="1.2rem"
-                        sx={{ fontSize: { xs: "1.2rem", sm: "" } }}
+                        sx={{ fontSize: '1.2rem' }}
                     >
-                        {" "}
-                        Agreement Photo{" "}
-                    </Button>{" "}
-                </label>{" "}
-            </Box>{" "}
-            {/* Preview */}{" "}
+
+                        Agreement
+                    </Button>
+                </label>
+            </Box>
+            {/* Preview */}
             <Box
                 mt={2}
                 display="flex"
@@ -88,18 +86,18 @@ export default function DualCameraUpload({ images, handleImageChange }) {
                 gap={2}
                 alignItems="center"
             >
-                {" "}
+
                 {images.customer && (
                     <Box>
-                        {" "}
-                        <h3>Customer Photo:</h3>{" "}
+
+                        <h3>Customer Photo:</h3>
                         <img
                             src={images.customer}
                             alt="customer"
                             style={{ maxWidth: "200px", borderRadius: "8px" }}
-                        />{" "}
+                        />
                     </Box>
-                )}{" "}
+                )}
                 {images.shop && (
                     <Box>
                         {" "}

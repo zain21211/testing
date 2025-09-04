@@ -1,7 +1,7 @@
 // src/store/customerSearchSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
-const CUSTOMER_KEYS = ["orderForm", "ledger", "recovery"];
+const CUSTOMER_KEYS = ["orderForm", "ledger", "recovery", "customerform"];
 
 function loadFromStorage(key, fallback) {
   try {
@@ -56,6 +56,14 @@ const customerSearchSlice = createSlice({
         `${key}_phoneNumber`,
         JSON.stringify(customer?.OCell || null)
       );
+    },
+
+    // Case 2: Only selectedCustomer
+    setOnlySelectedCustomer: (state, action) => {
+      const { key, customer } = action.payload;
+      state.customers[key].selectedCustomer = customer;
+
+      localStorage.setItem(`${key}_selectedCustomer`, JSON.stringify(customer));
     },
 
     setPhoneNumber: (state, action) => {

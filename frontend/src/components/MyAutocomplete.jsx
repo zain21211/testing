@@ -4,33 +4,34 @@ import { Autocomplete, TextField } from "@mui/material";
 
 export default function MyAutocomplete({
     field,
-    formData, // This now receives the full formData object
-    accounts = [],
-    urdu = [],
-    handleChange,
-    cleanString,
     errors,
+    onReset,
+    formData,
+    disabled,
+    onSelect,
+    urdu = [],
+    cleanString,
+    handleChange,
+    accounts = [],
 }) {
-    // This state directly controls what's displayed in the TextField portion of Autocomplete.
-    // It should be kept in sync with formData[field]
     const [localInputValue, setLocalInputValue] = useState(formData[field] ?? "");
     const [filteredOptions, setFilteredOptions] = useState([]);
 
     // Sync localInputValue when parent formData changes (e.g., initial load, external reset)
     useEffect(() => {
-        // Only update localInputValue if it's different from formData[field]
-        // This prevents unnecessary re-renders or conflicting updates if the user is typing
-        if (localInputValue !== (formData[field] ?? "")) {
-            setLocalInputValue(formData[field] ?? "");
+        if (localInputValue !== (formData[cleanString(field)] ?? "")) {
+            setLocalInputValue(formData[cleanString(field)] ?? "");
         }
-    }, [formData[field]]); // Only depend on the specific field's value
+    }, [formData]);
 
     useEffect(() => {
-        console.log('in the handler')
         const handler = setTimeout(() => {
-            console.log('onchange', localInputValue)
-
-            handleChange({ target: { name: cleanString(field), value: localInputValue } });
+            handleChange({
+                target: {
+                    name: cleanString(field),
+                    value: localInputValue
+                }
+            });
         }, 2000);
 
         return () => clearTimeout(handler); // clear previous timeout if input changes
@@ -54,52 +55,36 @@ export default function MyAutocomplete({
         }
     }, [localInputValue, accounts, urdu]);
 
-    // Handle reset when both name fields are empty (if applicable)
-    useEffect(() => {
-        if (!formData?.name && !formData?.urduname)
-            setLocalInputValue("");
-        // Also explicitly clear the parent formData for this field if it's not already empty
-        // This is crucial if `formData.name` or `formData.urduname` are becoming empty
-        // as part of an external reset condition, and you want the parent to reflect that.
-
-    }, [formData]); // Added missing dependencies
-
-    useEffect(() => {
-        console.log('in complete', formData)
-    }, [formData])
-
-
     return (
         <Autocomplete
             freeSolo
-            sx={{ gridColumn: "span 2" }}
-            options={filteredOptions}
-            // `value` should be null if you are not using specific "selections" from options
-            // as the primary state for your form. This lets `inputValue` drive the text.
             value={null}
-            // `inputValue` is now fully controlled by our local state, which is synced to formData.
+            disabled={disabled}
+            options={filteredOptions}
             inputValue={localInputValue}
+            sx={{ gridColumn: "span 2" }}
             onInputChange={(_, newInputValue) => {
-                console.log(`MyAutocomplete "${field}" - onInputChange:`, newInputValue);
+                if (!newInputValue) {
+                    alert("reset")
+                    onReset();
+                }
                 setLocalInputValue(newInputValue);
-                // setTimeout(() => {
-                //     handleChange({ target: { name: cleanString(field), value: newInputValue } });
-                // }, 2000);
             }}
             onChange={(_, newValue) => {
-                console.log(`MyAutocomplete "${field}" - onChange:`, newValue);
-                setLocalInputValue(newValue ?? "");
-                handleChange({ target: { name: cleanString(field), value: newValue ?? "" } });
+                if (!newValue) {
+                    onReset();
+                }
+                onSelect(newValue)
             }}
             renderInput={(params) => (
                 <TextField
                     {...params}
+                    required
+                    fullWidth
+                    size="small"
                     label={field}
                     error={!!errors[cleanString(field)]}
                     helperText={errors[cleanString(field)]}
-                    fullWidth
-                    required
-                    size="small"
                     InputProps={{
                         ...params.InputProps,
                         sx: {

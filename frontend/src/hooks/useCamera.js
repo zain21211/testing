@@ -21,5 +21,5 @@ export function useCamera(
 
   const resetImages = () => setImages(initial);
 
-  return { images, handleImageChange, resetImages };
+  return { images, handleImageChange, resetImages, setImages };
 }

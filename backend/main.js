@@ -6,8 +6,6 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 const http = require("http");
-const fs = require("fs");
-const path = require("path");
 const { Server } = require("socket.io"); // Import socket.io server
 const cors = require("cors");
 const express = require("express");
@@ -30,7 +28,6 @@ const coaRoutes = require("./routes/coaRoutes");
 const turnoverReport = require("./routes/turnOverReport");
 
 const app = express();
-const port = 3000;
 
 setInterval(async () => {
   try {
@@ -59,35 +56,11 @@ io.on("connection", (socket) => {
   console.log("🔌 Client connected:", socket.id);
 });
 
-// Middleware
-// app.use(cors({
-//   origin: ['http://localhost:5173', 'https://thin-signs-marry.loca.lt', "http://100.72.169.90:5173"], // include tunnel URL
-//   credentials: true
-// }));
-//app.use((req, res, next) => {
-//console.log("User-Agent:", req.headers['user-agent']);
-//console.log("Content-Type:", req.headers['content-type']);
-//console.log("Content-Length:", req.headers['content-length']);
-//next();
-//});
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://daily-sunny-pup.ngrok-free.app",
-];
-
 app.use(cors());
 
-// ✅ Must handle OPTIONS
-// app.options('/*', cors());
-
-// app.use(bodyParser.json());
 app.use(express.static(__dirname)); // For serving frontend
 app.use(express.json({ limit: "100mb" })); // or more, if needed
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
-// Handle preflight OPTIONS requests globally
-// app.options('*', cors());
 
 // Login route
 app.use("/api/login", loginRouter);

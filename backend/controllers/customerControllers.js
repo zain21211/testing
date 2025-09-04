@@ -2,6 +2,25 @@ const mssql = require("mssql");
 const dbConnection = require("../database/connection"); // Import your database connection
 const imageDb = require("../database/imagedb"); // Import your database connection
 
+function convertImages(record) {
+  const imageObj = {};
+
+  for (const key in record) {
+    const value = record[key];
+    if (Buffer.isBuffer(value)) {
+      // Convert buffer -> base64 data URL
+      imageObj[key.toLowerCase()] = `data:image/png;base64,${value.toString(
+        "base64"
+      )}`;
+    } else {
+      // Keep null or any non-buffer values
+      imageObj[key] = value;
+    }
+  }
+
+  return imageObj;
+}
+
 const customerControllers = {
   getCustomers: async (req, res) => {
     try {
@@ -17,17 +36,19 @@ const customerControllers = {
       // Determine if user is ADMIN
       const isAdmin = usertype.toUpperCase() === "ADMIN";
       let acid;
-      console.log(req.user);
       // Base SQL query
       let sql = `
         SELECT 
           id AS acid,
           Subsidary AS name,
           UrduName,
-          OAddress,
-          OCell,
+          OAddress as address,
+          OCell as phonenumber,
           route,
-          SPO
+          SPO,
+          creditlimit,
+          creditdays,
+          ACCATEGORY as type
         FROM coa
         WHERE Subsidary LIKE '%' + @subsibary + '%'
         and route like '%' + @route + '%'
@@ -78,6 +99,7 @@ const customerControllers = {
       res.status(500).send("Error retrieving customer data: " + err.message);
     }
   },
+
   getInactiveProducts: async (req, res) => {
     try {
       // --- Params from query ---
@@ -178,47 +200,55 @@ const customerControllers = {
 
       // map payload to DB fields
       const {
+        acid,
         name,
-        urduname,
-        address,
+        type,
         route,
-        phonenumber,
+        address,
         whatsapp,
+        username,
+        urduname,
         creditdays,
         creditlimit,
-        type,
-        discounts,
-        username,
-        acid,
+        phonenumber,
+        discounts = [],
       } = payload;
 
       if (!acid) {
         return res.status(400).json({ error: "ACID are required" });
       }
 
-      // take first discount (if provided)
-      const d1 = discounts?.[0]?.d1 ?? null;
-      const d2 = discounts?.[0]?.d2 ?? null;
-      const pricelist = discounts?.[0]?.list ?? null;
-
+      const disQuery = `
+   insert into partydiscount(
+    acid, 
+    company, 
+    discount, 
+    disc1p,
+    pricelist
+   ) values(
+    @acid, 
+    @company, 
+    @d2, 
+    @d1,
+    @pricelist
+   ) 
+   `;
       const pool = await dbConnection();
 
       // ✅ Step 2: insert with that Id
       const query = `
-  INSERT INTO coa
-  (Id, Date, Category, ACCATEGORY, Main, Control, Subsidary, UrduName, SPO,
-   ContactPerson, OPhone, OCell, OFax, OAddress, UrduAddress, Area, City, EMail, URL,
-   HPhone, HCell, HFax, HAddress, Balance, Status, Balance_Date, Cell, Crate, code,
-   discount, discount2, van, day, route, sm, creditlimit, creditdays, ledgerno, path,
-   pricelist, active, acType, RunsDate, rno, OCellNetwork, OCell2Network, Cell2, OCELLWA,
-   OCELL2WA, Terms, Head)
+INSERT INTO coa
+(
+    Id, Date, Category, ACCATEGORY, Main, Subsidary, UrduName, SPO,
+    OCell, OAddress, Balance, Status, Balance_Date,
+    route, creditlimit, creditdays,active, acType, RunsDate, OCELLWA
+)
 VALUES
-  (@Id, GETDATE(), 'BALANCE SHEET', @ACCATEGORY, 'TRADE DEBTORS', NULL, @Subsidary, @UrduName, @spo,
-   NULL, NULL, @OCell, NULL, @OAddress, NULL, NULL, NULL, NULL, NULL,
-   NULL, NULL, NULL, NULL, 0, 'Active', GETDATE(), NULL, NULL, NULL,
-   @discount, @discount2, NULL, NULL, @route, NULL, @creditlimit, @creditdays,
-   NULL, NULL, @pricelist, 1, @acType, GETDATE(), NULL, NULL, NULL, NULL, NULL,
-   @OCELLWA, NULL, NULL);
+(
+    @Id, GETDATE(), 'BALANCE SHEET', @ACCATEGORY, 'TRADE DEBTORS', @Subsidary, @UrduName, @spo,
+    @OCell, @OAddress, 0, 'Active', GETDATE(),
+    @route, @creditlimit, @creditdays, 1, @acType, GETDATE(), @OCELLWA
+);
 
     `;
 
@@ -234,12 +264,119 @@ VALUES
         .input("route", mssql.VarChar, route)
         .input("creditlimit", mssql.Int, creditlimit)
         .input("creditdays", mssql.Int, creditdays)
-        .input("discount", mssql.Decimal(18, 2), d1)
-        .input("discount2", mssql.Decimal(18, 2), d2)
-        .input("pricelist", mssql.VarChar, pricelist)
         .input("acType", mssql.Int, 5)
         .input("OCELLWA", mssql.VarChar, whatsapp)
         .query(query);
+
+      // Assuming discounts is an array of objects like:
+      // [{ acid, d1, d2, pricelist, company }, {...}, ...]
+
+      await Promise.all(
+        discounts.map(({ d1, d2, list, company }) =>
+          pool
+            .request()
+            .input("acid", mssql.Int, acid)
+            .input("d1", mssql.Decimal(18, 2), d1)
+            .input("d2", mssql.Decimal(18, 2), d2)
+            .input("pricelist", mssql.VarChar, list)
+            .input("company", mssql.VarChar, company)
+            .query(disQuery)
+        )
+      );
+
+      return res.status(201).json({ message: "Customer created successfully" });
+    } catch (err) {
+      console.error("Error inserting into coa:", err);
+      return res
+        .status(500)
+        .json({ error: "Failed to create customer", msg: err.message });
+    }
+  },
+
+  // Controller to insert customer
+  updateCustomer: async (req, res) => {
+    try {
+      const payload = req.body;
+
+      // map payload to DB fields
+      const {
+        name,
+        urduname,
+        address,
+        route,
+        phonenumber,
+        whatsapp,
+        creditdays,
+        creditlimit,
+        type,
+        discounts = [],
+        username,
+        acid,
+      } = payload;
+
+      if (!acid) {
+        return res.status(400).json({ error: "ACID are required" });
+      }
+
+      const disQuery = `
+                      UPADTE PARTYDISCOUNT SET
+                          company=@company, 
+                          discount=@d2, 
+                          disc1p=@d1,
+                          pricelist=@pricelist
+                       WHERE 
+                          acid=@acid,  
+    
+   `;
+      const pool = await dbConnection();
+
+      // ✅ Step 2: insert with that Id
+      const query = `
+UPDATE coa
+SET 
+    ACCATEGORY = @ACCATEGORY,
+    Subsidary = @Subsidary,
+    UrduName = @UrduName,
+    SPO = @spo,
+    OCell = @OCell,
+    OAddress = @OAddress,
+    route = @route,
+    creditlimit = @creditlimit,
+    creditdays = @creditdays,
+    acType = @acType,
+    OCELLWA = @OCELLWA
+WHERE Id = @Id;
+
+    `;
+
+      await pool
+        .request()
+        .input("Id", mssql.Int, acid)
+        .input("spo", mssql.VarChar, username)
+        .input("ACCATEGORY", mssql.VarChar, type)
+        .input("Subsidary", mssql.VarChar, name)
+        .input("UrduName", mssql.NVarChar, urduname)
+        .input("OCell", mssql.VarChar, phonenumber)
+        .input("OAddress", mssql.VarChar, address)
+        .input("route", mssql.VarChar, route)
+        .input("creditlimit", mssql.Int, creditlimit)
+        .input("creditdays", mssql.Int, creditdays)
+        .input("acType", mssql.Int, 5)
+        .input("OCELLWA", mssql.VarChar, whatsapp)
+        .query(query);
+
+      await Promise.all(
+        discounts?.map(({ d1, d2, list, company }) =>
+          pool
+            .request()
+            .input("acid", mssql.Int, acid)
+            .input("d1", mssql.Decimal(18, 2), d1)
+            .input("d2", mssql.Decimal(18, 2), d2)
+            .input("pricelist", mssql.VarChar, list)
+            .input("company", mssql.VarChar, company)
+            .query(disQuery)
+        )
+      );
 
       return res.status(201).json({ message: "Customer created successfully" });
     } catch (err) {
@@ -280,6 +417,80 @@ VALUES
       await request.query(query);
 
       res.status(201).json({ message: "Images uploaded successfully", acid });
+    } catch (error) {
+      console.error("❌ uploadCoaImages error:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to upload images", msg: error.message });
+    }
+  },
+
+  // Images upadate
+  updateImages: async (req, res) => {
+    const { acid, customer, shop, agreement } = req.body;
+    try {
+      const pool = await imageDb();
+      if (!acid) {
+        return res.status(400).json({ error: "ACID are required" });
+      }
+
+      // helper: convert base64 -> Buffer (works for "image" type)
+      const toBuffer = (data) => {
+        if (!data) return null;
+        const base64 = data.split(";base64,").pop();
+        return Buffer.from(base64, "base64");
+      };
+
+      const query = `
+        UPDATE COAIMAGES SET 
+          Customer=@customer,
+          Shop=@shop,
+          Agreement=@agreement
+        WHERE acid=@acid
+    `;
+
+      const request = pool.request();
+      request.input("acid", mssql.Int, acid);
+      request.input("customer", mssql.Image, toBuffer(customer));
+      request.input("shop", mssql.Image, toBuffer(shop));
+      request.input("agreement", mssql.Image, toBuffer(agreement));
+
+      await request.query(query);
+
+      res.status(201).json({ message: "Images uploaded successfully", acid });
+    } catch (error) {
+      console.error("❌ uploadCoaImages error:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to upload images", msg: error.message });
+    }
+  },
+
+  getImages: async (req, res) => {
+    const { acid } = req.query;
+    try {
+      const pool = await imageDb();
+      if (!acid) {
+        return res.status(400).json({ error: "ACID are required" });
+      }
+
+      const query = `
+        SELECT
+          Customer, Shop, Agreement
+        FROM COAIMAGES
+        WHERE acid=@acid
+      `;
+      const result = await pool
+        .request()
+        .input("acid", mssql.Int, acid)
+        .query(query);
+
+      const record = result.recordset[0];
+
+      // Convert all buffer fields in one go
+      const images = convertImages(record);
+
+      res.status(201).json({ status: "successful", images });
     } catch (error) {
       console.error("❌ uploadCoaImages error:", error);
       res

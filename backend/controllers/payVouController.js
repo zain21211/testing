@@ -4,7 +4,7 @@ const connection = require("../database/connection"); // Update path as needed
 const byUser = {
   getDebitCusts: async (req, res) => {
     const { username } = req.query; // or use req.query.username if it's from URL
-    console.log("Fetching debit customers for username:", username);
+    console.log("Fetching debit customers for username:", req.user);
     if (!username) {
       return res.status(400).json({ error: "Username is required" });
     }
@@ -77,7 +77,7 @@ const byUser = {
     const { date, accounts, amount, description, entryDateTime, user } =
       req.body;
 
-      console.log(accounts)
+    console.log(accounts);
     const time = new Date(entryDateTime);
     time.setHours(time.getHours() + 5);
 

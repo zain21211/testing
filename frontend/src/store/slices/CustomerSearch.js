@@ -1,7 +1,17 @@
 // src/store/customerSearchSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
-const CUSTOMER_KEYS = ["orderForm", "ledger", "recovery", "customerform"];
+const CUSTOMER_KEYS = [
+  "orderForm",
+  "ledger",
+  "recovery",
+  "customerform",
+  "payment",
+  "debit",
+  "credit",
+  "paymentDebit",
+  "paymentCredit",
+];
 
 function loadFromStorage(key, fallback) {
   try {

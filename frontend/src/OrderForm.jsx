@@ -529,7 +529,7 @@ const OrderForm = () => {
             name={selectedCustomer?.name || ""}
             loading={loading || initialDataLoading}
             inputRef={customerInputRef}
-            disabled={orderItems.length > 0}
+            disabled={orderItems.length > 0 && selectedCustomer}
           />
         </Box>
 

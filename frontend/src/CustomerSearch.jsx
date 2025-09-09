@@ -8,6 +8,7 @@ const CustomerSearch = ({
   usage = "ledger", // default usage
   onFetch,
   onSelect,
+  formType,
   route,
   disabled = false,
   ledgerLoading = false,
@@ -22,6 +23,7 @@ const CustomerSearch = ({
     route,
     onSelect,
     onFetch,
+    formType,
     usage,
     dates: dateHookData.dates, // Pass dates to the search hook
   });

@@ -66,6 +66,20 @@ export const fetchCustomers = async () => {
   return data;
 };
 
+export const fetchDebitCustomers = async () => {
+  const { data } = await client.get("/customers/debit", {
+    params: { username: JSON.parse(localStorage.getItem("user"))?.username },
+  });
+  return data;
+};
+
+export const fetchCreditCustomers = async () => {
+  const { data } = await client.get("/customers/credit", {
+    params: { username: JSON.parse(localStorage.getItem("user"))?.username },
+  });
+  return data;
+};
+
 // src/api/api.js
 // src/api/api.js
 export const fetchInactiveItems = async ({
@@ -91,11 +105,7 @@ export const fetchCost = async (code) => {
 export const fetchApiLogs = async () => {
   try {
     const res = await client.get(`/logs/api`);
-    console.log("API logs response:", res);
-    // if (!response.ok) {
-    //   throw new Error(`HTTP error! status: ${response.status}`);
-    // }
-    // const data = await response.json();
+
     return [res.data.data];
   } catch (error) {
     console.error("Error fetching API logs:", error);
@@ -107,13 +117,6 @@ export const fetchApiLogs = async () => {
 export const saveCustomer = async (selectedCustomer, finalFormData, images) => {
   try {
     if (!selectedCustomer || Object.keys(selectedCustomer).length === 0) {
-      console.log(
-        "Creating new customer with data:",
-        finalFormData,
-        "and images:",
-        images
-      );
-
       const [customerRes, imageRes] = await Promise.all([
         client.post("/customers/create", finalFormData),
         client.post("/customers/createImages", {

@@ -2,10 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { TextField, Button, Box, Typography } from '@mui/material';
 import axios from 'axios';
 import LedgerSearchForm from './CustomerSearch';
-import CustomerDetails from './components/CustomerDetails'; // Assuming this is the correct import for your search 
+import CustomerFinencials from './components/CustomerFinencials'; // Assuming this is the correct import for your search 
 import useLocalStorageState from 'use-local-storage-state';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
+import { clearSelection } from './store/slices/CustomerSearch';
 
 const url = import.meta.env.VITE_API_URL;
 const formatCurrency = (value) => {
@@ -26,6 +27,7 @@ const formatCurrency = (value) => {
     });
 };
 
+const style = { backgroundColor: "white", borderRadius: "1rem", p: 1, mb: 2 }
 const PaymentVoucher = () => {
     const [formData, setFormData] = useState({
         accountCode1: '',
@@ -51,15 +53,15 @@ const PaymentVoucher = () => {
 
     const descRef = useRef(null);
 
-useEffect(() => {
-    console.log("entering")
-//   if (descRef?.current && (debitCust || creditCust)) {
-    console.log(descRef?.current);
-    setTimeout(() => {
-      descRef.current?.focus();
-    }, 50); // or 0, 100 depending on render timing
-//   }
-}, []);
+    useEffect(() => {
+        console.log("entering")
+        //   if (descRef?.current && (debitCust || creditCust)) {
+        console.log(descRef?.current);
+        setTimeout(() => {
+            descRef.current?.focus();
+        }, 50); // or 0, 100 depending on render timing
+        //   }
+    }, []);
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -92,9 +94,6 @@ useEffect(() => {
         }];
         console.log(accounts)
         try {
-            console.log('Submitting form data:', formData);
-
-
             const response = await axios.post(`${url}/customers/post`, {
                 accounts,
                 entryBy: "zain",
@@ -109,18 +108,11 @@ useEffect(() => {
                 throw new Error(`Failed on account`);
             }
 
-            console.log(`Response for ${i === 0 ? 'debit' : 'credit'}:`, response.data);
-
-
             setSuccess(true);
             setDebitID(null);
             setDisplayValue(null);
-            setFormData({
-                creditCust: '',
-                debitCust: '',
-                cashAmount: '',
-                description: '',
-            });
+            clearSelection({ key: `paymentDebit` })
+            clearSelection({ key: `paymentCredit` })
 
         } catch (err) {
             setError('An error occurred while submitting the form. Please try again.');
@@ -157,7 +149,6 @@ useEffect(() => {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 2,
-                        maxWidth: 500,
                         margin: 'auto',
                         padding: 3,
                         boxShadow: 3,
@@ -173,12 +164,14 @@ useEffect(() => {
                         <Box sx={{ backgroundColor: "green", color: "white", borderRadius: "1.5rem" }}>
                             <Typography variant='h4' fontWeight={"bold"} p={2}>CREDIT</Typography>
                             <Box sx={{ padding: "1rem", borderRadius: "2rem" }}>
-                                < LedgerSearchForm
-                                    usage={"PaymentVoucher"}
-                                    onSelect={getCreditCusts}
-                                    formType="credit"
-                                    isCust={handleCredit}
-                                />
+                                <Box sx={style}>
+                                    < LedgerSearchForm
+                                        usage={"paymentCredit"}
+                                        onSelect={getCreditCusts}
+                                        formType="credit"
+                                        isCust={handleCredit}
+                                    />
+                                </Box>
 
                             </Box>
                         </Box>
@@ -188,14 +181,16 @@ useEffect(() => {
                         <Box sx={{ backgroundColor: "red", color: "white", borderRadius: "1.5rem" }}>
                             <Typography variant='h4' fontWeight={"bold"} p={2}>DEBIT</Typography>
 
-                            <Box sx={{ padding: "1rem", borderRadius: "2rem" }}>
-                                < LedgerSearchForm
-                                    formType="debit"
-                                    label="CREDIT"
-                                    name="debit"
-                                    onSelect={getDebitCusts}
-                                    isCust={handleDebit}
-                                />
+                            <Box sx={{ padding: "1rem", borderRadius: "2rem", }}>
+                                <Box sx={style}>
+                                    < LedgerSearchForm
+                                        usage='paymentDebit'
+                                        formType="debit"
+                                        name="debit"
+                                        onSelect={getDebitCusts}
+                                        isCust={handleDebit}
+                                    />
+                                </Box>
                                 <Box
                                     sx={{
                                         mb: ".5rem",
@@ -246,7 +241,7 @@ useEffect(() => {
                                         required
                                     />
                                 </Box>
-                                <CustomerDetails
+                                <CustomerFinencials
                                     acid={debitCust ? debitCust.acid : ""}
                                     cashAmount={parseFloat(displayValue?.replace(/,/g, '')) || 0}
                                 />
@@ -254,9 +249,6 @@ useEffect(() => {
                         </Box>
                     )}
                     {/* FORM DATA */}
-
-
-
                     <Button
                         type="submit"
                         variant="contained"

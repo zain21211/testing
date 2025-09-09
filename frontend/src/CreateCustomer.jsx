@@ -13,6 +13,8 @@ import {
 import CustomerForm from './components/CustomerForm';
 import CustomerList from './components/CustomerList';
 import { useMasterCustomerList } from './hooks/useMasterCustomerList';
+import { fetchCustomers } from './utils/api';
+import { useDispatch } from 'react-redux';
 
 // PARENT COMPONENT
 const CreateCustomer = () => {
@@ -28,7 +30,7 @@ const CreateCustomer = () => {
     const [tableHeight, setTableHeight] = useState(0);
     const names = masterCustomerList.map(account => account.name);
     const urdu = masterCustomerList.map(account => account.UrduName);
-
+    const dispatch = useDispatch();
     // useEffects
     // FOR TABLE HEIGHT
     useEffect(() => {
@@ -45,12 +47,7 @@ const CreateCustomer = () => {
         try {
 
             // FETCH API
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/customers`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    params: { form: "COA", username: user.username },
-                }
-            );
+            const response = await fetchCustomers()
 
             const data = Array.isArray(response.data) ? response.data : [];
             dispatch(persistMasterCustomerList(data))

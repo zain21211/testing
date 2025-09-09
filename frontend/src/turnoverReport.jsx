@@ -84,7 +84,7 @@ const formatCurrency = (value) => {
 };
 
 const StatusFilter = ({ handleChange }) => {
-    const [filter, setFilter] = useState('pending');
+    const [filter, setFilter] = useState('Pending');
     const FilterValues = [
         'Pending',
         "Done",
@@ -602,7 +602,7 @@ const TurnoverReport = () => {
                                 onFocus={e => e.target.select()}
                             />
 
-                            {/* for spo */}
+                            {/* for spo selection*/}
                             {(isZain || isAdmin) && (
                                 <TextField
                                     label=
@@ -742,6 +742,9 @@ const TurnoverReport = () => {
                             >
                                 <Typography variant="h6" fontWeight="bold">
                                     Payment: {formatCurrency(trader.payment) || "--"}
+                                </Typography>
+                                <Typography variant="h5" fontWeight="bold">
+                                    Location: {trader.address || "--"}
                                 </Typography>
                                 <Typography variant="h6" fontWeight="bold">
                                     FIT: {formatCurrency(trader.FitOrderAmount) || "--"}

@@ -170,8 +170,13 @@ const CashEntryController = {
       expenseMethod,
       desc = "",
       time,
+      location,
     } = req.body;
     const body = req.body;
+
+    const latitude = location.latitude;
+    const longitude = location.longitude;
+    const address = location.address;
 
     // Effective date of the transaction
     const effectiveDate = getPakistanISODateString(time);
@@ -233,11 +238,9 @@ const CashEntryController = {
       const lowerPaymentMethod = paymentMethod.toLowerCase();
       const paymentConfig = paymentModes[lowerPaymentMethod];
       if (!paymentConfig) {
-        return res
-          .status(400)
-          .json({
-            error: "Invalid no payment or expense method." + body.paymentMethod,
-          });
+        return res.status(400).json({
+          error: "Invalid no payment or expense method." + body.paymentMethod,
+        });
       }
       selectedMethodConfig = paymentConfig; // debitAcid is directly available
       narration = `${selectedMethodConfig.narrationPrefix} ${userName} ${desc}`;
@@ -291,6 +294,9 @@ const CashEntryController = {
         .input("credit", sql.Decimal(18, 2), receivedAmount)
         .input("narration1", sql.VarChar, narration)
         .input("entryBy1", sql.VarChar, userName)
+        .input("latitude", sql.Float, latitude)
+        .input("longitude", sql.Float, longitude)
+        .input("address", sql.VarChar, address)
         .input("entryDateTime1", sql.VarChar, systemTimestamp) // Use systemTimestamp and DateTime2
         .query(`
               IF NOT EXISTS (
@@ -303,8 +309,8 @@ const CashEntryController = {
         ABS(DATEDIFF(SECOND, EntryDateTime, @entryDateTime1)) < 60
     )
     BEGIN
-          INSERT INTO ledgers (date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime)
-          VALUES (@effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1)
+          INSERT INTO ledgers (address, latitude, longitude, date, type,doc, acid, credit, NARRATION, EntryBy, EntryDateTime)
+          VALUES (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1)
           END
         `);
 
@@ -332,9 +338,9 @@ const CashEntryController = {
     )
     BEGIN
       INSERT INTO ledgers 
-      (date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime)
+      (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime)
       VALUES 
-      (@effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1)
+      (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1)
     END
   `);
 

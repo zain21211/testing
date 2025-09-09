@@ -34,41 +34,51 @@ RecoveryData AS (
       AND [Date] < CAST(@Date AS DATE)
     GROUP BY ACID
 ),
-TodayData AS (
+OrderSummary AS (
     SELECT 
-        l.acid,
-        SUM(CASE WHEN entryby = @SPO THEN CREDIT ELSE 0 END) AS payment,
-ISNULL(ROUND((
-    SELECT SUM(pss.vist)
+        pss.Acid,
+        CAST(pss.[Date] AS DATE) AS [OnlyDate],
+        SUM(CASE WHEN p.company LIKE 'fit%'  THEN pss.vist ELSE 0 END) AS FitOrderAmount,
+        SUM(CASE WHEN p.company NOT LIKE 'fit%' THEN pss.vist ELSE 0 END) AS OtherOrderAmount
     FROM PsProduct pss
     JOIN Products p ON pss.prid = p.ID
     WHERE pss.spo LIKE @SPO + '%'
       AND pss.[Date] >= CAST(@Date AS DATE)
-      AND pss.[Date] < DATEADD(DAY, 2, CAST(@Date AS DATE))
-      AND p.company LIKE 'fit%'
-      AND pss.Acid = l.acid
-), 0), 0) AS FitOrderAmount,
-
-ISNULL(ROUND((
-    SELECT SUM(pss2.vist)
-    FROM PsProduct pss2
-    JOIN Products p ON pss2.prid = p.ID
-    WHERE pss2.spo LIKE @SPO + '%'
-      AND pss2.[Date] >= CAST(@Date AS DATE)
-      AND pss2.[Date] < DATEADD(DAY, 2, CAST(@Date AS DATE))
-      AND p.company NOT LIKE 'fit%'
-      AND pss2.Acid = l.acid
-), 0), 0) AS OtherOrderAmount
-
-
-
-    FROM Ledgers l
-    WHERE l.[Date] >= CAST(@Date AS DATE) 
-      AND l.[Date] < DATEADD(DAY, 2, CAST(@Date AS DATE))
-
-    GROUP BY l.acid
+      AND pss.[Date] < DATEADD(DAY, 1, CAST(@Date AS DATE))
+    GROUP BY pss.Acid, CAST(pss.[Date] AS DATE)
 ),
-
+TodayData AS (
+    SELECT 
+        l.acid,
+        MAX(CAST(l.entrydatetime AS TIME)) AS time,   -- latest payment time
+location.Latitude,
+        location.Longitude,
+        location.Address,        SUM(CASE WHEN l.entryby = @SPO THEN l.CREDIT ELSE 0 END) AS Payment,
+        ISNULL(os.FitOrderAmount, 0)  AS FitOrderAmount,
+        ISNULL(os.OtherOrderAmount, 0) AS OtherOrderAmount
+    FROM Ledgers l
+     CROSS APPLY (
+        SELECT TOP 1 l2.Latitude, l2.Longitude, l2.Address
+        FROM Ledgers l2
+        WHERE l2.Acid = l.Acid
+          AND l2.[Date] >= CAST(@Date AS DATE)
+          AND l2.[Date] < DATEADD(DAY, 1, CAST(@Date AS DATE))
+        ORDER BY l2.EntryDateTime DESC
+    ) location
+    LEFT JOIN OrderSummary os 
+        ON os.Acid = l.Acid 
+     AND CAST(l.[Date] AS DATE) = os.[OnlyDate]   -- join on date only
+    WHERE l.[Date] >= CAST(@Date AS DATE)
+      AND l.[Date] < DATEADD(DAY, 1, CAST(@Date AS DATE))
+    GROUP BY 
+        l.acid,
+        os.FitOrderAmount,
+        os.OtherOrderAmount,
+        location.Latitude,
+        location.Longitude,
+        location.Address
+)
+,
 BalanceData AS (
     SELECT A.ID AS ACID, A.Subsidary, A.UrduName, A.Ocell AS number,
            ISNULL(SUM(L.DEBIT), 0) - ISNULL(SUM(L.CREDIT), 0) AS Balance
@@ -142,6 +152,7 @@ OverdueData AS (
 
 SELECT 
     B.*,
+    T.time,
     ISNULL(R.Recovery, 0) AS Recovery,
     LD.[Last Sale] AS Sale,
     LD.[Sale Date],
@@ -150,6 +161,9 @@ SELECT
     T.payment,
     T.FitOrderAmount,
     T.OtherOrderAmount,
+    t.latitude,
+    t.longitude,
+    t.address,
     L.CreditDays AS [Credit Days],
     L.CreditLimit AS [Credit Limit],
     P.remarks,

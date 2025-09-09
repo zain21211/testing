@@ -1,19 +1,16 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import axios from "axios";
 
 export const useInvoiceSync = (invoice, setInvoice, token) => {
   const [loading, setLoading] = useState(false);
-  // Retry function
+  const isSyncing = useRef(false); // prevent overlaps
+
   const retryInvoices = useCallback(async () => {
+    if (isSyncing.current || !invoice || invoice.length === 0) return;
+
+    isSyncing.current = true;
     setLoading(true);
-
-    if (invoice?.length === 0 || invoice?.[0] === null) {
-      setInvoice([]);
-      return;
-    }
-
-    if (!Array.isArray(invoice)) setInvoice((prev) => [prev]);
 
     try {
       const results = await Promise.allSettled(
@@ -38,28 +35,47 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
         console.log(
           `Synced ${successfulIndexes.length} invoice(s) successfully`
         );
-        alert("invoice synced");
+        alert("Invoice synced");
       }
     } catch (err) {
       console.error("Retry failed:", err);
     } finally {
       setLoading(false);
+      isSyncing.current = false;
     }
   }, [invoice, token, setInvoice]);
 
-  // Automatic retries
   useEffect(() => {
-    if (!invoice || invoice?.length === 0 || invoice?.[0] === null) return;
+    if (!invoice || invoice.length === 0) return;
 
-    const interval = setInterval(retryInvoices, 5000);
-    window.addEventListener("online", retryInvoices);
+    let interval;
+
+    const startSync = () => {
+      if (navigator.onLine) {
+        interval = setInterval(retryInvoices, 5000);
+      }
+    };
+
+    const stopSync = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    // Start immediately if online
+    startSync();
+
+    // Listen for online/offline events
+    window.addEventListener("online", startSync);
+    window.addEventListener("offline", stopSync);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("online", retryInvoices);
+      stopSync();
+      window.removeEventListener("online", startSync);
+      window.removeEventListener("offline", stopSync);
     };
-  }, [retryInvoices]);
+  }, [retryInvoices, invoice]);
 
-  // Return the retry function for manual triggering
   return { retryInvoices, loading };
 };

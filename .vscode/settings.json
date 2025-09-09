@@ -1,7 +1,7 @@
 {
   // Keep your current settings
   "editor.fontFamily": "Consolas, 'Courier New', monospace",
-  "editor.fontSize": 14,
+  "editor.fontSize": 16,
   "editor.fontLigatures": false,
 
   // Firebase Studio–style colors
@@ -9,14 +9,14 @@
     "editor.background": "#121212", // Dark background
     "editor.foreground": "#FFFFFF",
     // "activityBar.background": "#967101", // Firebase Yellow
-    "activityBar.foreground": "#000000",
+    // "activityBar.foreground": "#000000",
     // "statusBar.background": "#967101",
-    "statusBar.foreground": "#000000",
-    // "titleBar.activeBackground": "#FFCA28",
+    // "statusBar.foreground": "#000000",
+    "titleBar.activeBackground": "#FFCA28",
     "titleBar.activeForeground": "#000000",
-    "sideBar.background": "#1E1E1E",
+    "sideBar.background": "#0606067d",
     "sideBar.foreground": "#FFFFFF",
-    "editorCursor.foreground": "#FFCA28",
+    "editorCursor.foreground": "#ffbf00",
     "terminal.foreground": "#FFCA28",
     "list.activeSelectionBackground": "#FFCA28",
     "list.activeSelectionForeground": "#000000"

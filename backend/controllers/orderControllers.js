@@ -2,43 +2,6 @@ const sql = require("mssql");
 const dbConnection = require("../database/connection");
 const jwt = require("jsonwebtoken");
 
-function bindCommonProductInputs(req, item, username) {
-  const discount1 = (discP1 / 100) * rate * qty;
-  const discount2 = (discP2 / 100) * rate * qty;
-  return req
-    .input("date", sql.VarChar, item.date)
-    .input("SellingType", sql.VarChar, "DEFAULT")
-    .input("SPO", sql.VarChar, username)
-    .input("department", sql.VarChar, "A1")
-    .input("type", sql.VarChar, "Sale")
-    .input("type2", sql.VarChar, "OUT")
-    .input("packet", sql.Int, 0)
-    .input("sch", sql.Int, item.sch)
-    .input("doc", sql.Int, item.doc)
-    .input("acid", sql.VarChar, item.acid)
-    .input("prid", sql.VarChar, item.prid)
-    .input("qty2", sql.Int, item.qty)
-    .input("qty", sql.Int, item.bQty)
-    .input("schpc", sql.Int, item.SchPc)
-    .input("rate", sql.Decimal(18, 2), item.rate)
-    .input("vest", sql.Decimal(18, 2), item.vest)
-    .input("discp", sql.Decimal(18, 2), item.discP1)
-    .input(
-      "discount",
-      sql.Decimal(18, 2),
-      (item.discP1 / 100) * item.rate * item.qty
-    )
-    .input("discp2", sql.Decimal(18, 2), item.discP2)
-    .input(
-      "discount2",
-      sql.Decimal(18, 2),
-      (item.discP2 / 100) * item.rate * item.qty
-    )
-    .input("vist", sql.Decimal(18, 2), item.vist)
-    .input("isclaim", sql.Bit, item.isClaim ? 1 : 0)
-    .input("profit", sql.Int, item.profit);
-}
-
 // productService.js (or inside productControllers.js if you prefer)
 const getProducts = async () => {
   let pool;
@@ -89,7 +52,7 @@ const updateStock = async (id, qty, columnName) => {
 
 const orderControllers = {
   postOrder: async (req, res) => {
-    const { products, totalAmount, col } = req.body;
+    const { products, totalAmount, col, status } = req.body;
 
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(" ")[1];
@@ -184,6 +147,7 @@ const orderControllers = {
           isClaim,
           prid,
           profit,
+          spo,
         } = item;
 
         const discount1 = (discP1 / 100) * rate * qty;
@@ -216,7 +180,7 @@ const orderControllers = {
           .input("profit", sql.Int, profit)
           .input("department", sql.VarChar, "A1")
           .input("isclaim", sql.Bit, isClaim ? 1 : 0)
-          .input("SPO", sql.VarChar, username).query(`
+          .input("SPO", sql.VarChar, spo).query(`
               INSERT INTO PsProduct (
                 [Date], [Type], [Doc], [Type2], [Prid], [Acid], [Packet], [Qty2],
                 [AQTY], [Qty], [Rate], [SuggestedRate], [VEST], [DiscP], [Discount],
@@ -291,7 +255,9 @@ const orderControllers = {
         .request()
         .input("doc", sql.Int, nextDoc)
         .query(
-          `SELECT ISNULL(SUM(profit), 0) AS GrossProfit FROM PsProduct WHERE type = 'sale' AND doc = @doc`
+          `SELECT 
+          ISNULL(SUM(profit), 0) AS GrossProfit
+           FROM PsProduct WHERE type = 'sale' AND doc = @doc`
         );
 
       const GrossProfit = result.recordset[0].GrossProfit;
@@ -320,7 +286,7 @@ const orderControllers = {
         .input("BuiltyPath", sql.VarChar, "")
         .input("remarks", sql.VarChar, "") // Could add order remarks here
         .input("GrossProfit", sql.Decimal(18, 2), GrossProfit) // This might need calculation
-        .input("Status", sql.VarChar, "ESTIMATE")
+        .input("Status", sql.VarChar, status.toUpperCase()) // "INVOICE" or "ESTIMATE"
         .input("CTN", sql.VarChar, "P")
         .input("Shopper", sql.VarChar, "P").query(`
             INSERT INTO PSDetail (

@@ -87,3 +87,63 @@ export const fetchCost = async (code) => {
   });
   return data;
 };
+
+export const fetchApiLogs = async () => {
+  try {
+    const res = await client.get(`/logs/api`);
+    console.log("API logs response:", res);
+    // if (!response.ok) {
+    //   throw new Error(`HTTP error! status: ${response.status}`);
+    // }
+    // const data = await response.json();
+    return [res.data.data];
+  } catch (error) {
+    console.error("Error fetching API logs:", error);
+    throw error;
+  }
+};
+
+// Create or Update customer
+export const saveCustomer = async (selectedCustomer, finalFormData, images) => {
+  try {
+    if (!selectedCustomer || Object.keys(selectedCustomer).length === 0) {
+      console.log(
+        "Creating new customer with data:",
+        finalFormData,
+        "and images:",
+        images
+      );
+
+      const [customerRes, imageRes] = await Promise.all([
+        client.post("/customers/create", finalFormData),
+        client.post("/customers/createImages", {
+          ...images,
+          acid: finalFormData.acid, // assuming acid comes from formData
+        }),
+      ]);
+
+      return { customer: customerRes.data, images: imageRes.data };
+    } else {
+      console.log(
+        "Updating customer with data:",
+        finalFormData,
+        "and images:",
+        images,
+        selectedCustomer || "No selected customer"
+      );
+
+      const [customerRes, imageRes] = await Promise.all([
+        client.put("/customers/update", finalFormData),
+        client.put("/customers/updateImages", {
+          ...images,
+          acid: selectedCustomer.acid,
+        }),
+      ]);
+
+      return { customer: customerRes.data, images: imageRes.data };
+    }
+  } catch (error) {
+    console.error("Error saving customer:", error);
+    throw error;
+  }
+};

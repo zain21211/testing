@@ -29,6 +29,7 @@ import useFetchCustImgs from "../hooks/useFetchCustImg";
 import useUpdateCustomer from "../hooks/useUpdateCustomer";
 import { useLocalStorageState } from "../hooks/LocalStorage";
 import useGeolocation from "../hooks/geolocation";
+import { saveCustomer } from "../utils/api";
 
 const url = import.meta.env.VITE_API_URL;
 
@@ -167,25 +168,9 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
             };
 
             // 2. Call both APIs in parallel with the same id
-            if (!selectedCustomer) {
-                await Promise.all([
-                    axios.post(`${url}/customers/create`, finalFormData, {
-                        headers: { "Content-Type": "application/json" },
-                    }),
-                    axios.post(`${url}/customers/createImages`, { ...images, acid }),
-                ]);
-            } else {
-                await Promise.all([
-                    axios.put(`${url}/customers/update`, finalFormData, {
-                        headers: { "Content-Type": "application/json" },
-                    }),
-                    axios.put(`${url}/customers/updateImages`, {
-                        ...images,
-                        acid: selectedCustomer.acid,
-                    }),
-                ]);
-            }
+            const res = await saveCustomer(selectedCustomer, finalFormData, images,);
 
+            console.log("Customer saved:", res);
             resetImages();
             setFormData({});
             onCustomerCreated();

@@ -14,6 +14,7 @@ import PaymentVoucher from './PaymentVoucher.jsx';
 import TurnoverReport from './turnoverReport.jsx';
 import BillingComponent from './BillingComponent.jsx';
 import CustomerRouteList from './CustomerRouteList.jsx';
+import ApiLogViewer from './components/ApiLogViewer';
 
 const AppLayout = () => {
     // const theme = useTheme(); // (Still need useTheme if using styled/sx)
@@ -39,6 +40,7 @@ const AppLayout = () => {
                     <Route path="/invoice/:id" element={<BillingComponent />} />
                     <Route path="/paymentvoucher" element={<PaymentVoucher />} />
                     <Route path="/turnoverreport" element={<TurnoverReport />} />
+                    <Route path="/logs" element={<ApiLogViewer />} />
                 </Routes>
             </Box>
 

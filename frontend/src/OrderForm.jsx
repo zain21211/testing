@@ -25,6 +25,7 @@ import {
   Alert,
   Paper,
   CircularProgress,
+  FormControl, InputLabel, Select, MenuItem, FormHelperText
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import Fade from "@mui/material/Fade";
@@ -48,6 +49,11 @@ import { useInvoiceSync } from "./hooks/useInvoiceSync.js";
 
 // --- Constants & Configuration ---
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+const spoList = ["ARIF", 'SALMAN', 'ZAIN', 'HAMZA',]
+const postButtons = [
+  { text: 'INVOICE', color: 'green' },
+  { text: 'ESTIMATE', color: 'error' }
+];
 
 // --- Utility Functions ---
 const formatCurrency = (value) => {
@@ -125,6 +131,8 @@ const OrderForm = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams()
+  const [spo, setSpo] = useState(user?.username);
+  // const [spo, setSpo] = useLocalStorageState('SpoOrderform', user?.username);
   const acid = searchParams.get('acid');
   // --- Refs ---
   const customerInputRef = useRef(null);
@@ -277,6 +285,20 @@ const OrderForm = () => {
 
   // --- Event Handlers & Callbacks ---
 
+  const HandleShortcuts = (event) => {
+
+    // POST ESTIMATE
+    if (event.altKey && event.key.toLowerCase() === "p") {
+      event.preventDefault();
+      handlePostOrder('ESTIMATE');
+    }
+
+    // POST INVOICE
+    if (event.altKey && event.key.toLowerCase() === "b") {
+      event.preventDefault();
+      handlePostOrder('INVOICE');
+    }
+  }
   const handleSelectCustomer = useCallback((customer) => {
     setSelectedCustomer(customer);
     if (customer) {
@@ -333,7 +355,7 @@ const OrderForm = () => {
     [setOrderItems]
   );
 
-  const handlePostOrder = async () => {
+  const handlePostOrder = async (status) => {
     setError(null);
     setSuccess(null);
 
@@ -368,6 +390,7 @@ const OrderForm = () => {
         prid: String(item.productID) || "0",
         profit: item.profit,
         remakes: item.remakes || "",
+        spo: String(spo || user?.username || 'no user'),
       })),
       orderDate: selectedDate,
       customerAcid: String(selectedCustomer.acid),
@@ -377,6 +400,7 @@ const OrderForm = () => {
         0
       ),
       totalQuantity: Number(orderItemsTotalQuantity),
+      status: status || "ESTIMATE",
     };
 
     try {
@@ -423,10 +447,6 @@ const OrderForm = () => {
     }
   };
 
-  useEffect(() => {
-    console.log('the incoices to retry', invoice)
-  }, [invoice])
-
   const handlePendingItems = async () => {
     try {
       const response = await axios.get(
@@ -472,7 +492,12 @@ const OrderForm = () => {
   );
 
   return (
-    <Container maxWidth={false} sx={{ all: "unset" }}>
+    <Container
+      tabIndex={0}
+      onKeyDown={HandleShortcuts}
+      maxWidth={false}
+      sx={{ all: "unset" }}
+    >
       {(success || error) && (
         <Box >
           <Fade in={!!error}>
@@ -646,6 +671,7 @@ const OrderForm = () => {
             display: "flex",
             justifyContent: "space-between",
             mb: 2,
+            gap: 2,
             alignItems: "center",
           }}
         >
@@ -656,6 +682,31 @@ const OrderForm = () => {
           >
             Add Product
           </Typography>
+
+          <FormControl
+            fullWidth
+            sx={{
+              flex: 1,
+              display: {
+                xs: 'none', md: 'block'
+              }
+            }}>
+            <InputLabel id="shop-label">Spo</InputLabel>
+            <Select
+              labelId="customer-label"
+              id="customer"
+              value={spo}
+              defaultValue={user?.username || 'no user'}
+              label="Customer"
+              onChange={(e) => setSpo(e.target.value)}
+            >
+              {spoList.map((c) => (
+                <MenuItem key={c} value={c}>
+                  {c}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           {selectedCustomer && (
             <Button
@@ -792,26 +843,28 @@ const OrderForm = () => {
           </Box>
         )}
 
-        <Box sx={{ mt: 3, textAlign: "center" }}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            onClick={handlePostOrder}
-            disabled={
-              loading ||
-              initialDataLoading ||
-              orderItems.length === 0 ||
-              !selectedCustomer
-            }
-            sx={{ minWidth: "200px" }}
-          >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "Post Order"
-            )}
-          </Button>
+        <Box sx={{ mt: 3, textAlign: "center", gap: 2, display: "flex", justifyContent: "center", flexWrap: "wrap" }}>
+          {postButtons.map((btn) => (
+            <Button
+              variant="contained"
+              color={btn.color}
+              size="large"
+              onClick={() => handlePostOrder(btn.text)}
+              disabled={
+                loading ||
+                initialDataLoading ||
+                orderItems.length === 0 ||
+                !selectedCustomer
+              }
+              sx={{ minWidth: "200px" }}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                `Post ${btn.text}`
+              )}
+            </Button>
+          ))}
         </Box>
       </Paper>
     </Container>

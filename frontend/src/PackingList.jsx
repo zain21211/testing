@@ -41,8 +41,8 @@ const useHandleNavigate = () => {
     const handleNavigate = async (doc) => {
         try {
             // Lock the invoice
-            const lock = `/invoices/${doc}/lock`;
-            await axios.put(`${url}${lock}`);
+            // const lock = `/invoices/${doc}/lock`;
+            // await axios.put(`${url}${lock}`);
 
             // Navigate inside SPA (no reload)
             navigate(`/pack/${doc}`);
@@ -377,24 +377,24 @@ const PackingList = () => {
     const memoizedData = useMemo(() => tableData, [tableData]);
 
     // Initial data fetch
-    useEffect(() => {
-        handleSubmit();
+    // useEffect(() => {
+    //     handleSubmit();
 
-        socket.on("invoiceLocked", () => {
-            console.log("locked")
-            handleSubmit(); // 🔄 will be called on every socket emission
-        });
+    //     socket.on("invoiceLocked", () => {
+    //         console.log("locked")
+    //         handleSubmit(); // 🔄 will be called on every socket emission
+    //     });
 
-        socket.on("invoiceUnlocked", () => {
-            console.log('unlocked')
-            handleSubmit(); // 🔄 will be called on every socket emission
-        });
+    //     socket.on("invoiceUnlocked", () => {
+    //         console.log('unlocked')
+    //         handleSubmit(); // 🔄 will be called on every socket emission
+    //     });
 
-        return () => {
-            socket.off("invoiceLocked"); // clean up when component unmounts
-            socket.off("invoiceUnlocked"); // clean up when component unmounts
-        };
-    }, []);
+    //     return () => {
+    //         socket.off("invoiceLocked"); // clean up when component unmounts
+    //         socket.off("invoiceUnlocked"); // clean up when component unmounts
+    //     };
+    // }, []);
 
     // Handle form submission
     const handleSubmit = async () => {

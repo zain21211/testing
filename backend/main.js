@@ -1,9 +1,9 @@
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
-});
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection:", reason);
-});
+// Initialize logging system first
+const { connectMongoDB } = require("./logging/config/mongodb");
+const { initializeErrorHandlers } = require("./logging/middleware/errorLogger");
+
+// Initialize error handlers
+initializeErrorHandlers();
 
 const http = require("http");
 const { Server } = require("socket.io"); // Import socket.io server
@@ -23,11 +23,27 @@ const balanceRoutes = require("./routes/balanceRoutes"); // Import your customer
 const CashEntryRoutes = require("./routes/CashEntryRoutes"); // Import your customer route
 const reportRoutes = require("./routes/reportRoutes"); // Import your customer route
 const saleRoutes = require("./routes/salesRoutes"); // Import your customer route
-
+const authMiddleware = require("./middleware/tokenAuthentication"); // Import your auth middleware
 const coaRoutes = require("./routes/coaRoutes");
 const turnoverReport = require("./routes/turnOverReport");
 
+// Import logging middleware
+const { createRequestLogger } = require("./logging/middleware/requestLogger");
+const {
+  errorLogger,
+  notFoundHandler,
+  globalErrorHandler,
+  validationErrorHandler,
+  databaseErrorHandler,
+  jwtErrorHandler,
+} = require("./logging/middleware/errorLogger");
+const logsRoutes = require("./logging/routes/logsRoutes");
+const frontendLogsRoutes = require("./logging/routes/frontendLogsRoutes");
+
 const app = express();
+
+// Connect to MongoDB for logging
+connectMongoDB().catch(console.error);
 
 setInterval(async () => {
   try {
@@ -44,7 +60,7 @@ const server = http.createServer(app); // create HTTP server
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });
 
@@ -57,6 +73,38 @@ io.on("connection", (socket) => {
 });
 
 app.use(cors());
+
+// Trust proxy for accurate IP addresses
+app.set("trust proxy", true);
+
+app.use(authMiddleware);
+// Logging middleware (should be early in the middleware stack)
+app.use(
+  createRequestLogger((req) => ({
+    // Derive user from JWT Authorization header (no req.user needed)
+    ...(() => {
+      try {
+        const auth = req.headers && req.headers.authorization;
+        if (auth && auth.startsWith("Bearer ")) {
+          const token = auth.slice(7);
+          const parts = token.split(".");
+          if (parts.length >= 2) {
+            const payloadJson = Buffer.from(parts[1], "base64").toString(
+              "utf8"
+            );
+            const payload = JSON.parse(payloadJson);
+            return {
+              username: payload?.username || payload?.sub,
+              userType: payload?.userType || payload?.role,
+            };
+          }
+        }
+      } catch (_) {}
+      return {};
+    })(),
+    sessionId: req.headers["x-session-id"],
+  }))
+);
 
 app.use(express.static(__dirname)); // For serving frontend
 app.use(express.json({ limit: "100mb" })); // or more, if needed
@@ -83,10 +131,16 @@ app.use("/api/ledger", ledgerRoutes);
 app.use("/api/coa", coaRoutes);
 app.use("/api/turnover", turnoverReport);
 
-app.use((req, res) => {
-  console.log("404 - Not Found:", req.originalUrl);
-  res.status(404).send("Page not found");
-});
+// Logs management routes
+app.use("/api/logs", logsRoutes);
+app.use("/api/logs", frontendLogsRoutes);
+
+// Error handling middleware (should be last)
+app.use(validationErrorHandler);
+app.use(databaseErrorHandler);
+app.use(jwtErrorHandler);
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 server.listen(3001, "0.0.0.0", () => {
   console.log("✅ HTTP server running on http://100.68.6.110:3001");

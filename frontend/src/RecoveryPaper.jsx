@@ -21,6 +21,7 @@ import {
 } from "./store/slices/CustomerSearch";
 // import AttachMoneyIcon from "@mui/icons-material/AttachMoney"; // Not used in this version
 import { useDispatch } from "react-redux";
+import useGeolocation from './hooks/geolocation'
 
 // Import MUI Components
 import {
@@ -162,6 +163,7 @@ const RecoveryPaper = () => {
   const [searchParams] = useSearchParams();
   const acid = searchParams.get('acid');
 
+  const { coordinates, address } = useGeolocation();
   const [easypaisaAmount, setEasypaisaAmount] = useLocalStorageState(
     "recoveryPaperEasypaisaAmount",
     ""
@@ -284,7 +286,6 @@ const RecoveryPaper = () => {
   useEffect(() => {
     dispatch(setIDWithKey({ key: 'recovery', value: parseInt(acid) }))
   }, [acid, dispatch])
-
 
   const handleSubmitExpenses = async () => {
     setIsLoading(true);
@@ -718,6 +719,7 @@ const RecoveryPaper = () => {
 
       let allSubEntriesSuccessful = true;
       for (const [method, amount] of entriesToPost) {
+        console.log(coordinates)
         const payload = {
           paymentMethod:
             method === "crownWallet"
@@ -730,8 +732,8 @@ const RecoveryPaper = () => {
           userName,
           desc: description,
           time: timestamp,
-        }
-
+          location: { latitude: coordinates.latitude, longitude: coordinates.longitude, address },
+        };
         if (isSubmittingRef.current) {
           console.warn("Blocked duplicate submission on refresh");
           return;

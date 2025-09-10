@@ -91,7 +91,9 @@ class LogFormatter {
       method: req.method,
       endpoint: req.route?.path || req.path,
       url: req.originalUrl || req.url,
-      userAgent: sanitizer.sanitizeUserAgent(req.get("User-Agent")),
+      userAgent: sanitizer.sanitizeUserAgent(
+        req.headers?.["User-Agent"] || "unknown"
+      ),
       ipAddress: sanitizer.sanitizeIP(req.ip || req.connection.remoteAddress),
       requestHeaders: sanitizer.sanitizeHeaders(req.headers),
       requestPayload: sanitizer.sanitizeRequestPayload({
@@ -145,7 +147,9 @@ class LogFormatter {
       environment: process.env.NODE_ENV || "development",
       additionalContext: {
         ...additionalContext,
-        userAgent: sanitizer.sanitizeUserAgent(req.get("User-Agent")),
+        userAgent: sanitizer.sanitizeUserAgent(
+          req.headers?.["User-Agent"] || "unknown"
+        ),
         ipAddress: sanitizer.sanitizeIP(req.ip || req.connection.remoteAddress),
       },
     };

@@ -54,6 +54,7 @@ export const useCustomerSearch = ({
   const customerState = useSelector(
     (state) => state.customerSearch.customers[customerKey] || {}
   );
+  const [localCustomerList, setLocalCustomerList] = useState([]);
 
   const {
     ID,
@@ -78,6 +79,7 @@ export const useCustomerSearch = ({
   const customerInputRef = useRef(null);
   const listRef = useRef(null);
   const searchButtonRef = useRef(null);
+  const prevLength = useRef(masterCustomerList.length);
 
   const stableOnSelect = useStableCallback(onSelect);
 
@@ -90,36 +92,50 @@ export const useCustomerSearch = ({
     data = [],
     isLoading: isCustomerLoading,
     error: fetchError,
-  } = useFetch("customers", fetchers[formType] || fetchCustomers);
+  } = useFetch(["customers", formType], fetchers[formType] || fetchCustomers);
 
   const allCustomerOptions = useMemo(
     () =>
       route
-        ? masterCustomerList.filter(
+        ? localCustomerList.filter(
             (c) => c.route?.toLowerCase() === route.toLowerCase()
           )
-        : masterCustomerList,
-    [route, masterCustomerList]
+        : localCustomerList,
+    [route, localCustomerList]
   );
 
-  // keep master list synced
+  // Sync master list
   useEffect(() => {
-    if (data.length > 0 && !isEqual(data, masterCustomerList)) {
-      const updated = [...data];
+    if (formType === "debit" || formType === "credit") return;
 
-      dispatch(persistMasterCustomerList(updated));
+    if (data.length > 0) {
+      const shouldUpdate = !isEqual(data, masterCustomerList);
+      if (shouldUpdate) {
+        dispatch(persistMasterCustomerList(data));
+      }
     }
+    // 🚨 don't add masterCustomerList here, or you loop forever
+  }, [data, dispatch]);
 
-    if (masterCustomerList.length === 1) {
+  useEffect(() => {
+    if (data.length > 0) {
+      setLocalCustomerList(data); // scoped only to this hook instance
+    }
+  }, [data]);
+
+  useEffect(() => {
+    if (
+      prevLength.current !== masterCustomerList.length &&
+      (masterCustomerList.length === 1 || localCustomerList.length === 1)
+    ) {
       handleSelect(allCustomerOptions[0]);
-      return;
     }
-  }, [data, masterCustomerList, dispatch]);
+    prevLength.current = masterCustomerList.length;
+  }, [masterCustomerList, allCustomerOptions, localCustomerList]);
 
   // 🔹 handle selecting a customer
   const handleSelect = useCallback(
     (customer) => {
-      console.log(customer, onSelect);
       if (!customer) return;
       dispatch(setSelectedCustomer({ key: customerKey, customer }));
       dispatch(setCustomerSuggestions({ key: customerKey, suggestions: [] }));
@@ -194,6 +210,12 @@ export const useCustomerSearch = ({
     selectedCustomer,
     handleSelect,
   ]);
+
+  useEffect(() => {
+    if (!acidInput && selectedCustomer) {
+      setAcidInput(selectedCustomer.acid);
+    }
+  }, [selectedCustomer]);
 
   // debounced setter for ID
   const debouncedSetId = useMemo(

@@ -71,6 +71,12 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
         }
     }, [products]);
 
+    useEffect(() => {
+        if (!id) return;
+        return () => {
+            handleUpdate(); // unlock on mount
+        };
+    }, [id]);
     const handleUpdate = async () => {
         if (!updatedInvoices[id]) {
             alert("missing invoice data");

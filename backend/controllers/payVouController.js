@@ -77,21 +77,72 @@ const byUser = {
     const { date, accounts, amount, description, entryDateTime, user } =
       req.body;
 
-    console.log(accounts);
     const time = new Date(entryDateTime);
     time.setHours(time.getHours() + 5);
 
     try {
       const pool = await connection();
 
-      const docResult = await pool
-        .request()
-        .input("type", sql.VarChar, "BPV")
-        .query(
-          "SELECT ISNULL(MAX(doc), 0) + 1 AS nextDoc FROM ledgers WHERE type = @type"
-        );
-      const nextDoc = docResult.recordset[0].nextDoc;
+      if (!Array.isArray(accounts) || accounts.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Accounts array is required and cannot be empty",
+        });
+      }
 
+      let debitDoc = null;
+      let creditDoc = null;
+      let bothDoc = null;
+      let docType;
+
+      if (accounts.length === 1 && accounts[0].type === "debit") {
+        docType = "CRV";
+        const debitRes = await pool
+          .request()
+          .input("type", sql.VarChar, "CRV")
+          .query(
+            ` UPDATE DocNumber
+            SET doc = doc + 1
+            OUTPUT DELETED.doc 
+            WHERE type = @type`
+          );
+        debitDoc = debitRes.recordset[0].doc;
+      } else if (accounts.length === 1 && accounts[0].type === "credit") {
+        docType = "CPV";
+        const creditRes = await pool
+          .request()
+          .input("type", sql.VarChar, "CPV")
+          .query(
+            ` UPDATE DocNumber
+            SET doc = doc + 1
+            OUTPUT DELETED.doc 
+            WHERE type = @type`
+          );
+        creditDoc = creditRes.recordset[0].doc;
+      } else {
+        docType = "BRV";
+        const bothRes = await pool
+          .request()
+          .input("type", sql.VarChar, "BRV")
+          .query(
+            ` UPDATE DocNumber
+            SET doc = doc + 1
+            OUTPUT DELETED.doc
+            WHERE type = @type`
+          );
+        bothDoc = bothRes.recordset[0].doc;
+      }
+
+      const doc = bothDoc || debitDoc || creditDoc;
+
+      console.log(
+        "Debit Doc:",
+        debitDoc,
+        "Credit Doc:",
+        creditDoc,
+        "Both Doc:",
+        bothDoc
+      );
       let query;
 
       for (let i = 0; i < accounts.length; i++) {
@@ -100,27 +151,37 @@ const byUser = {
         INSERT INTO ledgers 
           (date, acid, type, doc, debit, narration, EntryDateTime, EntryBy, ReceiptStatus, WhatsappStatus)
         VALUES 
-          (@DATE, @ACID, 'BPV', @DOC, @AMOUNT, @Narration, @EntryDateTime, @UserName, 'PAID', 'DONE')
+          (@DATE, @ACID, @type, @DOC, @AMOUNT, @Narration, @EntryDateTime, @UserName, 'PAID', 'DONE')
       `;
         } else {
           query = `
         INSERT INTO ledgers 
           (date, acid, type, doc, credit, narration, EntryDateTime, EntryBy, ReceiptStatus, WhatsappStatus)
         VALUES 
-          (@DATE, @ACID, 'BPV', @DOC, @AMOUNT, @Narration, @EntryDateTime, @UserName, 'RECIEVED', 'DONE')
+          (@DATE, @ACID, @type, @DOC, @AMOUNT, @Narration, @EntryDateTime, @UserName, 'RECIEVED', 'DONE')
       `;
         }
 
-        const result = await pool
+        await pool
           .request()
+          .input("DOC", sql.Int, doc)
           .input("DATE", sql.Date, date)
+          .input("type", sql.VarChar(50), docType)
+          .input("UserName", sql.VarChar(50), user)
           .input("ACID", sql.Int, accounts[i].acid)
-          .input("DOC", sql.Int, nextDoc)
+          .input("EntryDateTime", sql.DateTime, time)
           .input("AMOUNT", sql.Decimal(18, 2), amount)
           .input("Narration", sql.NVarChar(sql.MAX), description)
-          .input("EntryDateTime", sql.DateTime, time)
-          .input("UserName", sql.VarChar(50), user)
           .query(query);
+
+        if (accounts.length === 1) {
+          return res.status(200).json({
+            debitDoc,
+            creditDoc,
+            success: true,
+            message: "Ledger entry inserted",
+          });
+        }
       }
       res.status(200).json({
         success: true,
@@ -129,9 +190,12 @@ const byUser = {
       });
     } catch (err) {
       console.error("Ledger Insert Error:", err);
-      res
-        .status(500)
-        .json({ success: false, error: "Failed to insert ledger entry" });
+      res.status(500).json({
+        msg: "Server error",
+        // doc: { creditDoc: creditDoc ?? null, debitDoc: debitDoc ?? null },
+        success: false,
+        error: err.message,
+      });
     }
   },
 };

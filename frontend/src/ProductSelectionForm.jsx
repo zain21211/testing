@@ -92,6 +92,17 @@ export default function OrderPage({
     }, [user, setCompanyFilter, companyFilter])
 
     useEffect(() => {
+        setSelectedProduct(null)
+        setProductID(null)
+        setProductIDInput('')
+    }, [companyFilter, categoryFilter])
+
+    useEffect(() => {
+        if (!productInputValue)
+            setSelectedProduct(null)
+    }, [productInputValue])
+
+    useEffect(() => {
         if (Sch) return;
 
         setQuantity(orderQuantity);

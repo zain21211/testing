@@ -151,7 +151,7 @@ const CustomerSearchUI = forwardRef(
             >
               {/* Account ID Input */}
               <TextField
-                label="Account ID"
+                label="ID"
                 variant="outlined"
                 fullWidth
                 value={acidInput ?? ""}
@@ -165,7 +165,7 @@ const CustomerSearchUI = forwardRef(
               <TextField
                 fullWidth
                 variant="outlined"
-                placeholder="Search by Customer Name..."
+                placeholder="Search Customer"
                 value={customerInput ?? ""}
                 onChange={handleCustomerInputChange}
                 onKeyDown={handleInputKeyDown}
@@ -200,42 +200,40 @@ const CustomerSearchUI = forwardRef(
               />
 
               {/* Selected Customer Details */}
-              {selectedCustomer && (
-                <TextField
-                  value={phoneNumber || "No phone"}
-                  fullWidth
-                  variant="outlined"
-                  sx={{
-                    gridColumn: { xs: 'span 2', sm: 'span 1' },
-                    "& input": {
-                      borderRight: "1px solid black",
-                      width: "30%",
-                      marginY: { xs: 2, sm: 0 },
-                    },
-                  }}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <Box
-                        sx={{
-                          px: 2,
-                          color: "text.primary",
-                          fontFamily: "Jameel Noori Nastaleeq, serif",
-                          fontSize: "3rem",
-                          fontWeight: "bold",
-                          width: "100%",
-                          textAlign: "center",
-                        }}
-                      >
-                        {selectedCustomer.UrduName}
-                      </Box>
-                    ),
-                  }}
-                />
-              )}
+              <TextField
+                value={phoneNumber || ""}
+                fullWidth
+                variant="outlined"
+                sx={{
+                  gridColumn: { xs: 'span 2', sm: 'span 1' },
+                  "& input": {
+                    borderRight: "1px solid black",
+                    width: "30%",
+                    marginY: { xs: 2, sm: 0 },
+                  },
+                }}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <Box
+                      sx={{
+                        px: 2,
+                        color: "text.primary",
+                        fontFamily: "Jameel Noori Nastaleeq, serif",
+                        fontSize: "3rem",
+                        fontWeight: "bold",
+                        width: "100%",
+                        textAlign: "center",
+                      }}
+                    >
+                      {selectedCustomer?.UrduName}
+                    </Box>
+                  ),
+                }}
+              />
             </Box>
             <Popper
-              open={isPopperOpen && suggestions.length > 0 && !disabled}
+              open={isPopperOpen && suggestions?.length > 0 && !disabled}
               anchorEl={customerInputRef?.current}
               placement="bottom-end"
               modifiers={[{ name: "flip", enabled: false }]}

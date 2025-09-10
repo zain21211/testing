@@ -42,14 +42,19 @@ const CreateCustomer = () => {
 
     }, [height]);
 
+    useEffect(() => {
+        handleUpdate();
+    }, []);
+
     // FUNCTIONS
     const handleUpdate = async () => {
         try {
 
+            console.log("Fetching customers to update master list...");
             // FETCH API
             const response = await fetchCustomers()
 
-            const data = Array.isArray(response.data) ? response.data : [];
+            const data = Array.isArray(response) ? response : [];
             dispatch(persistMasterCustomerList(data))
 
         } catch (error) {

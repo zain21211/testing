@@ -77,7 +77,7 @@ app.use(cors());
 // Trust proxy for accurate IP addresses
 app.set("trust proxy", true);
 
-app.use(authMiddleware);
+// app.use(authMiddleware);
 // Logging middleware (should be early in the middleware stack)
 app.use(
   createRequestLogger((req) => ({

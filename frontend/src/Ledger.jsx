@@ -448,6 +448,7 @@ const Ledger = () => {
             <CardContent>
               <LedgerSearchForm
                 usage={"ledger"}
+                onSelect={handleFetchData}
                 onFetch={handleFetchData}
                 loading={loading}
                 name={customerName}

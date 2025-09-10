@@ -120,7 +120,9 @@ const Login = () => {
       // console.log("Customer detected, navigating to /order. UserData:", userData);
       navigate("/order");
     }
-  }, [isLoggedIn, isCustomer, userData, navigate]); // Runs when these dependencies change  // Effect 3: Handle redirection for customers
+  }, [isLoggedIn, isCustomer, userData, navigate]);
+
+  // Runs when these dependencies change  // Effect 3: Handle redirection for customers
   useEffect(() => {
     const isSpo = userData?.userType?.toLowerCase().includes("spo");
     if (isLoggedIn && isSpo && userData) {
@@ -192,6 +194,8 @@ const Login = () => {
 
   // Conditional Rendering Logic
   if (isLoggedIn) {
+
+    // for usertype customer
     if (isCustomer || userData?.userType?.toLowerCase().includes("spo")) {
       // User is a customer, Effect 3 should be redirecting them.
       // Show a loading indicator while the redirect happens.
@@ -202,7 +206,8 @@ const Login = () => {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            height: "80vh", // Use viewport height to center vertically
+
+            // height: "80vh", // Use viewport height to center vertically
           }}
         >
           <CircularProgress />
@@ -213,24 +218,22 @@ const Login = () => {
         </Box>
       );
     }
-    // Logged in, but not a customer (or redirect hasn't happened yet for a customer)
-    // Show "Welcome Back" screen for non-customers
+    // For non-customer users, show the dashboard
     return (
       <Box
         sx={{
+          padding: 2,
           display: "flex",
           alignItems: "center", // Vertically center content
           justifyContent: "center", // Horizontally center content
-          minHeight: "calc(100vh - 64px)", // Adjust 64px based on your AppBar height, if any
-          bgcolor: "grey.100",
-          padding: 2,
+          minHeight: "calc(100vh - 110px)",
         }}
       >
         <Paper
           elevation={6}
           sx={{
-            width: "100%",
-            maxWidth: 400,
+            width: "80%",
+            maxWidth: 1000,
             padding: 4,
             borderRadius: "35px",
             border: "1px solid",
@@ -244,14 +247,34 @@ const Login = () => {
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
             You are logged in.
           </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box sx={{
+            mt: 8,
+            display: "flex",
+            marginX: "auto",
+            maxWidth: "900px",
+            flexDirection: { xs: 'column', md: 'row' },
+            flexWrap: 'wrap',
+            gap: 2,
+            alignItems: 'center',
+            justifyContent: 'center',
+            "& > *": {
+              width: { xs: "100%", md: "25%" }, // children full width only in column
+            },
+          }}>
+            {/* <Box sx={{
+            gap: 2,
+            display: "grid",
+            margin: "0 auto",
+            maxWidth: "900px",
+            gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: "repeat(auto-fit, minmax(250px, 1fr))" },
+          }}> */}
             {packingList.some(e => userType.includes(e)) && (
               <Button
                 component={RouterLink}
                 to="/pending"
                 variant="contained"
                 size="large"
-                sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold  " }}
+                sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold", flexGrow: 1 }}
               >
                 Packing List
               </Button>
@@ -261,7 +284,7 @@ const Login = () => {
               to="/coa"
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "#610051ff", fontWeight: "Bold  " }}
+              sx={{ py: 1.5, height: "60px", bgcolor: "#610051ff", fontWeight: "Bold", flexGrow: 1 }}
             >
               Accounts
             </Button>
@@ -271,18 +294,18 @@ const Login = () => {
                 to="/turnoverreport"
                 variant="contained"
                 size="large"
-                sx={{ py: 1.5, height: "60px", bgcolor: "#FFC107", fontWeight: "Bold ", color: "black" }}
+                sx={{ py: 1.5, height: "60px", bgcolor: "#FFC107", fontWeight: "Bold ", color: "black", flexGrow: 1 }}
               >
                 Spo Working
               </Button>
             )}
-            {paymentVoucher.includes(userType) || userData?.username.includes("ZAIN") && (
+            {(paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
               <Button
                 component={RouterLink}
                 to="/paymentvoucher"
                 variant="contained"
                 size="large"
-                sx={{ py: 1.5, height: "60px", bgcolor: "	#795548" }}
+                sx={{ flexGrow: 1, py: 1.5, height: "60px", bgcolor: "	#795548" }}
               >
                 Payment Voucher
               </Button>
@@ -292,7 +315,7 @@ const Login = () => {
               to="/recovery"
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "green" }}
+              sx={{ py: 1.5, flexGrow: 1, height: "60px", bgcolor: "green" }}
             >
               Recovery
             </Button>
@@ -301,7 +324,7 @@ const Login = () => {
               to="/sales"
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "#009688" }}
+              sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#009688" }}
             >
               Sales
             </Button>
@@ -310,7 +333,7 @@ const Login = () => {
               to="/order" // Non-customers can still go to create order manually
               variant="contained"
               size="large"
-              sx={{ py: 1.5, height: "60px" }}
+              sx={{ py: 1.5, height: "60px", flexGrow: 1, }}
             >
               Create New Order
             </Button>
@@ -320,7 +343,7 @@ const Login = () => {
                 to="/list" // Non-customers can still go to create order manually
                 variant="contained"
                 size="large"
-                sx={{ py: 1.5, height: "60px" }}
+                sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#3f51b5" }}
               >
                 Customer Route Order
               </Button>
@@ -332,8 +355,8 @@ const Login = () => {
             variant="outlined"
             color="inherit"
             sx={{
-              mt: 4, // Reduced margin top a bit
-              width: "100%",
+              mt: 8, // Reduced margin top a bit
+              width: { xs: '100%', md: '900px' },
               height: "60px",
               bgcolor: "error.main", // Using theme color for red
               color: "white",
@@ -346,8 +369,8 @@ const Login = () => {
           >
             Logout
           </Button>
-        </Paper>
-      </Box>
+        </Paper >
+      </Box >
     );
   }
 

@@ -396,25 +396,31 @@ const ProductSelectionGrid = forwardRef(({
             />
 
             {/* Urdu name */}
-            {selectedProduct && (
-                <TextField
-                    value={` ${selectedProduct?.Company} - ${selectedProduct?.Category} | ${selectedProduct?.UrduName}`}
-                    fullWidth
-                    disabled
-                    sx={{
-                        gridColumn: "span 4",
-                        order: { xs: 4, sm: 4 },
-                        "& .MuiInputBase-input.Mui-disabled": {
-                            fontWeight: "bold",
-                            fontFamily: "Jameel Noori Nastaleeq, serif",
-                            color: "black",
-                            textAlign: "center",
-                            WebkitTextFillColor: "black !important",
-                            fontSize: { xs: "2.1rem", sm: "1.7rem" },
-                        },
-                    }}
-                />
-            )}
+            <TextField
+                label="Urduname"
+                // value={` ${selectedProduct?.Company || ''} - ${selectedProduct?.Category || ''} | ${selectedProduct?.UrduName || ''}`}
+                value={[
+                    selectedProduct?.Company,
+                    selectedProduct?.Category
+                ].filter(Boolean).join(" - ") +
+                    (selectedProduct?.UrduName ? ` | ${selectedProduct.UrduName}` : '')}
+
+                fullWidth
+                disabled
+                sx={{
+                    gridColumn: "span 4",
+                    order: { xs: 4, sm: 4 },
+                    "& .MuiInputBase-input.Mui-disabled": {
+                        p: 1.5,
+                        fontWeight: "bold",
+                        fontFamily: "Jameel Noori Nastaleeq, serif",
+                        color: "black",
+                        textAlign: "center",
+                        WebkitTextFillColor: "black !important",
+                        fontSize: { xs: "2.1rem", sm: "1.7rem" },
+                    },
+                }}
+            />
         </Box>
     );
 })

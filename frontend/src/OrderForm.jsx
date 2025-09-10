@@ -493,25 +493,27 @@ const OrderForm = () => {
 
   return (
     <Container
-      tabIndex={0}
+      tabIndex={0} // makes it focusable
       onKeyDown={HandleShortcuts}
-      maxWidth={false}
-      sx={{ all: "unset" }}
+      maxWidth={300}
+    // sx={{ outline: "none" }} // prevent blue border
     >
-      {(success || error) && (
-        <Box >
-          <Fade in={!!error}>
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          </Fade>
-          <Fade in={!!success}>
-            <Alert severity="success" onClose={() => setSuccess(null)}>
-              {success}
-            </Alert>
-          </Fade>
-        </Box>
-      )}
+      {
+        (success || error) && (
+          <Box >
+            <Fade in={!!error}>
+              <Alert severity="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            </Fade>
+            <Fade in={!!success}>
+              <Alert severity="success" onClose={() => setSuccess(null)}>
+                {success}
+              </Alert>
+            </Fade>
+          </Box>
+        )
+      }
 
       <Box
         sx={{
@@ -624,44 +626,46 @@ const OrderForm = () => {
         </Box>
       </Box>
 
-      {selectedCustomer && (
-        <Box>
-          <Button
-            variant="contained"
-            onClick={() => setOpen((prev) => !prev)}
-            sx={{ mb: 2 }}
-          >
-            {open ? "Hide Order History" : "Show Order History"}
-          </Button>
-          <Collapse in={open}>
-            <Box
-              sx={{
-                backgroundColor: "grey.300",
-                color: "black",
-                p: 1,
-                borderRadius: 2,
-              }}
+      {
+        selectedCustomer && (
+          <Box>
+            <Button
+              variant="contained"
+              onClick={() => setOpen((prev) => !prev)}
+              sx={{ mb: 2 }}
             >
-              <Typography
-                variant="h6"
+              {open ? "Hide Order History" : "Show Order History"}
+            </Button>
+            <Collapse in={open}>
+              <Box
                 sx={{
-                  fontFamily: "Jameel Noori Nastaleeq, serif",
-                  textAlign: "right",
-                  fontSize: "3rem",
-                  fontWeight: "bold",
-                  px: 1,
+                  backgroundColor: "grey.300",
+                  color: "black",
+                  p: 1,
+                  borderRadius: 2,
                 }}
               >
-                : آئٹم آرڈر کی آخری تاریخ
-              </Typography>
-              <InactiveItems
-                acid={selectedCustomer.acid}
-                handleRowClick={() => { }}
-              />
-            </Box>
-          </Collapse>
-        </Box>
-      )}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: "Jameel Noori Nastaleeq, serif",
+                    textAlign: "right",
+                    fontSize: "3rem",
+                    fontWeight: "bold",
+                    px: 1,
+                  }}
+                >
+                  : آئٹم آرڈر کی آخری تاریخ
+                </Typography>
+                <InactiveItems
+                  acid={selectedCustomer.acid}
+                  handleRowClick={() => { }}
+                />
+              </Box>
+            </Collapse>
+          </Box>
+        )
+      }
 
       <Paper
         sx={{ p: 2, mb: 3, opacity: loading || initialDataLoading ? 0.7 : 1 }}
@@ -867,7 +871,7 @@ const OrderForm = () => {
           ))}
         </Box>
       </Paper>
-    </Container>
+    </Container >
   );
 };
 

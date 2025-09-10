@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import localforage from "localforage";
+import isEqual from "lodash/isEqual";
 
 // configure a store for customers (optional, good for separation)
 localforage.config({
@@ -43,10 +44,14 @@ const customerDataSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchMasterCustomerList.fulfilled, (state, action) => {
-        state.masterCustomerList = action.payload;
+        if (!isEqual(state.masterCustomerList, action.payload)) {
+          state.masterCustomerList = action.payload;
+        }
       })
       .addCase(persistMasterCustomerList.fulfilled, (state, action) => {
-        state.masterCustomerList = action.payload;
+        if (!isEqual(state.masterCustomerList, action.payload)) {
+          state.masterCustomerList = action.payload;
+        }
       })
       .addCase(resetMasterCustomerList.fulfilled, (state) => {
         state.masterCustomerList = [];

@@ -58,16 +58,16 @@ export default function MyAutocomplete({
     return (
         <Autocomplete
             freeSolo
-            value={null}
+            // value={null}
             disabled={disabled}
             options={filteredOptions}
             inputValue={localInputValue}
             sx={{ gridColumn: "span 2" }}
             onInputChange={(_, newInputValue) => {
-                if (!newInputValue) {
-                    alert("reset")
+                if (newInputValue === "") {
                     onReset();
                 }
+
                 setLocalInputValue(newInputValue);
             }}
             onChange={(_, newValue) => {

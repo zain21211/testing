@@ -329,12 +329,12 @@ VALUES
         whatsapp,
         creditdays,
         creditlimit,
-        type,
+        type = "",
         discounts = [],
         username,
         acid,
-        monthlytransaction: worth,
-        buyingsource,
+        monthlytransaction: worth = "",
+        buyingsource = "",
       } = payload;
 
       if (!acid) {

@@ -303,7 +303,6 @@ const DataTable = ({
     <Paper
       sx={{
         // width: "100%",
-        overflow: "scroll",
         borderRadius: "7px",
         padding: 0,
         fontSize: "2rem",
@@ -376,7 +375,7 @@ const DataTable = ({
               </TableRow>
             ) : usage?.includes("coa") ? (
               <VariableSizeList
-                height={tableHeight - 60}
+                height={tableHeight}
                 itemCount={tableData.length}
                 itemSize={getItemSize}
                 width="100%"
@@ -408,7 +407,7 @@ const DataTable = ({
           </TableBody>
         </Table>
       </TableContainer>
-    </Paper>
+    </Paper >
   );
 };
 

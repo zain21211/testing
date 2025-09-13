@@ -167,6 +167,7 @@ const OrderForm = () => {
   // --- Effects ---
 
   useEffect(() => {
+    console.log("Syncing invoices:", acid);
     dispatch(setIDWithKey({ key: 'orderForm', value: parseInt(acid) }))
     // dispatch(setIDInputWithKey({ key: 'orderForm', value: parseInt(acid) }))
   }, [acid, dispatch])

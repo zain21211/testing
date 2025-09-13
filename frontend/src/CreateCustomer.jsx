@@ -1,7 +1,7 @@
 // coa.jsx
 import axios from 'axios';
 import { Box } from '@mui/material';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import useWindowDimensions from './useWindowDimensions'; // Import the custom hook
 
 // REDUX STATES FUNCTIONS
@@ -31,16 +31,22 @@ const CreateCustomer = () => {
     const names = masterCustomerList.map(account => account.name);
     const urdu = masterCustomerList.map(account => account.UrduName);
     const dispatch = useDispatch();
+
     // useEffects
+
     // FOR TABLE HEIGHT
     useEffect(() => {
         if (containerRef.current) {
-            const containerTop = containerRef.current.getBoundingClientRect().top;
-            // Adjust the subtraction value based on your layout's top margin and other elements
-            setTableHeight(height - containerTop - 100);
+            const divHeight = containerRef.current.offsetHeight;
+            console.log("Div height:", divHeight);
+            setTableHeight(divHeight);
         }
+    }, [containerRef]); // or any dependency you want to trigger recalculation
 
-    }, [height]);
+
+    useEffect(() => {
+        console.log("Window table height changed:", tableHeight);
+    }, [tableHeight]);
 
     useEffect(() => {
         handleUpdate();
@@ -65,10 +71,9 @@ const CreateCustomer = () => {
     // RENDERING
     return (
         <Box
-            ref={containerRef}
             sx={{
                 width: '100%',
-                my: 2,
+                // my: 2,
                 display: { xs: 'flex', sm: 'grid' },
                 flexDirection: 'column',
                 // overflow: 'hidden',
@@ -81,7 +86,9 @@ const CreateCustomer = () => {
             }}
         >
             {/* Left panel: CUSTOMER FORM */}
-            <Box sx={{ position: { md: 'sticky' }, alignSelf: "start" }}>
+            <Box
+                ref={containerRef}
+                sx={{ position: { md: 'sticky' }, alignSelf: "start" }}>
                 <CustomerForm
                     onCustomerCreated={handleUpdate}
                     accounts={names}

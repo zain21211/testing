@@ -63,7 +63,6 @@ export const fetchProducts = async () => {
 // Fetch customers
 export const fetchCustomers = async () => {
   const { data } = await client.get("/customers");
-  console.log("all customers: ", data);
   return data;
 };
 

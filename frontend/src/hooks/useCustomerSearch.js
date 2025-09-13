@@ -54,7 +54,7 @@ export const useCustomerSearch = ({
   const customerState = useSelector(
     (state) => state.customerSearch.customers[customerKey] || {}
   );
-  const [localCustomerList, setLocalCustomerList] = useState([]);
+  // const [localCustomerList, setLocalCustomerList] = useState([]);
 
   const {
     ID,
@@ -94,6 +94,9 @@ export const useCustomerSearch = ({
     error: fetchError,
   } = useFetch(["customers", formType], fetchers[formType] || fetchCustomers);
 
+  const localCustomerList =
+    (data?.length > 0 ? data : masterCustomerList) || [];
+
   const allCustomerOptions = useMemo(
     () =>
       route
@@ -116,12 +119,6 @@ export const useCustomerSearch = ({
     }
     // 🚨 don't add masterCustomerList here, or you loop forever
   }, [data, dispatch]);
-
-  useEffect(() => {
-    if (data.length > 0) {
-      setLocalCustomerList(data); // scoped only to this hook instance
-    }
-  }, [data]);
 
   useEffect(() => {
     if (

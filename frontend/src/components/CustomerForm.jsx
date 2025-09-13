@@ -14,6 +14,7 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    CircularProgress,
 } from "@mui/material";
 
 import TabPanel from "./TabPanel";
@@ -53,6 +54,7 @@ const editableFields = [
 export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
     // LOCAL STATES
     const [formData, setFormData] = useLocalStorageState("coaform", {});
+    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [companyOptions, setCompanyOptions] = useState([]);
     const [listOptions, setListOptions] = useState([]);
@@ -67,7 +69,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
     const { selectedCustomer, setSelectedCustomer } = useUpdateCustomer(name);
     const { images, setImages, handleImageChange, resetImages } = useCamera();
     const { list, error: disError } = useDiscount(selectedCustomer, null, true);
-    useFetchCustImgs(selectedCustomer?.acid, handleImageChange, setImages);
+    const { loading: imgLoading } = useFetchCustImgs(selectedCustomer?.acid, handleImageChange, setImages);
 
     // PERMISSIONS
     const usertype = user?.userType.toLowerCase();
@@ -151,6 +153,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
     const handlePost = async (e) => {
         e.preventDefault();
         try {
+            setLoading(true);
             // 1. Ask backend for the new id
             const { data } = await axios.get(`${url}/customers/newAcid`);
             const acid = data.acid;
@@ -179,6 +182,8 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
         } catch (error) {
             console.error("Error creating customer:", error);
             alert("Failed to create account.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -286,6 +291,18 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                         <DiscountList discountList={discountList} />
 
                         {/* Upload */}
+                        {imgLoading && (
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    minHeight: "200px", // keeps space consistent
+                                }}
+                            >
+                                <CircularProgress />
+                            </Box>
+                        )}
                         <DualCameraUpload
                             images={images}
                             handleImageChange={handleImageChange}
@@ -296,6 +313,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                             <Button
                                 // onClick={handlePost}
                                 type="submit"
+                                disabled={imgLoading || loading}
                                 variant="contained"
                                 fullWidth
                                 sx={{

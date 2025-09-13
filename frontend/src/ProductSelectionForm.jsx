@@ -95,6 +95,7 @@ export default function OrderPage({
         setSelectedProduct(null)
         setProductID(null)
         setProductIDInput('')
+
     }, [companyFilter, categoryFilter])
 
     useEffect(() => {

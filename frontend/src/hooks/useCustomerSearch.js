@@ -110,6 +110,8 @@ export const useCustomerSearch = ({
 
   // Sync master list
   useEffect(() => {
+    isCust && isCust(data.length !== 0);
+
     if (formType === "debit" || formType === "credit") return;
 
     if (data.length > 0) {

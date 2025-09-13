@@ -96,10 +96,10 @@ const byUser = {
       let docType;
 
       if (accounts.length === 1 && accounts[0].type === "debit") {
-        docType = "CRV";
+        docType = "CPV";
         const debitRes = await pool
           .request()
-          .input("type", sql.VarChar, "CRV")
+          .input("type", sql.VarChar, docType)
           .query(
             ` UPDATE DocNumber
             SET doc = doc + 1
@@ -108,10 +108,10 @@ const byUser = {
           );
         debitDoc = debitRes.recordset[0].doc;
       } else if (accounts.length === 1 && accounts[0].type === "credit") {
-        docType = "CPV";
+        docType = "CRV";
         const creditRes = await pool
           .request()
-          .input("type", sql.VarChar, "CPV")
+          .input("type", sql.VarChar, docType)
           .query(
             ` UPDATE DocNumber
             SET doc = doc + 1

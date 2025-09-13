@@ -1,12 +1,12 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { clearSelection } from "../store/slices/CustomerSearch";
 
 export const usePayVouCust = () => {
   const [creditCust, setCreditCust] = useState(null);
   const [debitCust, setDebitCust] = useState(null);
-  const [isCredit, setIsCredit] = useState(true);
-  const [isDebit, setIsDebit] = useState(true);
+  const [isCredit, setIsCredit] = useState(false);
+  const [isDebit, setIsDebit] = useState(false);
   const dispatch = useDispatch();
 
   const getCreditCusts = useCallback((customer) => {
@@ -19,19 +19,15 @@ export const usePayVouCust = () => {
     setDebitCust(customer);
   }, []);
 
-  // Derived flags
-  // const isCredit = useMemo(() => creditCust !== null, [creditCust]);
-  // const isDebit = useMemo(() => debitCust !== null, [debitCust]);
+  const handleCreditFlag = useCallback((flag) => {
+    console.log("Selected credit customer:", flag);
+    setIsCredit(flag);
+  }, []);
 
-  useEffect(() => {
-    console.log("Credit customer changed:", creditCust);
-    setIsCredit(creditCust !== null);
-  }, [creditCust]);
-
-  useEffect(() => {
-    console.log("Debit customer changed:", debitCust);
-    setIsDebit(debitCust !== null);
-  }, [debitCust]);
+  const handleDebitFlag = useCallback((flag) => {
+    console.log("Selected debit customer:", flag);
+    setIsDebit(flag);
+  }, []);
 
   const clearCustomerSelections = () => {
     setCreditCust(null);
@@ -47,6 +43,8 @@ export const usePayVouCust = () => {
     isDebit,
     getCreditCusts,
     getDebitCusts,
+    handleCreditFlag,
+    handleDebitFlag,
     clearCustomerSelections,
   };
 };

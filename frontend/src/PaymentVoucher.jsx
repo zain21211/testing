@@ -52,33 +52,36 @@ const PaymentVoucher = () => {
     };
 
     return (
-        <>
-            <Box mb={2} display={(isCredit && isDebit) ? 'none' : 'block'} />
-            <PayVouForm
-                isCredit={isCredit}
-                isDebit={isDebit}
-                onSelectCredit={getCreditCusts}
-                onSetIsCredit={handleCreditFlag}
-                onSelectDebit={getDebitCusts}
-                onSetIsDebit={handleDebitFlag}
-                description={formData.description}
-                onDescriptionChange={handleChange}
-                cashAmountDisplay={displayValue}
-                onCashAmountChange={handleCashAmountChange}
-                debitCust={debitCust}
-                descRef={descRef}
-                onSubmit={handleVoucherSubmit}
-                submitting={submitting}
-                success={success}
-                error={error}
-            />
-            {(isCredit || isDebit) &&
+        <Box>
+            <Box mb={2} display={(isCredit && isDebit) ? 'none' : 'block'} >
+                <PayVouForm
+                    isCredit={isCredit}
+                    isDebit={isDebit}
+                    onSelectCredit={getCreditCusts}
+                    onSetIsCredit={handleCreditFlag}
+                    onSelectDebit={getDebitCusts}
+                    onSetIsDebit={handleDebitFlag}
+                    description={formData.description}
+                    onDescriptionChange={handleChange}
+                    cashAmountDisplay={displayValue}
+                    onCashAmountChange={handleCashAmountChange}
+                    debitCust={debitCust}
+                    descRef={descRef}
+                    onSubmit={handleVoucherSubmit}
+                    submitting={submitting}
+                    success={success}
+                    error={error}
+                />
+            </Box>
+            {
+                (isCredit && isDebit) &&
                 (
                     <Typography>
                         unauthorized
                     </Typography>
-                )}
-        </>
+                )
+            }
+        </Box>
     );
 };
 

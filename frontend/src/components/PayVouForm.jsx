@@ -39,16 +39,12 @@ export const PayVouForm = ({
             Payment Voucher
         </Typography>
 
-
-        {/* {isCredit && ( */}
         <CreditSection
             onSelectCredit={onSelectCredit}
             onSetIsCredit={onSetIsCredit}
             isCust={isCredit}
         />
-        {/* )} */}
 
-        {/* {isDebit && ( */}
         <DebitSection
             onSelectDebit={onSelectDebit}
             isCust={isDebit}
@@ -60,7 +56,6 @@ export const PayVouForm = ({
             debitCust={debitCust}
             descRef={descRef}
         />
-        {/* )} */}
 
         <Button
             type="submit"

@@ -14,12 +14,15 @@ export const DebitSection = ({
     cashAmountDisplay,
     onCashAmountChange,
     debitCust,
-    descRef
+    descRef,
+    isCust,
 }) => (
-    <Box sx={{ backgroundColor: "red", color: "white", borderRadius: "1.5rem" }}>
+
+    <Box sx={{ backgroundColor: "red", color: "white", borderRadius: "1.5rem", display: isCust ? 'block' : 'none' }}>
         <Typography variant='h4' fontWeight={"bold"} p={2}>DEBIT</Typography>
         <Box sx={{ padding: "1rem", borderRadius: "2rem", }}>
             <Box sx={style}>
+
                 <LedgerSearchForm
                     usage='paymentDebit'
                     formType="debit"
@@ -27,6 +30,7 @@ export const DebitSection = ({
                     onSelect={onSelectDebit}
                     isCust={onSetIsDebit}
                 />
+
             </Box>
             <Box
                 sx={{
@@ -75,5 +79,7 @@ export const DebitSection = ({
                 cashAmount={parseFloat(cashAmountDisplay?.replace(/,/g, '')) || 0}
             />
         </Box>
+
     </Box>
+
 );

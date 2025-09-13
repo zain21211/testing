@@ -30,7 +30,7 @@ export const usePayVouCust = () => {
 
   useEffect(() => {
     console.log("Debit customer changed:", debitCust);
-    setDebitCust(debitCust !== null);
+    setIsDebit(debitCust !== null);
   }, [debitCust]);
 
   const clearCustomerSelections = () => {

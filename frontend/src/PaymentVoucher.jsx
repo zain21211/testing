@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { usePayVouForm } from './hooks/usePayVouFrom';
 import { usePayVouCust } from './hooks/usePayVouCust';
 import { usePayVouSub } from './hooks/usePayVouSub';
@@ -53,30 +53,31 @@ const PaymentVoucher = () => {
 
     return (
         <>
-            {(isCredit || isDebit) ? (
-                <PayVouForm
-                    isCredit={isCredit}
-                    isDebit={isDebit}
-                    onSelectCredit={getCreditCusts}
-                    onSetIsCredit={handleCreditFlag}
-                    onSelectDebit={getDebitCusts}
-                    onSetIsDebit={handleDebitFlag}
-                    description={formData.description}
-                    onDescriptionChange={handleChange}
-                    cashAmountDisplay={displayValue}
-                    onCashAmountChange={handleCashAmountChange}
-                    debitCust={debitCust}
-                    descRef={descRef}
-                    onSubmit={handleVoucherSubmit}
-                    submitting={submitting}
-                    success={success}
-                    error={error}
-                />
-            ) : (
-                <Typography>
-                    unauthorized
-                </Typography>
-            )}
+            <Box mb={2} display={(isCredit && isDebit) ? 'none' : 'block'} />
+            <PayVouForm
+                isCredit={isCredit}
+                isDebit={isDebit}
+                onSelectCredit={getCreditCusts}
+                onSetIsCredit={handleCreditFlag}
+                onSelectDebit={getDebitCusts}
+                onSetIsDebit={handleDebitFlag}
+                description={formData.description}
+                onDescriptionChange={handleChange}
+                cashAmountDisplay={displayValue}
+                onCashAmountChange={handleCashAmountChange}
+                debitCust={debitCust}
+                descRef={descRef}
+                onSubmit={handleVoucherSubmit}
+                submitting={submitting}
+                success={success}
+                error={error}
+            />
+            {(isCredit || isDebit) &&
+                (
+                    <Typography>
+                        unauthorized
+                    </Typography>
+                )}
         </>
     );
 };

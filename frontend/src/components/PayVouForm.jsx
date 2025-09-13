@@ -36,29 +36,31 @@ export const PayVouForm = ({
         }}
     >
         <Typography variant="h5" component="h2" gutterBottom>
-            Cash Payment Voucher credit({isCredit})
+            Payment Voucher
         </Typography>
 
 
-        {isCredit && (
-            <CreditSection
-                onSelectCredit={onSelectCredit}
-                onSetIsCredit={onSetIsCredit}
-            />
-        )}
+        {/* {isCredit && ( */}
+        <CreditSection
+            onSelectCredit={onSelectCredit}
+            onSetIsCredit={onSetIsCredit}
+            isCust={isCredit}
+        />
+        {/* )} */}
 
-        {isDebit && (
-            <DebitSection
-                onSelectDebit={onSelectDebit}
-                onSetIsDebit={onSetIsDebit}
-                description={description}
-                onDescriptionChange={onDescriptionChange}
-                cashAmountDisplay={cashAmountDisplay}
-                onCashAmountChange={onCashAmountChange}
-                debitCust={debitCust}
-                descRef={descRef}
-            />
-        )}
+        {/* {isDebit && ( */}
+        <DebitSection
+            onSelectDebit={onSelectDebit}
+            isCust={isDebit}
+            onSetIsDebit={onSetIsDebit}
+            description={description}
+            onDescriptionChange={onDescriptionChange}
+            cashAmountDisplay={cashAmountDisplay}
+            onCashAmountChange={onCashAmountChange}
+            debitCust={debitCust}
+            descRef={descRef}
+        />
+        {/* )} */}
 
         <Button
             type="submit"

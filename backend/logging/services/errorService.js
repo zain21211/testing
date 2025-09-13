@@ -9,21 +9,18 @@ class ErrorService {
 
   /**
    * Handle and log application errors
-   * @param {Error} error - Error object
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   * @param {Object} additionalContext - Additional context
+   * @param {Error} error
+   * @param {Object|null} req
+   * @param {Object|null} res
+   * @param {Object} additionalContext
    */
-  async handleError(error, req, res, additionalContext = {}) {
+  async handleError(error, req = null, res = null, additionalContext = {}) {
     try {
-      // Log the error
       const loggingService = require("./loggingService");
       await loggingService.logError(error, req, additionalContext);
 
-      // Check for error rate alerts
       await this.checkErrorRateAlerts(error, req);
 
-      // Send appropriate response
       this.sendErrorResponse(error, req, res);
     } catch (logError) {
       console.error("❌ Error in error handler:", logError);
@@ -31,35 +28,25 @@ class ErrorService {
     }
   }
 
-  /**
-   * Check error rate alerts
-   * @param {Error} error - Error object
-   * @param {Object} req - Express request object
-   */
-  async checkErrorRateAlerts(error, req) {
+  async checkErrorRateAlerts(error, req = {}) {
     try {
-      const endpoint = req.route?.path || req.path;
+      const endpoint = req?.route?.path || req?.path || "unknown";
       const now = Date.now();
       const timeWindow = 5 * 60 * 1000; // 5 minutes
 
-      // Initialize error count for endpoint if not exists
       if (!this.errorCounts.has(endpoint)) {
         this.errorCounts.set(endpoint, []);
       }
 
       const endpointErrors = this.errorCounts.get(endpoint);
-
-      // Add current error
       endpointErrors.push(now);
 
-      // Remove old errors outside time window
       const recentErrors = endpointErrors.filter(
         (timestamp) => now - timestamp < timeWindow
       );
       this.errorCounts.set(endpoint, recentErrors);
 
-      // Check if error rate exceeds threshold
-      const errorRate = recentErrors.length / (timeWindow / 1000); // errors per second
+      const errorRate = recentErrors.length / (timeWindow / 1000); // errors/sec
 
       if (errorRate > this.alertThresholds.errorRate) {
         await this.sendErrorRateAlert(endpoint, errorRate, recentErrors.length);
@@ -69,32 +56,21 @@ class ErrorService {
     }
   }
 
-  /**
-   * Send error rate alert
-   * @param {string} endpoint - Endpoint with high error rate
-   * @param {number} errorRate - Current error rate
-   * @param {number} errorCount - Number of errors in time window
-   */
   async sendErrorRateAlert(endpoint, errorRate, errorCount) {
     try {
       console.warn(`🚨 HIGH ERROR RATE ALERT: ${endpoint}`);
-      console.warn(`   Error Rate: ${errorRate.toFixed(2)} errors/second`);
-      console.warn(`   Error Count: ${errorCount} errors in 5 minutes`);
+      console.warn(`   Error Rate: ${errorRate.toFixed(2)} errors/sec`);
+      console.warn(`   Error Count: ${errorCount} in 5 minutes`);
       console.warn(
-        `   Threshold: ${this.alertThresholds.errorRate} errors/second`
+        `   Threshold: ${this.alertThresholds.errorRate} errors/sec`
       );
 
-      // Here you could integrate with external alerting systems
-      // like Slack, email, PagerDuty, etc.
-
-      // Log critical error for this alert
       const alertError = new Error(`High error rate detected on ${endpoint}`);
       alertError.name = "ErrorRateAlert";
       alertError.endpoint = endpoint;
       alertError.errorRate = errorRate;
       alertError.errorCount = errorCount;
 
-      // Create a mock request object for logging
       const mockReq = {
         route: { path: endpoint },
         path: endpoint,
@@ -111,57 +87,55 @@ class ErrorService {
     }
   }
 
-  /**
-   * Send appropriate error response
-   * @param {Error} error - Error object
-   * @param {Object} req - Express request object
-   * @param {Object} res - Express response object
-   */
-  sendErrorResponse(error, req, res) {
+  sendErrorResponse(error, req = {}, res = null) {
     const statusCode = error.statusCode || error.status || 500;
     const message = this.getErrorMessage(error, statusCode);
 
     const errorResponse = {
       success: false,
       error: {
-        message: message,
+        message,
         code: error.code || "INTERNAL_ERROR",
         timestamp: new Date().toISOString(),
-        requestId: req.headers["x-request-id"] || "unknown",
+        requestId: req?.headers?.["x-request-id"] || "unknown",
       },
     };
 
-    // Add stack trace in development
     if (process.env.NODE_ENV === "development") {
       errorResponse.error.stack = error.stack;
     }
 
-    res.status(statusCode).json(errorResponse);
+    if (res && typeof res.status === "function") {
+      res.status(statusCode).json(errorResponse);
+    } else {
+      console.error(
+        "⚠️ Cannot send error response: 'res' is missing or invalid."
+      );
+      console.error(JSON.stringify(errorResponse, null, 2));
+    }
   }
 
-  /**
-   * Send generic error response
-   * @param {Object} res - Express response object
-   */
-  sendGenericErrorResponse(res) {
-    res.status(500).json({
+  sendGenericErrorResponse(res = null) {
+    const fallbackResponse = {
       success: false,
       error: {
         message: "Internal server error",
         code: "INTERNAL_ERROR",
         timestamp: new Date().toISOString(),
       },
-    });
+    };
+
+    if (res && typeof res.status === "function") {
+      res.status(500).json(fallbackResponse);
+    } else {
+      console.error(
+        "⚠️ Cannot send generic error response: 'res' is missing or invalid."
+      );
+      console.error(JSON.stringify(fallbackResponse, null, 2));
+    }
   }
 
-  /**
-   * Get appropriate error message
-   * @param {Error} error - Error object
-   * @param {number} statusCode - HTTP status code
-   * @returns {string} Error message
-   */
   getErrorMessage(error, statusCode) {
-    // Don't expose internal error details in production
     if (process.env.NODE_ENV === "production") {
       switch (statusCode) {
         case 400:
@@ -186,25 +160,13 @@ class ErrorService {
           return "An error occurred";
       }
     }
-
     return error.message || "An error occurred";
   }
 
-  /**
-   * Mark error as resolved
-   * @param {string} errorId - Error log ID
-   * @param {string} resolvedBy - Username who resolved it
-   * @param {string} notes - Resolution notes
-   * @returns {Object} Updated error log
-   */
   async markErrorAsResolved(errorId, resolvedBy, notes) {
     try {
       const errorLog = await ErrorLog.findById(errorId);
-
-      if (!errorLog) {
-        throw new Error("Error log not found");
-      }
-
+      if (!errorLog) throw new Error("Error log not found");
       await errorLog.markAsResolved(resolvedBy, notes);
       return errorLog;
     } catch (error) {
@@ -213,15 +175,9 @@ class ErrorService {
     }
   }
 
-  /**
-   * Get unresolved errors
-   * @param {Object} filters - Filter options
-   * @returns {Array} Unresolved errors
-   */
   async getUnresolvedErrors(filters = {}) {
     try {
       const query = { resolved: false };
-
       if (filters.severity) query.severity = filters.severity;
       if (filters.errorType) query.errorType = filters.errorType;
       if (filters.username) query.username = filters.username;
@@ -235,21 +191,12 @@ class ErrorService {
     }
   }
 
-  /**
-   * Get error trends
-   * @param {Date} startDate - Start date
-   * @param {Date} endDate - End date
-   * @returns {Object} Error trends
-   */
   async getErrorTrends(startDate, endDate) {
     try {
       const trends = await ErrorLog.aggregate([
         {
           $match: {
-            timestamp: {
-              $gte: startDate,
-              $lte: endDate,
-            },
+            timestamp: { $gte: startDate, $lte: endDate },
           },
         },
         {
@@ -281,9 +228,7 @@ class ErrorService {
             },
           },
         },
-        {
-          $sort: { _id: 1 },
-        },
+        { $sort: { _id: 1 } },
       ]);
 
       return trends;
@@ -293,11 +238,6 @@ class ErrorService {
     }
   }
 
-  /**
-   * Clean up old resolved errors
-   * @param {number} daysOld - Number of days old
-   * @returns {number} Number of errors cleaned up
-   */
   async cleanupOldResolvedErrors(daysOld = 30) {
     try {
       const cutoffDate = new Date();

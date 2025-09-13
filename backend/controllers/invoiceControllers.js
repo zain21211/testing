@@ -125,7 +125,7 @@ p.prid AS prid,
 FROM PSProduct P 
 JOIN Products PR ON PR.ID = P.Prid
 WHERE P.Doc = @DocNumber
-  AND P.Type = 'Sale' and P.QTY<>0
+  AND P.Type = 'Sale' and P.QTY<>0 
 `;
 
     if (page.includes("pack")) {
@@ -319,6 +319,7 @@ select count(*)
  where type='sale' 
  and doc=@DOC
   and PackingDateTime is null
+  and qty<>0
 ) = 0 
  then
   'INVOICE' 
@@ -332,6 +333,7 @@ from PsProduct
  where type='sale' 
  and doc=@DOC 
  and PackingDateTime is null
+ and qty<>0
  ) = 0
 then 
 N' Packed by: ' + @PackedBy + ', ' +@DateTime 

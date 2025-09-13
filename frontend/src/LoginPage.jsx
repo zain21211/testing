@@ -279,15 +279,6 @@ const Login = () => {
                 Packing List
               </Button>
             )}
-            <Button
-              component={RouterLink}
-              to="/coa"
-              variant="contained"
-              size="large"
-              sx={{ py: 1.5, height: "60px", bgcolor: "#610051ff", fontWeight: "Bold", flexGrow: 1 }}
-            >
-              Accounts
-            </Button>
             {(forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
               <Button
                 component={RouterLink}
@@ -310,33 +301,47 @@ const Login = () => {
                 Payment Voucher
               </Button>
             )}
-            <Button
-              component={RouterLink}
-              to="/recovery"
-              variant="contained"
-              size="large"
-              sx={{ py: 1.5, flexGrow: 1, height: "60px", bgcolor: "green" }}
-            >
-              Recovery
-            </Button>
-            <Button
-              component={RouterLink}
-              to="/sales"
-              variant="contained"
-              size="large"
-              sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#009688" }}
-            >
-              Sales
-            </Button>
-            <Button
-              component={RouterLink}
-              to="/order" // Non-customers can still go to create order manually
-              variant="contained"
-              size="large"
-              sx={{ py: 1.5, height: "60px", flexGrow: 1, }}
-            >
-              Create New Order
-            </Button>
+            {(userType !== 'payment' &&
+              <>
+                <Button
+                  component={RouterLink}
+                  to="/coa"
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", bgcolor: "#610051ff", fontWeight: "Bold", flexGrow: 1 }}
+                >
+                  Accounts
+                </Button>
+
+                <Button
+                  component={RouterLink}
+                  to="/recovery"
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, flexGrow: 1, height: "60px", bgcolor: "green" }}
+                >
+                  Recovery
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/sales"
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#009688" }}
+                >
+                  Sales
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/order" // Non-customers can still go to create order manually
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", flexGrow: 1, }}
+                >
+                  Create New Order
+                </Button>
+              </>
+            )}
             {isList && (
               <Button
                 component={RouterLink}

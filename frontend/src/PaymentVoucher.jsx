@@ -19,8 +19,8 @@ const PaymentVoucher = () => {
     const {
         creditCust,
         debitCust,
-        isCredit,
-        isDebit,
+        isCredit = true,
+        isDebit = true,
         getCreditCusts,
         getDebitCusts,
         handleCreditFlag,

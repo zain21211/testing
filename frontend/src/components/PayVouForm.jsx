@@ -36,8 +36,9 @@ export const PayVouForm = ({
         }}
     >
         <Typography variant="h5" component="h2" gutterBottom>
-            Cash Payment Voucher
+            Cash Payment Voucher credit({isCredit})
         </Typography>
+
 
         {isCredit && (
             <CreditSection

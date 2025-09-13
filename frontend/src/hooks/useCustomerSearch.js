@@ -1,5 +1,5 @@
 // src/hooks/useCustomerSearch.js
-import { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState, use } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { useFetch } from "./useFetch";
@@ -41,6 +41,7 @@ export const useCustomerSearch = ({
   onSelect,
   onFetch,
   dates,
+  isCust,
 }) => {
   const dispatch = useDispatch();
   // const location = useLocation();
@@ -122,8 +123,9 @@ export const useCustomerSearch = ({
 
   useEffect(() => {
     if (
-      prevLength.current !== masterCustomerList.length &&
-      (masterCustomerList.length === 1 || localCustomerList.length === 1)
+      // prevLength.current !== masterCustomerList.length &&
+      masterCustomerList.length === 1 ||
+      localCustomerList.length === 1
     ) {
       handleSelect(allCustomerOptions[0]);
     }

@@ -12,6 +12,7 @@ const CustomerSearch = ({
   route,
   disabled = false,
   ledgerLoading = false,
+  isCust,
 }) => {
 
   // 1. Call the date hook
@@ -21,6 +22,7 @@ const CustomerSearch = ({
   // 2. Call the main logic hook, passing it dependencies
   const customerSearchHookData = useCustomerSearch({
     route,
+    isCust,
     onSelect,
     onFetch,
     formType,

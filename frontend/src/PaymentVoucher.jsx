@@ -46,7 +46,8 @@ const PaymentVoucher = () => {
             creditCust,
             onSubmissionSuccess: () => {
                 clearForm();
-                clearCustomerSelections();
+                descRef?.current?.focus();
+                // clearCustomerSelections();
             },
         });
     };

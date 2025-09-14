@@ -8,6 +8,7 @@ import React, {
 import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import LocalPendingItems from "./components/orderform/LocalPendingItems.jsx";
 // import debounce from "lodash.debounce";
 
 // --- Material-UI Imports ---
@@ -25,7 +26,13 @@ import {
   Alert,
   Paper,
   CircularProgress,
-  FormControl, InputLabel, Select, MenuItem, FormHelperText
+  FormControl,
+
+  Tabs, Tab,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import Fade from "@mui/material/Fade";
@@ -49,10 +56,10 @@ import { useInvoiceSync } from "./hooks/useInvoiceSync.js";
 
 // --- Constants & Configuration ---
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const spoList = ["ARIF", 'SALMAN', 'ZAIN', 'HAMZA',]
+const spoList = ["ARIF", "SALMAN", "ZAIN", "HAMZA"];
 const postButtons = [
-  { text: 'INVOICE', color: 'green' },
-  { text: 'ESTIMATE', color: 'error' }
+  { text: "INVOICE", color: "green" },
+  { text: "ESTIMATE", color: "error" },
 ];
 
 // --- Utility Functions ---
@@ -112,7 +119,7 @@ const OrderForm = () => {
   const { selectedCustomer } = useSelector(
     (state) => state.customerSearch.customers["orderForm"]
   );
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
   // --- Component State ---
   const [products, setProducts, productsLoaded] = useIndexedDBState(
     "products",
@@ -130,10 +137,13 @@ const OrderForm = () => {
   const [open, setOpen] = useState(true);
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(0);
+
+  const [searchParams] = useSearchParams();
   const [spo, setSpo] = useState(user?.username);
   // const [spo, setSpo] = useLocalStorageState('SpoOrderform', user?.username);
-  const acid = searchParams.get('acid');
+  const acid = searchParams.get("acid");
+  const [localItems, setLocalItems] = useState([]);
   // --- Refs ---
   const customerInputRef = useRef(null);
 
@@ -163,14 +173,18 @@ const OrderForm = () => {
   }, [today]);
 
   // custom hooks
-  const { retryInvoices, loading: syncing } = useInvoiceSync(invoice, setInvoice, token);
+  const { retryInvoices, loading: syncing } = useInvoiceSync(
+    invoice,
+    setInvoice,
+    token
+  );
   // --- Effects ---
 
   useEffect(() => {
     console.log("Syncing invoices:", acid);
-    dispatch(setIDWithKey({ key: 'orderForm', value: parseInt(acid) }))
+    dispatch(setIDWithKey({ key: "orderForm", value: parseInt(acid) }));
     // dispatch(setIDInputWithKey({ key: 'orderForm', value: parseInt(acid) }))
-  }, [acid, dispatch])
+  }, [acid, dispatch]);
 
   // Ensure selected date is not in the past on initial load
   useEffect(() => {
@@ -280,26 +294,21 @@ const OrderForm = () => {
     setOrderItemsTotalQuantity(newTotalQuantity);
   }, [orderItems, setOrderItemsTotalQuantity]);
 
-
-
-
-
   // --- Event Handlers & Callbacks ---
 
   const HandleShortcuts = (event) => {
-
     // POST ESTIMATE
     if (event.altKey && event.key.toLowerCase() === "p") {
       event.preventDefault();
-      handlePostOrder('ESTIMATE');
+      handlePostOrder("ESTIMATE");
     }
 
     // POST INVOICE
     if (event.altKey && event.key.toLowerCase() === "b") {
       event.preventDefault();
-      handlePostOrder('INVOICE');
+      handlePostOrder("INVOICE");
     }
-  }
+  };
   const handleSelectCustomer = useCallback((customer) => {
     setSelectedCustomer(customer);
     if (customer) {
@@ -334,6 +343,11 @@ const OrderForm = () => {
     // This function can be expanded if ProductSelectionForm exposes a reset method via a ref
     // For now, it clears what it can from the parent.
   }, []);
+
+
+  const handleChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
   const handleAddProduct = useCallback(
     (item) => {
@@ -391,7 +405,7 @@ const OrderForm = () => {
         prid: String(item.productID) || "0",
         profit: item.profit,
         remakes: item.remakes || "",
-        spo: String(spo || user?.username || 'no user'),
+        spo: String(spo || user?.username || "no user"),
       })),
       orderDate: selectedDate,
       customerAcid: String(selectedCustomer.acid),
@@ -423,12 +437,12 @@ const OrderForm = () => {
       resetProductInputs();
       setBalance(null);
       setOverDue(null);
-      dispatch(clearSelection({ key: 'orderForm' }));
+      dispatch(clearSelection({ key: "orderForm" }));
     } catch (err) {
       // Errors
       const errorMessage =
         err.response?.data?.message || "Failed to create order.";
-      dispatch(clearSelection({ key: 'orderForm' }));
+      dispatch(clearSelection({ key: "orderForm" }));
       console.error(
         "Order creation failed:",
         err.response?.data || err.message || err
@@ -436,19 +450,21 @@ const OrderForm = () => {
       setError(`${errorMessage} Please check details and try again.`);
 
       // for sync
-      const confirmed = window.confirm("Are you sure you want to delete this and let it post automatically?");
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this and let it post automatically?"
+      );
       if (!confirmed) return;
-      setInvoice(prev => [...prev, payload]);
+      setInvoice((prev) => [...prev, payload]);
       setOrderItems([]);
       setSelectedCustomer(null);
-      resetProductInputs();// Save payload for retry if offline
-
+      resetProductInputs(); // Save payload for retry if offline
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePendingItems = async () => {
+  const handlePendingItems = async (company = "fit") => {
+    console.log("Fetching pending items for company:", company);
     try {
       const response = await axios.get(
         `${API_BASE_URL}/create-order/pendingitems`,
@@ -479,7 +495,9 @@ const OrderForm = () => {
         remakes: "",
       }));
 
-      setOrderItems((prev) => [...prev, ...transformedItems]);
+      if (company === "fit")
+        setOrderItems((prev) => [...prev, ...transformedItems]);
+      if (company === "local") setLocalItems(transformedItems);
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || "Could not fetch pending items.";
@@ -499,22 +517,20 @@ const OrderForm = () => {
       maxWidth={300}
     // sx={{ outline: "none" }} // prevent blue border
     >
-      {
-        (success || error) && (
-          <Box >
-            <Fade in={!!error}>
-              <Alert severity="error" onClose={() => setError(null)}>
-                {error}
-              </Alert>
-            </Fade>
-            <Fade in={!!success}>
-              <Alert severity="success" onClose={() => setSuccess(null)}>
-                {success}
-              </Alert>
-            </Fade>
-          </Box>
-        )
-      }
+      {(success || error) && (
+        <Box>
+          <Fade in={!!error}>
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          </Fade>
+          <Fade in={!!success}>
+            <Alert severity="success" onClose={() => setSuccess(null)}>
+              {success}
+            </Alert>
+          </Fade>
+        </Box>
+      )}
 
       <Box
         sx={{
@@ -627,25 +643,38 @@ const OrderForm = () => {
         </Box>
       </Box>
 
-      {
-        selectedCustomer && (
-          <Box>
-            <Button
-              variant="contained"
-              onClick={() => setOpen((prev) => !prev)}
-              sx={{ mb: 2 }}
+      {selectedCustomer && (
+        <Box>
+          <Button
+            variant="contained"
+            onClick={() => setOpen((prev) => !prev)}
+            sx={{ mb: 2 }}
+          >
+            {open ? "Hide Order History" : "Show Order History"}
+          </Button>
+          <Collapse in={open}>
+            <Box
+              sx={{
+                backgroundColor: "grey.300",
+                color: "black",
+                p: 1,
+                borderRadius: 2,
+              }}
             >
-              {open ? "Hide Order History" : "Show Order History"}
-            </Button>
-            <Collapse in={open}>
               <Box
                 sx={{
-                  backgroundColor: "grey.300",
-                  color: "black",
-                  p: 1,
-                  borderRadius: 2,
+                  display: "flex",
+                  fontWeight: "bold",
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+
                 }}
               >
+
+                <Tabs value={activeTab} onChange={handleChange}>
+                  <Tab label="focus" sx={{ fontWeight: "bold", fontSize: '1rem' }} />
+                  <Tab label="fit" sx={{ fontWeight: "bold", fontSize: '1rem' }} />
+                </Tabs>
                 <Typography
                   variant="h6"
                   sx={{
@@ -658,15 +687,25 @@ const OrderForm = () => {
                 >
                   : آئٹم آرڈر کی آخری تاریخ
                 </Typography>
+              </Box>
+              {/* Tabs content */}
+              {activeTab === 0 && (
+                <InactiveItems
+                  acid={selectedCustomer.acid}
+                  handleRowClick={() => { }}
+                  company={'st%'}
+                />
+              )}
+              {activeTab === 1 && (
                 <InactiveItems
                   acid={selectedCustomer.acid}
                   handleRowClick={() => { }}
                 />
-              </Box>
-            </Collapse>
-          </Box>
-        )
-      }
+              )}
+            </Box>
+          </Collapse>
+        </Box>
+      )}
 
       <Paper
         sx={{ p: 2, mb: 3, opacity: loading || initialDataLoading ? 0.7 : 1 }}
@@ -693,15 +732,17 @@ const OrderForm = () => {
             sx={{
               flex: 1,
               display: {
-                xs: 'none', md: 'block'
-              }
-            }}>
+                xs: "none",
+                md: "block",
+              },
+            }}
+          >
             <InputLabel id="shop-label">Spo</InputLabel>
             <Select
               labelId="customer-label"
               id="customer"
               value={spo}
-              defaultValue={user?.username || 'no user'}
+              defaultValue={user?.username || "no user"}
               label="Customer"
               onChange={(e) => setSpo(e.target.value)}
             >
@@ -730,9 +771,7 @@ const OrderForm = () => {
               onClick={retryInvoices}
               disabled={syncing}
             >
-              {syncing ? `Syncing`
-                : `Retry Invoices ( ${invoice.length} )`
-              }
+              {syncing ? `Syncing` : `Retry Invoices ( ${invoice.length} )`}
             </Button>
           )}
         </Box>
@@ -750,92 +789,102 @@ const OrderForm = () => {
           formatCurrency={formatCurrency}
         />
 
-        {orderItems.length > 0 && (
-          <Box sx={{ my: 2 }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
+
+        {/* {orderItems.length > 0 && ( */}
+        <Box sx={{ my: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Order Preview
+            </Typography>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="small"
+              onClick={() => setOrderItems([])}
+              disabled={loading}
+              sx={{ mb: 1 }}
             >
-              <Typography variant="h6" gutterBottom>
-                Order Preview
-              </Typography>
-              <Button
-                variant="contained"
-                color="secondary"
-                size="small"
-                onClick={() => setOrderItems([])}
-                disabled={loading}
-                sx={{ mb: 1 }}
+              Clear Order
+            </Button>
+          </Box>
+          <Box
+            sx={{ height: 500 }}
+          >
+
+
+            {activeTab === 0 && (
+              <List
+                dense
+                sx={{
+                  height: 300,
+                  overflowY: "auto",
+                  border: "1px solid #eee",
+                  borderRadius: "4px",
+                }}
               >
-                Clear Order
-              </Button>
-            </Box>
-            <List
-              dense
-              sx={{
-                maxHeight: 300,
-                overflowY: "auto",
-                border: "1px solid #eee",
-                borderRadius: "4px",
-              }}
-            >
-              {orderItems.map((item, index) => (
-                <ListItem
-                  key={`${item.productID}-${index}`}
-                  divider
-                  secondaryAction={
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      onClick={() => handleRemoveProduct(index)}
-                      disabled={loading}
-                      size="small"
-                    >
-                      <CloseIcon sx={{
-                        color: item.status
-                          ?.toLowerCase()
-                          .includes("short")
-                          ? "white" : "red",
-                        fontWeight: "bold"
-                      }} />
-                    </IconButton>
-                  }
-                  sx={{
-                    py: 0.5,
-                    backgroundColor: item.status
-                      ?.toLowerCase()
-                      .includes("short")
-                      ? "red"
-                      : "inherit",
-                    color: item.status?.toLowerCase().includes("short")
-                      ? "white"
-                      : "black",
-                  }}
-                >
-                  <ListItemText
-                    primary={item.name}
-                    secondary={`Qty: ${item.orderQuantity} (${item.quantity
-                      } TQ) | Rate: ${Number(item.rate).toFixed(0)} | ${item.company
-                      } | ${item.model} | Amt: ${formatCurrency(item.amount)}`}
-                    primaryTypographyProps={{
-                      fontSize: { xs: "1rem", sm: "1.2rem" },
-                      fontWeight: "bold",
-                      noWrap: true,
-                    }}
-                    secondaryTypographyProps={{
-                      fontSize: { xs: ".9rem", sm: "1rem" },
+                {orderItems.map((item, index) => (
+                  <ListItem
+                    key={`${item.productID}-${index}`}
+                    divider
+                    secondaryAction={
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleRemoveProduct(index)}
+                        disabled={loading}
+                        size="small"
+                      >
+                        <CloseIcon
+                          sx={{
+                            color: item.status?.toLowerCase().includes("short")
+                              ? "white"
+                              : "red",
+                            fontWeight: "bold",
+                          }}
+                        />
+                      </IconButton>
+                    }
+                    sx={{
+                      py: 0.5,
+                      backgroundColor: item.status
+                        ?.toLowerCase()
+                        .includes("short")
+                        ? "red"
+                        : "inherit",
                       color: item.status?.toLowerCase().includes("short")
                         ? "white"
-                        : "text.secondary",
-                      noWrap: true,
+                        : "black",
                     }}
-                  />
-                </ListItem>
-              ))}
-            </List>
+                  >
+                    <ListItemText
+                      primary={item.name}
+                      secondary={`Qty: ${item.orderQuantity} (${item.quantity
+                        } TQ) | Rate: ${Number(item.rate).toFixed(0)} | ${item.company
+                        } | ${item.model} | Amt: ${formatCurrency(item.amount)}`}
+                      primaryTypographyProps={{
+                        fontSize: { xs: "1rem", sm: "1.2rem" },
+                        fontWeight: "bold",
+                        noWrap: true,
+                      }}
+                      secondaryTypographyProps={{
+                        fontSize: { xs: ".9rem", sm: "1rem" },
+                        color: item.status?.toLowerCase().includes("short")
+                          ? "white"
+                          : "text.secondary",
+                        noWrap: true,
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+
+            )}
 
             <Box sx={{ mt: 2, textAlign: "right" }}>
               <Typography variant="h6">
@@ -846,9 +895,19 @@ const OrderForm = () => {
               </Typography>
             </Box>
           </Box>
-        )}
 
-        <Box sx={{ mt: 3, textAlign: "center", gap: 2, display: "flex", justifyContent: "center", flexWrap: "wrap" }}>
+        </Box>
+
+        <Box
+          sx={{
+            mt: 3,
+            textAlign: "center",
+            gap: 2,
+            display: "flex",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
           {postButtons.map((btn) => (
             <Button
               variant="contained"
@@ -872,7 +931,7 @@ const OrderForm = () => {
           ))}
         </Box>
       </Paper>
-    </Container >
+    </Container>
   );
 };
 

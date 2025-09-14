@@ -40,7 +40,7 @@ export const TotalsDisplaySection = ({
                     )}
                     {totalCash !== 0 && (
                         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                            NET Cash: <strong>{formatCurrency(totalCash.toFixed(0))}</strong>
+                            NET Cash: <strong>{formatCurrency(totalCash.toFixed(0) - currentTotalExpenses)}</strong>
                         </Typography>
                     )}
                     {totalJazzcash > 0 && (

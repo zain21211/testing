@@ -67,6 +67,7 @@ const InactiveItemsTable = ({ acid, company = "fit-o%", fromDate = "2024-01-01",
 
         }}>
 
+
             <DataGrid
                 rows={items.map((item, idx) => ({
                     id: idx + 1,

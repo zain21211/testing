@@ -15,11 +15,11 @@ import { useNavigate } from 'react-router-dom';
 const uniqueRowKey = '(row) => row.rn';
 const Today = new Date().toISOString().split("T")[0];
 const url = import.meta.env.VITE_API_URL;
-const surl = import.meta.env.VITE_SOCKET_URL;
+// const surl = import.meta.env.VITE_SOCKET_URL;
 // If your backend is running at 100.68.6.110:3001
-const socket = io(surl, {
-    transports: ["websocket"], // force websocket
-});
+// const socket = io(surl, {
+//     transports: ["websocket"], // force websocket
+// });
 
 
 // GLOBAL UTILITIES
@@ -377,24 +377,24 @@ const PackingList = () => {
     const memoizedData = useMemo(() => tableData, [tableData]);
 
     // Initial data fetch
-    // useEffect(() => {
-    //     handleSubmit();
+    useEffect(() => {
+        handleSubmit();
 
-    //     socket.on("invoiceLocked", () => {
-    //         console.log("locked")
-    //         handleSubmit(); // 🔄 will be called on every socket emission
-    //     });
+        // socket.on("invoiceLocked", () => {
+        //     console.log("locked")
+        //     handleSubmit(); // 🔄 will be called on every socket emission
+        // });
 
-    //     socket.on("invoiceUnlocked", () => {
-    //         console.log('unlocked')
-    //         handleSubmit(); // 🔄 will be called on every socket emission
-    //     });
+        // socket.on("invoiceUnlocked", () => {
+        //     console.log('unlocked')
+        //     handleSubmit(); // 🔄 will be called on every socket emission
+        // });
 
-    //     return () => {
-    //         socket.off("invoiceLocked"); // clean up when component unmounts
-    //         socket.off("invoiceUnlocked"); // clean up when component unmounts
-    //     };
-    // }, []);
+        // return () => {
+        //     socket.off("invoiceLocked"); // clean up when component unmounts
+        //     socket.off("invoiceUnlocked"); // clean up when component unmounts
+        // };
+    }, []);
 
     // Handle form submission
     const handleSubmit = async () => {

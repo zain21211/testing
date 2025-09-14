@@ -7,17 +7,11 @@ export const FormActionsSection = ({
     isAddEntryDisabled,
     isLoading,
 }) => {
-    const handleKeyDown = (event) => {
-        if (event.key === 'Enter' && !isAddEntryDisabled) {
-            onAddEntry();
-        }
-    };
     return (
         <>
             <Button
                 variant="contained"
                 fullWidth
-                onKeyDown={handleKeyDown}
                 onClick={onAddEntry}
                 disabled={isAddEntryDisabled}
                 sx={{

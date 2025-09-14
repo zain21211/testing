@@ -5,15 +5,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import sql from "mssql";
 import { MongoClient, ObjectId } from "mongodb";
-
+import { ar } from "zod/v4/locales";
+// import { ok } from "@modelcontextprotocol/sdk/server/responses.js";
 console.error("MODERN SERVER: Process started.");
 
 // --- DB CONFIG AND CONNECTIONS ---
 const mssqlConfig = {
   user: "sa",
-  password: "zain001",
-  server: "localhost",
-  database: "replicated",
+  password: "Ahmad",
+  server: "100.72.169.90",
+  database: "ahmadinternational",
   options: { encrypt: false, trustServerCertificate: true },
 };
 const mongoUri = "mongodb://localhost:27017";
@@ -35,7 +36,7 @@ async function initDatabases() {
 
 // --- MCP SERVER ---
 const server = new McpServer({
-  name: "server",
+  name: "llm-server",
   version: "1.0.0",
   handlers: {
     "tools/call": async (args) => {
@@ -74,37 +75,29 @@ server.registerTool(
   }
 );
 
+// Read tool
+
 server.registerTool(
   "readMSSQL",
-  z.object({ random_string: z.string() }).describe("Read from MSSQL"),
+  {
+    inputSchema: z.object({
+      random_string: z.string().describe("SQL query to run on MSSQL"),
+    }),
+  },
   async ({ random_string }) => {
-    try {
-      // Handle both JSON string and plain text
-      let query = random_string;
-      try {
-        const parsed = JSON.parse(random_string);
-        if (parsed.query) {
-          query = parsed.query;
-        }
-      } catch (e) {
-        // If not JSON, use as a simple query
-        query = random_string;
-      }
+    console.error("✅ echo tool called with random_string:", random_string);
 
-      const result = await mssqlPool.request().query(query);
-      return {
-        content: [
-          { type: "text", text: JSON.stringify(result.recordset, null, 2) },
-        ],
-      };
-    } catch (error) {
-      return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
-      };
-    }
+    return {
+      content: [
+        {
+          type: "text",
+          // text: `Echoed: ${JSON.stringify(args)}`,
+          text: `Echoed: ${JSON.stringify(random_string)}`,
+        },
+      ],
+    };
   }
 );
-
 server.registerTool(
   "writeMongo",
   z.object({ random_string: z.string() }).describe("Write to MongoDB"),
@@ -131,14 +124,12 @@ server.registerTool(
         .db(mongoDbName)
         .collection(collection)
         .insertOne(doc);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `✅ Mongo write successful. Inserted ID: ${result.insertedId}`,
-          },
-        ],
-      };
+      return ok([
+        {
+          type: "text",
+          text: `✅ Mongo write successful. Inserted ID: ${result.insertedId}`,
+        },
+      ]);
     } catch (error) {
       return {
         content: [{ type: "text", text: `Error: ${error.message}` }],

@@ -125,7 +125,7 @@ p.prid AS prid,
 FROM PSProduct P 
 JOIN Products PR ON PR.ID = P.Prid
 WHERE P.Doc = @DocNumber
-  AND P.Type = 'Sale' and P.QTY<>0 
+  AND P.Type = 'Sale'  
 `;
 
     if (page.includes("pack")) {
@@ -313,19 +313,19 @@ WHERE P.Doc = @DocNumber
          AND doc = @DOC
         ), 
         0), 
-Status = case when (
-select count(*)
- from PsProduct 
- where type='sale' 
- and doc=@DOC
-  and PackingDateTime is null
-  and qty<>0
-) = 0 
- then
-  'INVOICE' 
-  else 
-    null
-   end 
+Status = CASE 
+    WHEN NOT EXISTS (
+        SELECT 1
+        FROM PsProduct 
+        WHERE type = 'sale'
+          AND doc = @DOC
+          AND PackingDateTime IS NULL
+          AND qty <> 0
+    )
+    THEN 'INVOICE'
+    ELSE null
+END
+
 , Shopper =  @NUG, 
 description = case when (
 select count(*) 

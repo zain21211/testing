@@ -540,7 +540,7 @@ const TraderCard = React.memo(({ trader, onClick }) => {
             <CardContent sx={{ gridColumn: "span 3" }}>
                 {FIELDS_TO_DISPLAY.map((key) => renderField(key, trader[key]))}
             </CardContent>
-        </Card>
+        </CardContent>
     );
 });
 

@@ -54,7 +54,7 @@ const PaymentVoucher = () => {
 
     return (
         <Box>
-            <Box mb={2} display={(isCredit && isDebit) ? 'none' : 'block'} >
+            <Box mb={2} display={(!isCredit && !isDebit) ? 'none' : 'block'} >
                 <PayVouForm
                     isCredit={isCredit}
                     isDebit={isDebit}
@@ -75,7 +75,7 @@ const PaymentVoucher = () => {
                 />
             </Box>
             {
-                (isCredit && isDebit) &&
+                (!isCredit && !isDebit) &&
                 (
                     <Typography>
                         unauthorized

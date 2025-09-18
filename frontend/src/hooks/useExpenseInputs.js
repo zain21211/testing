@@ -100,7 +100,7 @@ export const useExpenseInputs = () => {
           type: "info",
         });
         setIsSubmitting(false);
-        return;
+        return true;
       }
 
       const entryData = {

@@ -5,8 +5,8 @@ import { clearSelection } from "../store/slices/CustomerSearch";
 export const usePayVouCust = () => {
   const [creditCust, setCreditCust] = useState(null);
   const [debitCust, setDebitCust] = useState(null);
-  const [isCredit, setIsCredit] = useState(false);
-  const [isDebit, setIsDebit] = useState(false);
+  const [isCredit, setIsCredit] = useState(true);
+  const [isDebit, setIsDebit] = useState(true);
   const dispatch = useDispatch();
 
   const getCreditCusts = useCallback((customer) => {

@@ -279,6 +279,7 @@ const RecoveryPaper = () => {
     // Submit expenses
     const success = await handleSubmitExpenses(user);
 
+
     if (success) {
       // Reset all inputs and entries
       await screenshot();

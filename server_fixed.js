@@ -38,18 +38,21 @@ async function initDatabases() {
 const server = new McpServer({
   name: "llm-server",
   version: "1.0.0",
-  handlers: {
-    "tools/call": async (args) => {
-      console.error(`SERVER: Routing call for tool '${args.name}'`);
-      return server.callTool(args.name, args.arguments);
-    },
-  },
+  // handlers: {
+  //   "tools/call": async (args) => {
+  //     console.error(`SERVER: Routing call for tool '${args.name}'`);
+  //     return server.callTool(args.name, args.arguments);
+  //   },
+  // },
 });
 
+// --- INTERCEPT ALL REQUESTS ---
+// --- INTERCEPT TOOL CALLS ---
+
 // 1. DEFINE your tools using registerTool - Updated to work with MCP client
-server.registerTool(
+server.tool(
   "ping",
-  z.object({ random_string: z.string() }).describe("Summarize text"),
+  z.object({ random_string: z.string() }),
   async ({ random_string }) => {
     // Handle both JSON string and plain text
     let text = random_string;
@@ -76,67 +79,80 @@ server.registerTool(
 );
 
 // Read tool
-
-server.registerTool(
+server.tool(
   "readMSSQL",
-  {
-    inputSchema: z.object({
-      random_string: z.string().describe("SQL query to run on MSSQL"),
-    }),
-  },
+  z.object({
+    random_string: z.string(),
+  }),
   async ({ random_string }) => {
-    console.error("✅ echo tool called with random_string:", random_string);
+    console.error(
+      "✅ readMSSQL tool called with random_string:",
+      random_string
+    );
 
-    return {
-      content: [
-        {
-          type: "text",
-          // text: `Echoed: ${JSON.stringify(args)}`,
-          text: `Echoed: ${JSON.stringify(random_string)}`,
-        },
-      ],
-    };
-  }
-);
-server.registerTool(
-  "writeMongo",
-  z.object({ random_string: z.string() }).describe("Write to MongoDB"),
-  async ({ random_string }) => {
     try {
-      // Parse the JSON string to get collection and doc
-      let collection, doc;
-      try {
-        const parsed = JSON.parse(random_string);
-        collection = parsed.collection || "test_collection";
-        doc = parsed.doc || { test: "default document", timestamp: new Date() };
-      } catch (e) {
-        // If not JSON, create a default document
-        collection = "test_collection";
-        doc = { message: random_string, timestamp: new Date() };
-      }
+      // Execute the SQL query
+      const result = await mssqlPool.request().query(random_string);
 
-      // FIXED: Ensure document has _id if not provided
-      if (!doc._id) {
-        doc._id = new ObjectId();
-      }
-
-      const result = await mongoClient
-        .db(mongoDbName)
-        .collection(collection)
-        .insertOne(doc);
-      return ok([
-        {
-          type: "text",
-          text: `✅ Mongo write successful. Inserted ID: ${result.insertedId}`,
-        },
-      ]);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Query result: ${JSON.stringify(result.recordset)}`,
+          },
+        ],
+      };
     } catch (error) {
       return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
+        content: [
+          {
+            type: "text",
+            text: `Error executing query: ${error.message}`,
+          },
+        ],
       };
     }
   }
 );
+// server.registerTool(
+//   "writeMongo",
+//   z.object({ random_string: z.string() }).describe("Write to MongoDB"),
+//   async ({ random_string }) => {
+//     try {
+//       // Parse the JSON string to get collection and doc
+//       let collection, doc;
+//       try {
+//         const parsed = JSON.parse(random_string);
+//         collection = parsed.collection || "test_collection";
+//         doc = parsed.doc || { test: "default document", timestamp: new Date() };
+//       } catch (e) {
+//         // If not JSON, create a default document
+//         collection = "test_collection";
+//         doc = { message: random_string, timestamp: new Date() };
+//       }
+
+//       // FIXED: Ensure document has _id if not provided
+//       if (!doc._id) {
+//         doc._id = new ObjectId();
+//       }
+
+//       const result = await mongoClient
+//         .db(mongoDbName)
+//         .collection(collection)
+//         .insertOne(doc);
+//       return ok([
+//         {
+//           type: "text",
+//           text: `✅ Mongo write successful. Inserted ID: ${result.insertedId}`,
+//         },
+//       ]);
+//     } catch (error) {
+//       return {
+//         content: [{ type: "text", text: `Error: ${error.message}` }],
+//       };
+//     }
+//   }
+// );
 
 // --- START THE SERVER ---
 async function startServer() {

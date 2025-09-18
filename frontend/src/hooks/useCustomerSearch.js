@@ -20,6 +20,7 @@ import {
   fetchMasterCustomerList,
   persistMasterCustomerList,
 } from "../store/slices/CustomerData";
+import { json } from "zod/v4";
 
 const wildcardToRegex = (pattern) => {
   return pattern?.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*");
@@ -43,6 +44,11 @@ export const useCustomerSearch = ({
   dates,
   isCust,
 }) => {
+  // To read user object from localStorage
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userType = user?.userType?.toLowerCase();
+  const isAdmin = userType === "admin";
+
   const dispatch = useDispatch();
   // const location = useLocation();
 
@@ -93,7 +99,10 @@ export const useCustomerSearch = ({
     data = [],
     isLoading: isCustomerLoading,
     error: fetchError,
-  } = useFetch(["customers", formType], fetchers[formType] || fetchCustomers);
+  } = useFetch(
+    ["customers", formType, isAdmin],
+    isAdmin ? fetchCustomers : fetchers[formType] || fetchCustomers
+  );
 
   const localCustomerList =
     (data?.length > 0 ? data : masterCustomerList) || [];
@@ -112,7 +121,7 @@ export const useCustomerSearch = ({
   useEffect(() => {
     isCust && isCust(data.length !== 0);
 
-    if (formType === "debit" || formType === "credit") return;
+    if (!isAdmin && (formType === "debit" || formType === "credit")) return;
 
     if (data.length > 0) {
       const shouldUpdate = !isEqual(data, masterCustomerList);

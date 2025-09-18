@@ -601,7 +601,7 @@ const orderControllers = {
   },
 
   pendingItems: async (req, res) => {
-    const { acid } = req.query; // Or use req.body if sent in body
+    const { acid, company = "fit" } = req.query; // Or use req.body if sent in body
 
     if (!acid) {
       return res.status(400).json({ error: "acid (account ID) is required" });

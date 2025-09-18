@@ -20,7 +20,6 @@ import {
   fetchMasterCustomerList,
   persistMasterCustomerList,
 } from "../store/slices/CustomerData";
-import { json } from "zod/v4";
 
 const wildcardToRegex = (pattern) => {
   return pattern?.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*");
@@ -131,6 +130,10 @@ export const useCustomerSearch = ({
     }
     // 🚨 don't add masterCustomerList here, or you loop forever
   }, [data, dispatch]);
+
+  useEffect(() => {
+    if (onSelect) onSelect(selectedCustomer);
+  }, [selectedCustomer, onSelect]);
 
   useEffect(() => {
     if (

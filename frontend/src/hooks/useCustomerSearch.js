@@ -8,6 +8,7 @@ import { fetchDebitCustomers } from "../utils/api";
 import { fetchCreditCustomers } from "../utils/api";
 import debounce from "lodash.debounce";
 import isEqual from "lodash/isEqual";
+import { useLocalStorageState } from "./LocalStorage";
 import {
   setSelectedCustomer,
   setCustomerInputWithKey,
@@ -48,6 +49,16 @@ export const useCustomerSearch = ({
   const userType = user?.userType?.toLowerCase();
   const isAdmin = userType === "admin";
 
+  const path =
+    formType === "credit"
+      ? "creditCustList"
+      : formType === "debit"
+      ? "debitCustList"
+      : "CustList";
+  const [localCustomerList, setLocalCustomerList] = useLocalStorageState(
+    path,
+    []
+  );
   const dispatch = useDispatch();
   // const location = useLocation();
 
@@ -103,9 +114,6 @@ export const useCustomerSearch = ({
     isAdmin ? fetchCustomers : fetchers[formType] || fetchCustomers
   );
 
-  const localCustomerList =
-    (data?.length > 0 ? data : masterCustomerList) || [];
-
   const allCustomerOptions = useMemo(
     () =>
       route
@@ -118,18 +126,20 @@ export const useCustomerSearch = ({
 
   // Sync master list
   useEffect(() => {
-    isCust && isCust(data.length !== 0);
-
-    if (!isAdmin && (formType === "debit" || formType === "credit")) return;
+    console.log("this is in the data");
+    console.log(localCustomerList.length, data.length);
+    isCust && isCust(data.length !== 0 || localCustomerList?.length !== 0);
 
     if (data.length > 0) {
+      setLocalCustomerList(data);
+      if (!isAdmin && (formType === "debit" || formType === "credit")) return;
       const shouldUpdate = !isEqual(data, masterCustomerList);
       if (shouldUpdate) {
         dispatch(persistMasterCustomerList(data));
       }
     }
     // 🚨 don't add masterCustomerList here, or you loop forever
-  }, [data, dispatch]);
+  }, [data, dispatch, localCustomerList]);
 
   useEffect(() => {
     if (onSelect) onSelect(selectedCustomer);
@@ -139,7 +149,7 @@ export const useCustomerSearch = ({
     if (
       // prevLength.current !== masterCustomerList.length &&
       masterCustomerList.length === 1 ||
-      localCustomerList.length === 1
+      localCustomerList?.length === 1
     ) {
       handleSelect(allCustomerOptions[0]);
     }
@@ -163,10 +173,10 @@ export const useCustomerSearch = ({
 
   // Effect 1: Sync ID → selectedCustomer
   useEffect(() => {
-    if (!ID || allCustomerOptions.length === 0) return;
+    if (!ID || allCustomerOptions?.length === 0) return;
 
     if (selectedCustomer?.acid !== Number(ID)) {
-      const customerToSelect = allCustomerOptions.find(
+      const customerToSelect = allCustomerOptions?.find(
         (c) => c.acid === Number(ID)
       );
       if (customerToSelect) {

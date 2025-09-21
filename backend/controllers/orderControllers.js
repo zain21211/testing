@@ -707,14 +707,14 @@ FROM
 
 WHERE
     ps.TYPE = 'SALE'
-    AND ps.DOC = (
-        SELECT TOP 1 doc
-        FROM PsProduct
-        WHERE acid = @acid
-          AND qty < qty2
-        ORDER BY date DESC, doc DESC
-    )
-    AND ps.QTY < ps.QTY2;
+AND ps.DATE = (
+    SELECT MAX(date)
+    FROM PsProduct
+    WHERE acid = @acid
+      AND qty < qty2
+)
+AND ps.QTY < ps.QTY2
+
 `);
 
       return res.status(200).json(result.recordset);

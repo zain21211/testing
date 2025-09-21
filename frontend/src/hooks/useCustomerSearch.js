@@ -55,10 +55,7 @@ export const useCustomerSearch = ({
       : formType === "debit"
       ? "debitCustList"
       : "CustList";
-  const [localCustomerList, setLocalCustomerList] = useLocalStorageState(
-    path,
-    []
-  );
+
   const dispatch = useDispatch();
   // const location = useLocation();
 
@@ -86,7 +83,10 @@ export const useCustomerSearch = ({
   const masterCustomerList = useSelector(
     (s) => s.customerData.masterCustomerList
   );
-
+  const [localCustomerList, setLocalCustomerList] = useLocalStorageState(
+    path,
+    masterCustomerList
+  );
   // Load from IndexedDB (via localforage) on mount
   useEffect(() => {
     dispatch(fetchMasterCustomerList());
@@ -126,8 +126,6 @@ export const useCustomerSearch = ({
 
   // Sync master list
   useEffect(() => {
-    console.log("this is in the data");
-    console.log(localCustomerList.length, data.length);
     isCust && isCust(data.length !== 0 || localCustomerList?.length !== 0);
 
     if (data.length > 0) {

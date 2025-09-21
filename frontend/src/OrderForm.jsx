@@ -495,9 +495,9 @@ const OrderForm = () => {
         remakes: "",
       }));
 
-      if (company === "fit")
-        setOrderItems((prev) => [...prev, ...transformedItems]);
-      if (company === "local") setLocalItems(transformedItems);
+      // if (company === "fit")
+      setOrderItems((prev) => [...prev, ...transformedItems]);
+      // if (company === "local") setLocalItems(transformedItems);
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || "Could not fetch pending items.";

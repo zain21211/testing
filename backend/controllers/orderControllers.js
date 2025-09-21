@@ -707,13 +707,14 @@ FROM
 
 WHERE
     ps.TYPE = 'SALE'
-AND ps.DATE = (
-    SELECT MAX(date)
-    FROM PsProduct
-    WHERE acid = @acid
+    AND ps.DATE = (
+      SELECT MAX(date)
+      FROM PsProduct
+      WHERE acid = @acid
       AND qty < qty2
-)
-AND ps.QTY < ps.QTY2
+      )
+      AND ps.ACID = @acid
+      AND ps.QTY < ps.QTY2
 
 `);
 

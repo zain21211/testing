@@ -3,6 +3,8 @@ import React from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 import LedgerSearchForm from '../CustomerSearch'; // Adjust path as needed
 import CustomerFinencials from './CustomerFinencials'; // Adjust path as needed
+import { cleanNumbers } from '../utils/cleanString';
+import { green } from '@mui/material/colors';
 
 const style = { backgroundColor: "white", borderRadius: "1rem", p: 1, mb: 2 };
 
@@ -16,70 +18,76 @@ export const DebitSection = ({
     debitCust,
     descRef,
     isCust,
-}) => (
+}) => {
 
-    <Box sx={{ backgroundColor: "red", color: "white", borderRadius: "1.5rem", display: isCust ? 'block' : 'none' }}>
-        <Typography variant='h4' fontWeight={"bold"} p={2}>DEBIT</Typography>
-        <Box sx={{ padding: "1rem", borderRadius: "2rem", }}>
-            <Box sx={style}>
+    const user = JSON.parse(localStorage.getItem("user"));
+    const color = user?.username.toLowerCase().includes('ssana') ? "green" : 'red';
 
-                <LedgerSearchForm
-                    usage='paymentDebit'
-                    formType="debit"
-                    name="debit"
-                    onSelect={onSelectDebit}
-                    isCust={onSetIsDebit}
-                />
+    return (
 
-            </Box>
-            <Box
-                sx={{
-                    mb: ".5rem",
-                    display: "flex",
-                    gap: 1,
-                }}
-            >
-                <TextField
-                    label="Description of Transaction"
-                    name="description"
-                    inputRef={descRef}
-                    value={description || ""}
-                    onChange={onDescriptionChange}
+        <Box sx={{ backgroundColor: color, color: "white", borderRadius: "1.5rem", display: isCust ? 'block' : 'none' }}>
+            <Typography variant='h4' fontWeight={"bold"} p={2}>DEBIT</Typography>
+            <Box sx={{ padding: "1rem", borderRadius: "2rem", }}>
+                <Box sx={style}>
+
+                    <LedgerSearchForm
+                        usage='paymentDebit'
+                        formType="debit"
+                        name="debit"
+                        onSelect={onSelectDebit}
+                        isCust={onSetIsDebit}
+                    />
+
+                </Box>
+                <Box
                     sx={{
-                        height: "100%",
-                        backgroundColor: "white",
-                        borderRadius: ".5rem",
-                        "& .MuiInputBase-input": {
-                            fontSize: "1.5rem",
-                        }
+                        mb: ".5rem",
+                        display: "flex",
+                        gap: 1,
                     }}
-                    required
-                />
-                <TextField
-                    label="Cash Amount"
-                    name="cashAmount"
-                    type="String"
-                    value={cashAmountDisplay}
-                    onChange={onCashAmountChange}
-                    inputProps={{ inputMode: 'numeric' }}
-                    sx={{
-                        maxWidth: "30%",
-                        borderRadius: ".5rem",
-                        backgroundColor: "white",
-                        "& .MuiInputBase-input": {
-                            fontSize: "1.5rem",
-                            textAlign: "right",
-                        }
-                    }}
-                    required
+                >
+                    <TextField
+                        label="Description of Transaction"
+                        name="description"
+                        inputRef={descRef}
+                        value={description || ""}
+                        onChange={onDescriptionChange}
+                        sx={{
+                            height: "100%",
+                            backgroundColor: "white",
+                            borderRadius: ".5rem",
+                            "& .MuiInputBase-input": {
+                                fontSize: "1.5rem",
+                            }
+                        }}
+                        required
+                    />
+                    <TextField
+                        label="Cash Amount"
+                        name="cashAmount"
+                        type="String"
+                        value={cashAmountDisplay}
+                        onChange={onCashAmountChange}
+                        inputProps={{ inputMode: 'numeric' }}
+                        sx={{
+                            maxWidth: "30%",
+                            borderRadius: ".5rem",
+                            backgroundColor: "white",
+                            "& .MuiInputBase-input": {
+                                fontSize: "1.5rem",
+                                textAlign: "right",
+                            }
+                        }}
+                        required
+                    />
+                </Box>
+                <CustomerFinencials
+                    acid={debitCust ? debitCust.acid : ""}
+                    cashAmount={cleanNumbers(cashAmountDisplay) || 0}
                 />
             </Box>
-            <CustomerFinencials
-                acid={debitCust ? debitCust.acid : ""}
-                cashAmount={parseFloat(cashAmountDisplay?.replace(/,/g, '')) || 0}
-            />
+
         </Box>
 
-    </Box>
-
-);
+    )
+};

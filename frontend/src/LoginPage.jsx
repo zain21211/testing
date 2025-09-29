@@ -269,15 +269,26 @@ const Login = () => {
             gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: "repeat(auto-fit, minmax(250px, 1fr))" },
           }}> */}
             {packingList.some(e => userType.includes(e)) && (
-              <Button
-                component={RouterLink}
-                to="/pending"
-                variant="contained"
-                size="large"
-                sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold", flexGrow: 1 }}
-              >
-                Packing List
-              </Button>
+              <>
+                <Button
+                  component={RouterLink}
+                  to="/pending"
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold", flexGrow: 1 }}
+                >
+                  Packing List
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/load"
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", bgcolor: "#00a611ff", fontWeight: "Bold", flexGrow: 1 }}
+                >
+                  Load Form
+                </Button>
+              </>
             )}
             {(forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
               <Button

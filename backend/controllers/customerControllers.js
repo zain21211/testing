@@ -525,6 +525,41 @@ WHERE Id = @Id;
         .json({ error: "Failed to upload images", msg: error.message });
     }
   },
+
+  createDeliveryImages: async (req, res) => {
+    const { acid, img } = req.body;
+    try {
+      const pool = await imageDb();
+      if (!acid) {
+        return res.status(400).json({ error: "ACID are required" });
+      }
+
+      // helper: convert base64 -> Buffer (works for "image" type)
+      const toBuffer = (data) => {
+        if (!data) return null;
+        const base64 = data.split(";base64,").pop();
+        return Buffer.from(base64, "base64");
+      };
+
+      const query = `
+      INSERT INTO recovery ( ACID, img)
+      VALUES ( @acid, @img)
+    `;
+
+      const request = pool.request();
+      request.input("acid", mssql.Int, acid);
+      request.input("img", mssql.Image, toBuffer(img));
+
+      await request.query(query);
+
+      res.status(201).json({ message: "Images uploaded successfully", acid });
+    } catch (error) {
+      console.error("❌ uploadCoaImages error:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to upload images", msg: error.message });
+    }
+  },
 };
 
 module.exports = customerControllers;

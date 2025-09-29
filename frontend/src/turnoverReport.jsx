@@ -29,6 +29,8 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 // Local Component Imports (assuming they are in the same directory or configured path)
 import DataTable from "./table";
+import { useFetchRemarks } from "./hooks/useFetchRemarks";
+import { cleanString } from "./utils/cleanString";
 
 //================================================================================
 // 1. CONSTANTS & UTILITIES
@@ -167,101 +169,235 @@ const StatusFilter = React.memo(({ onFilterChange }) => {
     );
 });
 
-const RemarkDialog = React.memo(
-    ({ open, onClose, acid, name, onSubmitRemark }) => {
-        const [remark, setRemark] = useState("");
-        const [pastRemarks, setPastRemarks] = useState([]);
-        const [error, setError] = useState(null);
-        const navigate = useNavigate();
+// export const RemarkDialog = React.memo(
+//     ({ open, onClose, acid, name, onSubmitRemark, pastRemarks }) => {
+//         const [remark, setRemark] = useState("");
+//         // const [pastRemarks, setPastRemarks] = useState([]);
+//         const [error, setError] = useState(null);
 
-        useEffect(() => {
-            const fetchRemarks = async () => {
-                if (open && acid) {
-                    try {
-                        const res = await axios.get(`${API_URL}/turnover/remarks`, {
-                            params: { acid },
-                        });
-                        setPastRemarks(res.data || []);
-                    } catch (err) {
-                        console.error("Failed to fetch remarks:", err);
-                        setError("Failed to fetch past remarks.");
-                    }
-                }
-            };
-            fetchRemarks();
-        }, [open, acid]);
+//         const navigate = useNavigate();
 
-        const handleNavigate = useCallback(
-            (page) => {
-                if (!acid) return;
-                const startDate = new Date();
-                startDate.setMonth(startDate.getMonth() - 3);
-                const url = `/${page}?name=${encodeURIComponent(
-                    name || ""
-                )}&acid=${encodeURIComponent(acid)}&startDate=${startDate.toISOString().split("T")[0]
-                    }&endDate=${new Date().toISOString().split("T")[0]}`;
-                navigate(url);
-            },
-            [acid, name, navigate]
-        );
+//         // useEffect(() => {
+//         //     // const fetchRemarks = async () => {
+//         //     //     if (open && acid) {
+//         //     //         try {
+//         //     //             const res = await axios.get(`${API_URL}/turnover/remarks`, {
+//         //     //                 params: { acid },
+//         //     //             });
+//         //     //             setPastRemarks(res.data || []);
+//         //     //         } catch (err) {
+//         //     //             console.error("Failed to fetch remarks:", err);
+//         //     //             setError("Failed to fetch past remarks.");
+//         //     //         }
+//         //     //     }
+//         //     // };
+//         //     onFetch(open, acid, setPastRemarks);
+//         // }, [open, acid]);
 
-        const handleSubmit = () => {
-            if (!remark.trim()) return;
-            onSubmitRemark(acid, remark);
-            setRemark("");
-            onClose();
-        };
+//         const handleNavigate = useCallback(
+//             (page) => {
+//                 if (!acid) return;
+//                 const startDate = new Date();
+//                 startDate.setMonth(startDate.getMonth() - 3);
+//                 const url = `/${page}?name=${encodeURIComponent(
+//                     name || ""
+//                 )}&acid=${encodeURIComponent(acid)}&startDate=${startDate.toISOString().split("T")[0]
+//                     }&endDate=${new Date().toISOString().split("T")[0]}`;
+//                 navigate(url);
+//             },
+//             [acid, name, navigate]
+//         );
 
-        return (
-            <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-                <DialogTitle>Customer Actions: {acid}</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        label="Enter New Remark"
-                        fullWidth
-                        value={remark}
-                        onChange={(e) => setRemark(e.target.value)}
-                        margin="normal"
-                    />
-                    {error && <Typography color="error">{error}</Typography>}
-                    {pastRemarks.length > 0 && (
-                        <DataTable data={pastRemarks} columns={REMARK_COLUMNS} />
-                    )}
-                </DialogContent>
-                <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
-                    <Box>
-                        <Button
-                            variant="contained"
-                            onClick={() => handleNavigate("order")}
-                            color="primary"
-                            sx={{ mr: 1 }}
-                        >
-                            Order
-                        </Button>
-                        <Button
-                            variant="contained"
-                            onClick={() => handleNavigate("recovery")}
-                            color="secondary"
-                            sx={{ mr: 1 }}
-                        >
-                            Recovery
-                        </Button>
-                        <Button
-                            variant="contained"
-                            onClick={() => handleNavigate("ledger")}
-                            color="warning"
-                        >
-                            Ledger
-                        </Button>
-                    </Box>
-                    <Button onClick={handleSubmit} color="success" variant="contained">
-                        Submit Remark
+//         const handleSubmit = () => {
+//             if (!remark.trim()) return;
+//             onSubmitRemark(acid, remark);
+//             setRemark("");
+//             onClose();
+//         };
+
+//         return (
+//             <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+//                 <DialogTitle>Customer Actions: {acid}</DialogTitle>
+//                 <DialogContent>
+//                     <TextField
+//                         label="Enter New Remark"
+//                         fullWidth
+//                         value={remark}
+//                         onChange={(e) => setRemark(e.target.value)}
+//                         margin="normal"
+//                     />
+//                     {error && <Typography color="error">{error}</Typography>}
+//                     {pastRemarks?.length > 0 && (
+//                         <DataTable data={pastRemarks} columns={REMARK_COLUMNS} />
+//                     )}
+//                 </DialogContent>
+//                 <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+//                     <Box>
+//                         <Button
+//                             variant="contained"
+//                             onClick={() => handleNavigate("order")}
+//                             color="primary"
+//                             sx={{ mr: 1 }}
+//                         >
+//                             Order
+//                         </Button>
+//                         <Button
+//                             variant="contained"
+//                             onClick={() => handleNavigate("recovery")}
+//                             color="secondary"
+//                             sx={{ mr: 1 }}
+//                         >
+//                             Recovery
+//                         </Button>
+//                         <Button
+//                             variant="contained"
+//                             onClick={() => handleNavigate("ledger")}
+//                             color="warning"
+//                         >
+//                             Ledger
+//                         </Button>
+//                     </Box>
+//                     <Button onClick={handleSubmit} color="success" variant="contained">
+//                         Submit Remark
+//                     </Button>
+//                 </DialogActions>
+//             </Dialog>
+//         );
+//     }
+// );
+// useRemarkDialog.ts
+
+export function useRemarkDialog({ open, acid, name, onSubmitRemark, onClose }) {
+    const [remark, setRemark] = useState("");
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
+
+    const handleNavigate = useCallback(
+        (page) => {
+            if (!acid) return;
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 3);
+            const url = `/${page}?name=${encodeURIComponent(name || "")}&acid=${encodeURIComponent(
+                acid
+            )}&startDate=${startDate.toISOString().split("T")[0]}&endDate=${new Date()
+                .toISOString()
+                .split("T")[0]}`;
+            navigate(url);
+        },
+        [acid, name, navigate]
+    );
+
+    const handleSubmit = () => {
+        if (!remark.trim()) return;
+        onSubmitRemark(acid, remark);
+        setRemark("");
+        onClose();
+    };
+
+    return {
+        remark,
+        setRemark,
+        error,
+        setError,
+        handleNavigate,
+        handleSubmit,
+    };
+}
+// RemarkDialogUI.tsx
+// import React from "react";
+// import {
+//     Dialog,
+//     DialogTitle,
+//     DialogContent,
+//     DialogActions,
+//     Button,
+//     TextField,
+//     Typography,
+//     Box,
+// } from "@mui/material";
+// import DataTable from "./DataTable";
+// import { REMARK_COLUMNS } from "./constants";
+
+export const RemarkDialogUI = ({
+    open,
+    onClose,
+    acid,
+    name,
+    pastRemarks,
+    remark,
+    setRemark,
+    error,
+    handleNavigate,
+    handleSubmit,
+}) => {
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+            <DialogTitle>Customer Actions: {acid}</DialogTitle>
+            <DialogContent>
+                <TextField
+                    label="Enter New Remark"
+                    fullWidth
+                    value={remark}
+                    onChange={(e) => setRemark(e.target.value)}
+                    margin="normal"
+                />
+                {error && <Typography color="error">{error}</Typography>}
+                {pastRemarks.length > 0 && (
+                    <DataTable data={pastRemarks} columns={REMARK_COLUMNS} />
+                )}
+            </DialogContent>
+            <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+                <Box>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleNavigate("order")}
+                        color="primary"
+                        sx={{ mr: 1 }}
+                    >
+                        Order
                     </Button>
-                </DialogActions>
-            </Dialog>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleNavigate("recovery")}
+                        color="secondary"
+                        sx={{ mr: 1 }}
+                    >
+                        Recovery
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => handleNavigate("ledger")}
+                        color="warning"
+                    >
+                        Ledger
+                    </Button>
+                </Box>
+                <Button onClick={handleSubmit} color="success" variant="contained">
+                    Submit Remark
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+// RemarkDialog.tsx
+// import { useRemarkDialog } from "./useRemarkDialog";
+// import { RemarkDialogUI } from "./RemarkDialogUI";
+
+export const RemarkDialog = React.memo(
+    ({ open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer }) => {
+        const { remark, setRemark, error, handleNavigate, handleSubmit } =
+            useRemarkDialog({ open, acid, name, onSubmitRemark, onClose });
+
+        if (!onRender) {
+            alert("nothing to  render")
+            return;
+        }
+        return (
+            onRender(customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose, pastRemarks)
         );
     }
 );
+
 
 const SummaryBar = React.memo(
     ({ summary, userRoles, onParamsChange, onFetch, isLoading }) => {
@@ -428,19 +564,40 @@ const SummaryBar = React.memo(
     }
 );
 
-const TraderCard = React.memo(({ trader, onClick }) => {
-    const renderField = (key, value) => {
+// ✅ Left card (yellow block)
+const TraderInfoCard = ({ trader }) => (
+    <CardContent
+        sx={{
+            bgcolor: "rgba(255, 247, 12, 0.84)",
+            gridColumn: "span 2",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+        }}
+    >
+        <Typography variant="h6" fontWeight="bold">
+            Location: {trader.address?.split(",")[0] || "--"}
+        </Typography>
+        <Typography variant="h6" fontWeight={700}>
+            Payment: {formatCurrency(trader.payment) || 0}
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+            FIT: {formatCurrency(trader.FitOrderAmount) || "--"}
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+            Local: {formatCurrency(trader.OtherOrderAmount) || "--"}
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+            Promise: {trader.remarks || "--"}
+        </Typography>
+    </CardContent>
+);
+
+// ✅ Right card (fields block)
+const TraderDetailsCard = ({ trader, fields }) => {
+    const renderField = (key, trader, value) => {
         if (value === undefined || value === null) return null;
-        if (
-            [
-                "Sale Date",
-                "Recovery Date",
-                "Credit Limit",
-                "Balance",
-                "number",
-            ].includes(key)
-        )
-            return null;
+        if (["Sale Date", "Recovery Date", "Credit Limit", "Balance", "number"].includes(key)) return null;
         if (key === "Turnover Days" && value < 7) return null;
 
         let formattedDate = "";
@@ -461,8 +618,7 @@ const TraderCard = React.memo(({ trader, onClick }) => {
             extraInfo = trader["number"];
         }
 
-        const displayValue =
-            typeof value === "number" ? formatCurrency(value) : value;
+        const displayValue = typeof value === "number" ? formatCurrency(value) : value;
         const label = key.includes("lrecovery")
             ? "L.Recovery"
             : key.includes("ale")
@@ -498,61 +654,47 @@ const TraderCard = React.memo(({ trader, onClick }) => {
     };
 
     return (
-        <Card
-            onClick={onClick}
-            sx={{
-                boxShadow: 3,
-                display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
-                cursor: "pointer",
-                "&:hover": {
-                    boxShadow: 6,
-                    transform: "scale(1.02)",
-                    transition: "transform 0.2s",
-                },
-            }}
-        >
-            <CardContent
-                sx={{
-                    bgcolor: "rgba(255, 247, 12, 0.84)",
-                    gridColumn: "span 2",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                }}
-            >
-                <Typography variant="h6" fontWeight="bold">
-                    Location: {trader.address?.split(",")[0] || "--"}
-                </Typography>
-                <Typography variant="h6" fontWeight={700}>
-                    Payment: {formatCurrency(trader.payment) || 0}
-                </Typography>
-                <Typography variant="h6" fontWeight="bold">
-                    FIT: {formatCurrency(trader.FitOrderAmount) || "--"}
-                </Typography>
-                <Typography variant="h6" fontWeight="bold">
-                    Local: {formatCurrency(trader.OtherOrderAmount) || "--"}
-                </Typography>
-                <Typography variant="h6" fontWeight="bold">
-                    Promise: {trader.remarks || "--"}
-                </Typography>
-            </CardContent>
-            <CardContent sx={{ gridColumn: "span 3" }}>
-                {FIELDS_TO_DISPLAY.map((key) => renderField(key, trader[key]))}
-            </CardContent>
-        </Card >
+        <CardContent sx={{ gridColumn: "span 3" }}>
+            {fields?.map((key) => {
+                const cleanedKey = key || cleanString(key)
+                return (
+                    renderField(cleanedKey, trader, trader[cleanedKey])
+                )
+            })}
+        </CardContent>
     );
-});
+};
 
-//================================================================================
-// 3. MAIN COMPONENT
-//================================================================================
+// ✅ Parent wrapper
+export const TraderCard = React.memo(({ trader, fields, onClick, flag = false }) => (
+    <Card
+        onClick={onClick}
+        sx={{
+            boxShadow: 3,
+            display: "grid",
+            gridTemplateColumns: flag ? "repeat(5, 1fr)" : "repeat(3, 1fr)",
+            cursor: "pointer",
+            "&:hover": {
+                boxShadow: 6,
+                transform: "scale(1.02)",
+                transition: "transform 0.2s",
+            },
+        }}
+    >
+
+        {flag && (
+            <TraderInfoCard trader={trader} />
+        )}
+        <TraderDetailsCard trader={trader} fields={fields} />
+    </Card>
+));
 
 const TurnoverReport = () => {
     // --- DIALOG STATE ---
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState(null);
 
+    const { pastRemarks } = useFetchRemarks(dialogOpen, selectedTrader?.ACID);
     // --- USER & ROLES ---
     const user = useMemo(
         () => JSON.parse(localStorage.getItem("user") || "{}"),
@@ -566,7 +708,24 @@ const TurnoverReport = () => {
         }),
         [user]
     );
-
+    const remarkDialogUi = (remark, setRemark, pastRemarks, error, acid, handleNavigate, handleSubmit, onClose) => {
+        return (
+            <Box>
+                <RemarkDialogUI
+                    open={open}
+                    onClose={onClose}
+                    acid={acid}
+                    name={name}
+                    pastRemarks={pastRemarks}
+                    remark={remark}
+                    setRemark={setRemark}
+                    error={error}
+                    handleNavigate={handleNavigate}
+                    handleSubmit={handleSubmit}
+                />
+            </Box>
+        )
+    }
     // --- DATA & FILTERING STATE ---
     const [turnoverData, setTurnoverData] = useLocalStorageState("turnoverData", {
         defaultValue: [],
@@ -722,6 +881,8 @@ const TurnoverReport = () => {
                     <TraderCard
                         key={trader.ACID}
                         trader={trader}
+                        fields={FIELDS_TO_DISPLAY}
+                        flag={true}
                         onClick={() => openDialog(trader)}
                     />
                 ))}
@@ -729,10 +890,12 @@ const TurnoverReport = () => {
             {selectedTrader && (
                 <RemarkDialog
                     open={dialogOpen}
+                    onRender={remarkDialogUi}
                     onClose={closeDialog}
                     acid={selectedTrader.ACID}
                     name={selectedTrader.Subsidary || selectedTrader.UrduName}
                     onSubmitRemark={handlePostRemark}
+                    pastRemarks={pastRemarks}
                 />
             )}
         </Container>

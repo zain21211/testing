@@ -145,7 +145,8 @@ const CustomerSearchUI = forwardRef(
                 // Responsive columns: 1 column on small screens, 2 columns on larger screens
                 gridTemplateColumns: {
                   xs: "1fr 3fr", // 1 column on extra-small screens (stacked)
-                  sm: "2fr 4fr 6fr", // 2 columns with a 1:3 ratio on small screens and up
+                  sm: "1fr 3fr", // 2 columns with a 1:3 ratio on small screens and up
+                  md: "2fr 4fr 6fr", // 2 columns with a 1:3 ratio on small screens and up
                 },
               }}
             >
@@ -205,7 +206,7 @@ const CustomerSearchUI = forwardRef(
                 fullWidth
                 variant="outlined"
                 sx={{
-                  gridColumn: { xs: 'span 2', sm: 'span 1' },
+                  gridColumn: { xs: 'span 2', sm: 'span 2', md: 'span 1' },
                   "& input": {
                     borderRight: "1px solid black",
                     width: "30%",

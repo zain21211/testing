@@ -99,6 +99,7 @@ const RecoveryPaper = () => {
     totalMeezanBank,
     addEntry,
     handleSyncOneEntry,
+    setIsLoading,
     resetEntries,
   } = useEntries();
 
@@ -276,6 +277,7 @@ const RecoveryPaper = () => {
 
   // Update the handleSubmitAndReset function:
   const handleSubmitAndReset = async () => {
+    setIsLoading(true)
     // Submit expenses
     const success = await handleSubmitExpenses(user);
 
@@ -290,6 +292,8 @@ const RecoveryPaper = () => {
       // Handle error case, maybe show a message to the user
       alert('Error submitting expenses. Please try again.');
     }
+    setIsLoading(false)
+
   };
 
   const screenshot = async () => {

@@ -1,6 +1,7 @@
 // hooks/usePaymentVoucherForm.js
 import { useState, useRef, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { cleanNumbers } from "../utils/cleanString";
 
 export const usePayVouForm = () => {
   const [formData, setFormData] = useState({
@@ -26,7 +27,8 @@ export const usePayVouForm = () => {
 
   const handleCashAmountChange = (e) => {
     const value = e.target.value;
-    const formatted = formatCurrency(value);
+    const raw = cleanNumbers(value);
+    const formatted = formatCurrency(raw);
     setDisplayValue(formatted);
     // We don't store the formatted value in formData,
     // but the raw numeric value is extracted during submission.

@@ -148,5 +148,6 @@ export const useEntries = () => {
     addEntry,
     handleSyncOneEntry,
     resetEntries,
+    setIsLoading,
   };
 };

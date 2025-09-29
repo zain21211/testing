@@ -16,6 +16,7 @@ export const PayVouForm = ({
     cashAmountDisplay,
     onCashAmountChange,
     debitCust,
+    creditCust,
     descRef,
     onSubmit,
     submitting,
@@ -43,6 +44,13 @@ export const PayVouForm = ({
             onSelectCredit={onSelectCredit}
             onSetIsCredit={onSetIsCredit}
             isCust={isCredit}
+            description={description}
+            descRef={descRef}
+            isDebit={isDebit}
+            creditCust={creditCust}
+            onDescriptionChange={onDescriptionChange}
+            cashAmountDisplay={cashAmountDisplay}
+            onCashAmountChange={onCashAmountChange}
         />
 
         <DebitSection
@@ -73,7 +81,7 @@ export const PayVouForm = ({
                 Voucher submitted successfully!
             </Typography>
         )}
-        
+
         {error && (
             <Typography color="error" sx={{ mt: 2 }}>
                 {error}

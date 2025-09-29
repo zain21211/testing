@@ -1,7 +1,7 @@
 const express = require("express");
 const authenticateToken = require("../middleware/tokenAuthentication");
 const customerController = require("../controllers/customerControllers");
-const byUser = require("../controllers/payVouController"); // Import the byUser controller
+const byUser = require("../controllers/payVouController"); // Import the pay vou controller
 
 const router = express.Router();
 
@@ -15,6 +15,7 @@ router.get("/getImages", customerController.getImages);
 router.post("/create", customerController.createCustomer);
 router.put("/update", customerController.updateCustomer);
 router.post("/createImages", customerController.createImages);
+router.post("/createDeliveryImages", customerController.createDeliveryImages);
 router.put("/updateImages", customerController.updateImages);
 router.get("/inactive", customerController.getInactiveProducts);
 router.get("/", authenticateToken, customerController.getCustomers);

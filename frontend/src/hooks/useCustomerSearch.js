@@ -126,7 +126,8 @@ export const useCustomerSearch = ({
 
   // Sync master list
   useEffect(() => {
-    isCust && isCust(data.length !== 0 || localCustomerList?.length !== 0);
+    isCust && isCust(data.length !== 0);
+    // alert(`${data.length !== 0}`);
 
     if (data.length > 0) {
       setLocalCustomerList(data);

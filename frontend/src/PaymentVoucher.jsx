@@ -67,6 +67,7 @@ const PaymentVoucher = () => {
                     cashAmountDisplay={displayValue}
                     onCashAmountChange={handleCashAmountChange}
                     debitCust={debitCust}
+                    creditCust={creditCust}
                     descRef={descRef}
                     onSubmit={handleVoucherSubmit}
                     submitting={submitting}

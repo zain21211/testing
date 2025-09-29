@@ -6,43 +6,126 @@ const dbConnection = require("../database/connection"); // Import your database 
 const lockTimers = new Map();
 
 const invoiceControllers = {
-  getInvoice: async (req, res) => {
-    const inv = "131368";
+  getLoadList: async (req, res) => {
+    const { transporter = "", route = "" } = req.query;
 
     const query = `
-    SELECT TOP 20
-      ROW_NUMBER() OVER (ORDER BY p.id) rn,
-      p.id rec,
-      (
-        SELECT SUM(debit) - SUM(credit)
-        FROM ledgers l 
-        WHERE acid = (SELECT acid FROM psdetail WHERE type='sale' AND doc = @DocNumber)
-          AND l.date <= (SELECT date FROM PSDetail WHERE type='sale' AND doc = @DocNumber)
-          AND l.doc <> @DocNumber
-      ) AS PreBal,
-      Ac.id, AC.ROUTE, Ac.Subsidary, P.DoC, AC.CreditLimit, Ac.Terms, Ac.CreditDays, 
-      Ac.Urduname AS UrduParty, ac.ledgerno, ISNULL(pr.runs, 0) AS Runs, Ac.OAddress, 
-      Ac.Area, Ac.City, Ac.OCell, Ac.SPO, Pr.company, Pr.Name, Pr.Urduname, 
-      Pr.Size, Pr.Packing, Pr.company, Pr.category, Pr.code AS ProductCode, Pr.Batch, 
-      P.SchPc, P.id AS PSProductID, P.Packet, P.Qty, P.Rate, P.VEST, P.Discp, 
-      P.Discount, P.DiscP2, P.Discount2, P.VIST, P.SchPc, D.Date, D.Discount AS TotalDisc, 
-      D.ExtraDiscount, D.Freight, ROUND(D.Amount, 2) AS amount, D.PBalance, D.Term, 
-      D.Description, D.Vehicle, D.SalesMan, D.Goods, D.Builty, D.CreditDays, 
-      D.Received, D.REMARKS
-    FROM PSProduct P 
-    JOIN PSDetail D ON P.DOC = D.DOC AND P.TYPE = D.TYPE 
-    JOIN COA AC ON D.ACID = AC.ID 
-    JOIN Products PR ON PR.ID = P.Prid
-   WHERE P.Type = 'Sale' 
-      AND D.Type = 'Sale'
-      AND P.Doc = @DocNumber
-    ORDER BY p.id;
-  `;
+      SELECT 
+        d.doc, 
+        c.id as ACID, 
+        c.urduname as UrduName, 
+        d.goods as transporter,
+        d.shopper,
+        c.route
+      FROM psdetail d
+      join coa c
+      on d.acid = c.id
+      WHERE d.status = 'invoice'
+      and (d.s_status is null  
+      or d.s_status = '' )
+      and goods like '%' + @Transporter + '%'
+      and c.route like '%' + @Route + '%'
+      AND CAST(d.[date] AS DATE) BETWEEN CAST(GETDATE() AS DATE) 
+                                 AND CAST(DATEADD(DAY, 1, GETDATE()) AS DATE)
+      --group by d.goods
+      order by d.goods, c.rno;
+    `;
 
     try {
       const pool = await dbConnection();
       const request = pool.request();
-      request.input("DocNumber", sql.VarChar, inv);
+      request.input("Transporter", sql.VarChar, transporter);
+      request.input("Route", sql.VarChar, route);
+
+      const result = await request.query(query);
+      console.log("result", result.recordset);
+      res.status(200).json(result.recordset);
+    } catch (err) {
+      console.error("Error fetching invoice:", err);
+      res
+        .status(500)
+        .json({ message: "Error fetching invoice", error: err.message });
+    } finally {
+      sql.close(); // Always close the connection
+    }
+  },
+
+  postItem: async (req, res) => {
+    const { nug = {}, status = "", to = "" } = req.body;
+
+    const vehicle = to?.toLowerCase();
+    if (!req.body || Object.keys(nug).length === 0) {
+      return res.status(400).json({ msg: "missing params" });
+    }
+
+    const query = `
+    UPDATE psdetail 
+    SET vehicle = @To, 
+        s_status = @Status, 
+        shopper = @Nug 
+    WHERE doc = @Doc;
+  `;
+
+    try {
+      const pool = await dbConnection();
+
+      // Run all updates in parallel
+      await Promise.all(
+        Object.entries(nug).map(([doc, shopper]) => {
+          const request = pool.request();
+          request.input("Status", sql.VarChar, status);
+          request.input("Nug", sql.VarChar, shopper);
+          request.input("Doc", sql.Int, parseInt(doc));
+          request.input(
+            "To",
+            sql.VarChar,
+            vehicle.includes("ka") ? "km" : vehicle.includes("suz") ? "sm" : to
+          );
+
+          return request.query(query);
+        })
+      );
+
+      res.status(200).json({ status: "succeeded", updated: Object.keys(nug) });
+    } catch (err) {
+      console.error("Error updating invoice(s):", err);
+      res
+        .status(500)
+        .json({ message: "Error updating invoice(s)", error: err.message });
+    } finally {
+      sql.close();
+    }
+  },
+
+  getDeliveryList: async (req, res) => {
+    const { transporter = "" } = req.query;
+
+    const query = `
+    SELECT top 5
+     d.doc, 
+     c.id as ACID, 
+     c.urduname as UrduName, 
+	   d.amount,
+     d.goods as transporter,
+     d.shopper,     
+	 (sum(l.debit) - sum(l.credit)) - d.amount as prevBalance,
+	 sum(l.debit) - sum(l.credit) as currentBalance
+FROM psdetail d
+join coa c
+on d.acid = c.id
+join ledgers l
+on d.acid = l.acid
+WHERE d.status = 'delivering'
+--and goods like '%' + @Transporter + '%'
+group by d.doc, c.id, c.urduname, d.amount, d.goods, d.shopper
+order by  d.doc desc;
+--order by d.goods, c.rno, doc desc;
+`;
+
+    try {
+      const pool = await dbConnection();
+      const request = pool.request();
+      request.input("Transporter", sql.VarChar, transporter);
 
       const result = await request.query(query);
       console.log("result", result.recordset);

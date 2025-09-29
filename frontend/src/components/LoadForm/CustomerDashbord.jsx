@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, CircularProgress, Alert } from '@mui/material';
 import TransporterFilter from './TransporterFilter';
 import CustomerList from './CustomerList';
@@ -15,6 +15,10 @@ const CustomerDashboard = () => {
     const { customers, loading, error, fetchList, routes } = useFetchList();
     const [to, setTo] = useState('');
 
+    useEffect(() => {
+        if (fetchList)
+            fetchList()
+    }, [])
     return (
         <Box sx={{ padding: 2 }}>
             <TransporterFilter onFilterChange={fetchList} routes={routes} />

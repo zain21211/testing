@@ -10,7 +10,6 @@ const transporters = [
 
 const TransporterFilter = ({ onFilterChange, routes }) => {
   const [route, setRoute] = useState('');
-  console.log(routes)
   return (
     <Box sx={{
       display: 'flex',

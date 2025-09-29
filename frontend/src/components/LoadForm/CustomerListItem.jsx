@@ -8,7 +8,7 @@ const CustomerListItem = ({ customer, nug, setNug }) => {
             <ListItemText
                 sx={{ width: "60%", textAlign: 'right' }} // left 70%
                 primary={customer.UrduName}
-                secondary={`${customer.transporter} `}
+                secondary={`${customer.route} `}
                 primaryTypographyProps={{
                     sx: {
                         fontWeight: "bold",
@@ -38,7 +38,7 @@ const CustomerListItem = ({ customer, nug, setNug }) => {
             >
                 <TextField
                     label="NUG"
-                    value={nug[doc] ?? ""}
+                    value={nug?.[doc] ?? ""}
                     inputProps={{
                         inputMode: "numeric",   // 📱 triggers numeric keypad
                         pattern: "[0-9]*",      // extra hint for iOS Safari
@@ -61,7 +61,7 @@ const CustomerListItem = ({ customer, nug, setNug }) => {
                 />
                 <Typography variant="h6" sx={{ backgroundColor: 'grey', p: 1, color: 'white', borderRadius: 2, minWidth: 50, textAlign: 'center' }}>
                     <span style={{ fontSize: "2rem", fontWeight: 600 }}>
-                        {customer.shopper}
+                        {customer.shopper || 0}
                     </span>
                 </Typography>
             </Box>

@@ -3,17 +3,24 @@ import { List, Typography, Button, CircularProgress, Box, Autocomplete, TextFiel
 import CustomerListItem from './CustomerListItem';
 import axios from 'axios';
 const url = `${import.meta.env.VITE_API_URL}`;
+import useLocalStorageState from 'use-local-storage-state';
 
 const CustomerList = ({ customers, fetchList, to, setTo, deliver }) => {
     const [loadingCustomerId, setLoadingCustomerId] = useState(null);
-    const [nug, setNug] = useState({});
+    const [nug, setNug] = useLocalStorageState('loadNugs', {});
     const [loading, setLoading] = useState(false)
 
-    const deleteItem = (doc) => {
+    const deleteItem = async (doc) => {
         const copy = { ...nug };
-        delete copy[doc];
-        setNug(copy)
-    }
+        await Promise.all(
+            doc.map(async (d) => {
+                delete copy[d];
+            })
+        );
+
+        setNug(copy);
+    };
+
 
     const handleLoadCustomer = async () => {
         try {
@@ -21,7 +28,7 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver }) => {
             const res = await axios.put(`${url}/invoices/loadList/update`, {
                 nug, status: 'loaded', to
             })
-            const doc = res.data.doc;
+            const doc = res.data.updated;
             deleteItem(doc);
             fetchList();
             // Handle successful load if needed
@@ -75,7 +82,7 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver }) => {
                 <Button
                     variant="contained"
                     onClick={handleLoadCustomer}
-                    disabled={loading}
+                    disabled={loading || !to || !nug}
                     sx={{ fontSize: "2rem", minWidth: 300, }}
                 >
                     {loading ? <CircularProgress size={24} /> : "Load"}

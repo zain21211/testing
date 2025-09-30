@@ -5,10 +5,12 @@ import CustomerList from './CustomerList';
 import { useFetchList } from '../../hooks/LoadForm/useFetchList';
 
 const deliver = [
+    { label: 'COUNTER (MZAIN)' },
     { label: 'KARVAN' },
     { label: 'SUZUKI' },
     { label: 'ARIF' },
     { label: 'SALMAN' },
+    { label: 'COUNTER (FAKHAR)' },
 ];
 
 const CustomerDashboard = () => {

@@ -8,7 +8,7 @@ const CustomerListItem = ({ customer, nug, setNug }) => {
             <ListItemText
                 sx={{ width: "60%", textAlign: 'right' }} // left 70%
                 primary={customer.UrduName}
-                secondary={`${customer.route} `}
+                secondary={`${customer.doc} - ${customer.route} `}
                 primaryTypographyProps={{
                     sx: {
                         fontWeight: "bold",

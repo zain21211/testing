@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { cleanNumbers } from "../utils/cleanString";
 
-export const usePayVouForm = () => {
+export const usePayVouForm = (isCust) => {
   const [formData, setFormData] = useState({
     description: "",
   });
@@ -12,10 +12,12 @@ export const usePayVouForm = () => {
 
   useEffect(() => {
     // Focus description field if needed
-    setTimeout(() => {
-      descRef.current?.focus();
-    }, 50);
-  }, []);
+    if (isCust) {
+      setTimeout(() => {
+        descRef.current?.focus();
+      }, 50);
+    }
+  }, [isCust]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

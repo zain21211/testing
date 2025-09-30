@@ -542,13 +542,13 @@ WHERE Id = @Id;
       };
 
       const query = `
-      INSERT INTO recovery ( ACID, img)
+      INSERT INTO recovery ( ACID, image)
       VALUES ( @acid, @img)
     `;
 
       const request = pool.request();
       request.input("acid", mssql.Int, acid);
-      request.input("img", mssql.Image, toBuffer(img));
+      request.input("img", mssql.VarBinary, toBuffer(img));
 
       await request.query(query);
 

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+    useState,
+    useEffect,
+    useCallback,
+    useMemo,
+    useRef,
+} from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
@@ -28,6 +34,7 @@ import TransporterFilter from "../LoadForm/TransporterFilter";
 import DeliveryContent from "./DeliveryContent";
 import useGeolocation from "../../hooks/geolocation";
 import { cleanNumbers, cleanString } from "../../utils/cleanString";
+import Card from "../Card";
 
 // Local Component Imports (assuming they are in the same directory or configured path)
 // import DataTable from "./table";
@@ -46,16 +53,84 @@ export const RemarkDialogUI = ({
 }) => {
     const captureRef = useRef();
     const dialogFields = [
-        { name: 'Prev Bal', col: 2, align: 'right', pa: 1, frontsize: 14, color: 'blue', backgroundColor: '#e8eaf6', disabled: true, val: customer.prevBalance },
-        { name: 'Amount', col: 2, align: 'right', pa: 1, frontsize: 14, color: 'green', backgroundColor: '#e8f5e9', disabled: true, val: customer.amount },
-        { name: 'Current Bal', col: 2, align: 'right', pa: 1, frontsize: 14, color: 'blue', backgroundColor: '#e8eaf6', disabled: true, val: customer.currentBalance },
-        { name: 'Recovery', col: 2, align: 'right', pa: 1, frontsize: 14, color: 'red', backgroundColor: '#ffebee', disabled: false, val: cash },
-        { name: 'remaining Bal', col: 2, align: 'right', pa: 1, frontsize: 14, color: 'blue', backgroundColor: '#e8eaf6', disabled: true, val: (customer.currentBalance - (cash || 0)) || "err" },
+        {
+            name: "Prev Bal",
+            col: 2,
+            align: "right",
+            pa: 1,
+            frontsize: 14,
+            color: "blue",
+            backgroundColor: "#e8eaf6",
+            disabled: true,
+            val: customer.prevBalance,
+        },
+        {
+            name: "Bill Amount",
+            col: 2,
+            align: "right",
+            pa: 1,
+            frontsize: 14,
+            color: "green",
+            backgroundColor: "#e8f5e9",
+            disabled: true,
+            val: customer.amount,
+        },
+        {
+            name: "Current Bal",
+            col: 2,
+            align: "right",
+            pa: 1,
+            frontsize: 14,
+            color: "blue",
+            backgroundColor: "#e8eaf6",
+            disabled: true,
+            val: customer.currentBalance,
+        },
+        {
+            name: "Cash Recovery",
+            col: 2,
+            align: "right",
+            pa: 1,
+            frontsize: 14,
+            color: "red",
+            backgroundColor: "#ffebee",
+            disabled: false,
+            val: cash,
+        },
+        {
+            name: "remaining Bal",
+            col: 2,
+            align: "right",
+            pa: 1,
+            frontsize: 14,
+            color: "blue",
+            backgroundColor: "#e8eaf6",
+            disabled: true,
+            val: (customer.currentBalance - (cash[customer.ACID] || 0)).toFixed(0) || "err",
+        },
     ];
 
     const secondaryFields = [
-        { name: 'Shopper', col: 2, align: 'left', pa: 1, frontsize: 14, color: 'teal', backgroundColor: '#e0f2f1', val: customer.shopper },
-        { name: 'Name', col: 2, align: 'left', pa: 1, frontsize: 14, color: 'teal', backgroundColor: '#e0f2f1', val: customer.UrduName },
+        {
+            name: "Shopper",
+            col: 2,
+            align: "left",
+            pa: 1,
+            frontsize: 14,
+            color: "teal",
+            backgroundColor: "#e0f2f1",
+            val: customer.shopper,
+        },
+        // {
+        //     name: "Name",
+        //     col: 2,
+        //     align: "left",
+        //     pa: 1,
+        //     frontsize: 14,
+        //     color: "teal",
+        //     backgroundColor: "#e0f2f1",
+        //     val: customer.UrduName,
+        // },
     ];
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -65,6 +140,7 @@ export const RemarkDialogUI = ({
                     error={error}
                     name={customer.UrduName}
                     shopper={customer.shopper}
+                    id={customer.ACID}
                     dialogFields={dialogFields}
                     secondaryFields={secondaryFields}
                     captureRef={captureRef}
@@ -97,8 +173,14 @@ export const RemarkDialogUI = ({
                         Ledger
                     </Button>
                 </Box>
-                <Button onClick={() => { handleSubmit(616, captureRef) }} color="success" variant="contained">
-                    Submit Remark
+                <Button
+                    onClick={() => {
+                        handleSubmit(customer.ACID, customer.doc, captureRef);
+                    }}
+                    color="success"
+                    variant="contained"
+                >
+                    Submit
                 </Button>
             </DialogActions>
         </Dialog>
@@ -106,27 +188,38 @@ export const RemarkDialogUI = ({
 };
 
 // Fields to display on each trader card
-const fields = [
-    "ACID",
-    "UrduName",
-];
-const SPECIAL_FIELDS = [
-
-];
+const fields = ["ACID", "UrduName"];
+const SPECIAL_FIELDS = [];
 const DeliveryForm = () => {
     // --- DIALOG STATE ---
+    const [status, setStatus] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState(null);
-    const [cash, setCash] = useState(0)
-    const captureRef = useRef();
+    const [cash, setCash] = useState({});
+    // const captureRef = useRef();
+    const [loading, setLoading] = useState(false)
     const { coordinates, address } = useGeolocation();
     const { addEntry } = useEntries();
-    const handleChange = (val) => {
+    const handleChange = (id, val) => {
         const cleaned = cleanNumbers(val);
-        const number = parseFloat(cleaned)
-        setCash(number);
-    }
-    const remarkDialogUI = (customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, handleSubmit, onClose,) => {
+        const number = parseFloat(cleaned);
+        setCash((prev) => ({
+            ...prev,
+            [id]: number,
+        }));
+    };
+
+    const remarkDialogUI = (
+        customer,
+        remark,
+        setRemark,
+        pastRemarks,
+        error,
+        acid,
+        handleNavigate,
+        handleSubmit,
+        onClose
+    ) => {
         return (
             <Box>
                 <RemarkDialogUI
@@ -140,11 +233,11 @@ const DeliveryForm = () => {
                     handleSubmit={handleSubmit}
                     content={DeliveryContent}
                     cash={cash}
-                >
-                </RemarkDialogUI>
+                ></RemarkDialogUI>
             </Box>
-        )
-    }
+        );
+    };
+
     // --- USER & ROLES ---
     const user = useMemo(
         () => JSON.parse(localStorage.getItem("user") || "{}"),
@@ -160,83 +253,72 @@ const DeliveryForm = () => {
     );
 
     // --- DATA & FILTERING STATE ---
-    const [turnoverData, setTurnoverData] = useLocalStorageState("turnoverData", {
-        defaultValue: [],
-    });
-    const [isLoading, setIsLoading] = useState(false);
-    const [params, setParams] = useState({
-        route: "",
-        spo: userRoles.isAdmin || userRoles.isZain ? "" : user.username,
-        date: new Date().toISOString().split("T")[0],
-        nameFilter: "",
-        statusFilter: "Pending",
-    });
 
     // --- DATA FETCHING ---
-    const fetchReport = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const res = await axios.get(`${API_URL}/turnover`, {
-                params: {
-                    route: params.route,
-                    spo: params.spo,
-                    date: new Date(params.date),
-                    company: userRoles.isClassic ? "classic" : "",
-                },
-            });
-            if (!isEqual(turnoverData, res.data)) {
-                setTurnoverData(res.data);
-            }
-        } catch (error) {
-            console.error("Error fetching turnover data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [
-        params.route,
-        params.spo,
-        params.date,
-        userRoles.isClassic,
-        turnoverData,
-        setTurnoverData,
-    ]);
-
     const handleCapture = async (captureRef) => {
         if (!captureRef.current) return;
         const canvas = await html2canvas(captureRef.current);
         const data = canvas.toDataURL("image/png");
         return data;
-    }
+    };
 
     const handlePost = useCallback(
-        async (acid, captureRef) => {
+        async (acid, doc, captureRef) => {
+            setLoading(true);
             const img = await handleCapture(captureRef);
+
             const newEntry = {
                 id: acid,
                 amounts: {
-                    cash,
+                    cash: cash[acid],
                 },
-                userName: user?.username || 'Unknown User',
+                userName: user?.username || "Unknown User",
                 timestamp: new Date().toISOString(),
             };
 
-            console.log('posting cash...');
-            await addEntry(newEntry, coordinates, address);
+            try {
+                await addEntry(newEntry, coordinates, address);
 
-            console.log('posting img...');
+                await axios.post(`${url}/customers/createDeliveryImages`, {
+                    acid,
+                    img,
+                });
 
-            await axios.post(`${url}/customers/createDeliveryImages`, {
-                acid,
-                img,
-            })
-            fetchReport(); // Re-fetch data to reflect changes
+                await axios.put(`${url}/invoices/deliveryList/update`, {
+                    status: 'delivered',
+                    id: doc,
+
+                });
+
+                fetchList();
+                closeDialog()
+                setStatus(200);
+            } catch (error) {
+                alert(`${error}`)
+                setStatus(500);
+
+            } finally {
+                setLoading(false);
+            }
+
         },
-        [user.username, fetchReport]
+        [user.username, cash]
     );
 
     useEffect(() => {
+        fetchList();
+    }, []);
+
+    useEffect(() => {
+        if (status)
+            setTimeout(() => {
+                setStatus(null)
+            }, 2000);
+    }, [status]);
+
+    useEffect(() => {
         if (!dialogOpen) {
-            fetchReport();
+            fetchList();
         }
     }, [dialogOpen]); // Refetch when dialog closes
 
@@ -250,15 +332,61 @@ const DeliveryForm = () => {
         setDialogOpen(false);
         setSelectedTrader(null);
     }, []);
-    const { customers, loading, error, fetchList } = useFetchList('delivery');
+    const { customers, loading: listLoading, error, fetchList } = useFetchList("delivery");
 
     // --- RENDER ---
     return (
         <Container sx={{ p: 0 }}>
+            <Box
+                sx={{
+                    display: userRoles.isAdmin || userRoles.isZain ? "block" : "none",
+                    m: 2,
+                }}
+            >
+                <TransporterFilter onFilterChange={fetchList} />
+            </Box>
 
-            <TransporterFilter onFilterChange={fetchList} />
+            {/* not found */}
+            {(customers.length === 0 && !listLoading) && (
+                <Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '69vh'
+                    }}>
+                    <Card text={'no customer found'} code={404} color="grey" />
+                </Box>
+            )}
 
-            <Box sx={{ display: "grid", gap: 3, mb: "10rem" }}>
+            {/* while list loading */}
+            {listLoading && (
+                <Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '69vh'
+                    }}>
+                    <Card text={'your content is loading ...'} code={"Loading"} color="darkblue" />
+                </Box>
+            )}
+
+            {/* while list loading */}
+            {status && !(customers.length === 0 || listLoading) && (
+                <Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        // height: '69vh'
+                    }}>
+                    <Card text={'posted'} code={status} color="green" />
+                </Box>
+            )}
+
+            <Box sx={{ display: listLoading ? 'none' : "grid", gap: 3, mb: "10rem" }}>
+
                 {customers.map((customer) => (
                     <TraderCard
                         key={customers.acid}

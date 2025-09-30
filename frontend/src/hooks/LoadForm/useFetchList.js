@@ -9,6 +9,7 @@ export const useFetchList = (list = "load") => {
   const [routes, setRoutes] = useState([]);
 
   const fetchList = useCallback(async (route) => {
+    const user = JSON.parse(localStorage.getItem("user"));
     // if (!transporter) {
     //   setCustomers([]);
     //   return;
@@ -23,6 +24,7 @@ export const useFetchList = (list = "load") => {
         params: {
           // transporter,
           route,
+          usertype: user?.userType?.toLowerCase(),
         },
       });
       //   if (!response.ok) {

@@ -312,7 +312,7 @@ const Login = () => {
                 Payment Voucher
               </Button>
             )}
-            {(userType !== 'payment' &&
+            {((userType !== 'payment' && !userType.includes('pack')) &&
               <>
                 <Button
                   component={RouterLink}

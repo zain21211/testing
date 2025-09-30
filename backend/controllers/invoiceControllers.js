@@ -38,7 +38,6 @@ const invoiceControllers = {
       request.input("Route", sql.VarChar, route);
 
       const result = await request.query(query);
-      console.log("result", result.recordset);
       res.status(200).json(result.recordset);
     } catch (err) {
       console.error("Error fetching invoice:", err);
@@ -51,14 +50,20 @@ const invoiceControllers = {
   },
 
   postItem: async (req, res) => {
-    const { nug = {}, status = "", to = "" } = req.body;
-
+    const { nug = {}, status = "", to = "", id } = req.body;
+    console.log(status && !(nug && to));
     const vehicle = to?.toLowerCase();
-    if (!req.body || Object.keys(nug).length === 0) {
+    if (!req.body && Object.keys(nug).length === 0) {
       return res.status(400).json({ msg: "missing params" });
     }
+    let query;
 
-    const query = `
+    try {
+      const pool = await dbConnection();
+
+      // Run all updates in parallel
+      if (nug && to) {
+        query = `
     UPDATE psdetail 
     SET vehicle = @To, 
         s_status = @Status, 
@@ -66,27 +71,45 @@ const invoiceControllers = {
     WHERE doc = @Doc;
   `;
 
-    try {
-      const pool = await dbConnection();
+        await Promise.all(
+          Object.entries(nug).map(([doc, shopper]) => {
+            const request = pool.request();
+            request.input("Status", sql.VarChar, status);
+            request.input("Nug", sql.VarChar, shopper);
+            request.input("Doc", sql.Int, parseInt(doc));
+            request.input(
+              "To",
+              sql.VarChar,
+              vehicle.includes("ka")
+                ? "kr"
+                : vehicle.includes("suz")
+                ? "sr"
+                : to
+            );
 
-      // Run all updates in parallel
-      await Promise.all(
-        Object.entries(nug).map(([doc, shopper]) => {
-          const request = pool.request();
-          request.input("Status", sql.VarChar, status);
-          request.input("Nug", sql.VarChar, shopper);
-          request.input("Doc", sql.Int, parseInt(doc));
-          request.input(
-            "To",
-            sql.VarChar,
-            vehicle.includes("ka") ? "km" : vehicle.includes("suz") ? "sm" : to
-          );
+            return request.query(query);
+          })
+        );
+      }
+      if (status && !(nug && to)) {
+        query = `
+    UPDATE psdetail 
+    SET s_status = @Status 
+    WHERE doc = @Doc;
+    
+  `;
+        const request = pool.request();
 
-          return request.query(query);
-        })
-      );
+        request.input("Status", sql.VarChar, status);
+        request.input("Doc", sql.Int, id);
+        request.query(query);
+      }
 
-      res.status(200).json({ status: "succeeded", updated: Object.keys(nug) });
+      res.status(200).json({
+        status: "succeeded",
+        updated: Object.keys(nug) || "",
+        ss: status,
+      });
     } catch (err) {
       console.error("Error updating invoice(s):", err);
       res
@@ -98,15 +121,17 @@ const invoiceControllers = {
   },
 
   getDeliveryList: async (req, res) => {
-    const { transporter = "" } = req.query;
+    const { usertype = "" } = req.query;
+
+    // const vehical = "km";
+    const vehical = usertype.split("-")[1] || "";
 
     const query = `
-    SELECT top 5
+    SELECT
      d.doc, 
      c.id as ACID, 
      c.urduname as UrduName, 
 	   d.amount,
-     d.goods as transporter,
      d.shopper,     
 	 (sum(l.debit) - sum(l.credit)) - d.amount as prevBalance,
 	 sum(l.debit) - sum(l.credit) as currentBalance
@@ -115,20 +140,19 @@ join coa c
 on d.acid = c.id
 join ledgers l
 on d.acid = l.acid
-WHERE d.status = 'delivering'
---and goods like '%' + @Transporter + '%'
-group by d.doc, c.id, c.urduname, d.amount, d.goods, d.shopper
-order by  d.doc desc;
---order by d.goods, c.rno, doc desc;
+WHERE d.s_status = 'loaded'
+and vehicle like '%' + @vehical + '%'
+group by d.doc, c.id, c.urduname, d.amount, d.shopper, c.rno
+--order by  d.doc desc;
+order by c.rno;
 `;
 
     try {
       const pool = await dbConnection();
       const request = pool.request();
-      request.input("Transporter", sql.VarChar, transporter);
+      request.input("vehical", sql.VarChar, vehical);
 
       const result = await request.query(query);
-      console.log("result", result.recordset);
       res.status(200).json(result.recordset);
     } catch (err) {
       console.error("Error fetching invoice:", err);

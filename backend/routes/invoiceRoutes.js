@@ -8,7 +8,7 @@ router.get("/loadlist", invoiceControllers.getLoadList);
 router.get("/deliverylist", invoiceControllers.getDeliveryList);
 router.put("/loadlist", invoiceControllers.getLoadList);
 router.put("/loadList/update", invoiceControllers.postItem);
-router.put("/deliverylist/update", invoiceControllers.postItem);
+router.put("/deliveryList/update", invoiceControllers.postItem);
 
 // Route to get a single invoice by ID
 router.get("/:id", invoiceControllers.getInvoiceByID);

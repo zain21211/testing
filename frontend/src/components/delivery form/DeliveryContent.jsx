@@ -12,7 +12,7 @@ import {
 import SignatureCanvas from "react-signature-canvas";
 import { formatCurrency } from "../../utils/formatCurrency";
 
-const DeliveryContent = ({ name, shopper, error, captureRef, dialogFields, secondaryFields, handleChange }) => {
+const DeliveryContent = ({ id, name, shopper, error, captureRef, dialogFields, secondaryFields, handleChange }) => {
 
     return (
         <>
@@ -40,24 +40,36 @@ const DeliveryContent = ({ name, shopper, error, captureRef, dialogFields, secon
                                 disabled={field.disabled}
                                 InputProps={{
                                     sx: {
-                                        textAlign: field.align,          // ✅ applies to input text
+                                        textAlign: field.align,
                                         color: field.color,
                                         backgroundColor: field.backgroundColor,
-                                    }
+                                    },
                                 }}
-                                value={formatCurrency(field.val)}
-                                onChange={(e) => handleChange(e.target.value)}
-                            // margin="normal"
+                                value={
+                                    field.val?.[id] !== undefined
+                                        ? formatCurrency(field.val[id])
+                                        : field.val !== undefined && field.val !== null
+                                            ? formatCurrency(Number(field.val))
+                                            : ""
+                                }
+                                onFocus={e => e.target.select()}
+                                onChange={(e) => handleChange(id, e.target.value)}
                             />
+
                         ))}
                     </Box>
                     <Box>
-                        <Typography fontSize={'2rem'} fontWeight={'BOLD'}>
+                        <Typography fontSize={'3rem'} fontWeight={'BOLD'} sx={{
+                            fontFamily: "Jameel Noori Nastaleeq, serif",
+                            // backgroundColor: 'pink',
+                            textAlign: 'right',
+
+                        }}>
                             {name}
                         </Typography>
                         {secondaryFields.map(field => (
-                            <Typography fontSize={'2rem'} fontWeight={'BOLD'}>
-                                {field.name} : {shopper}
+                            <Typography fontSize={'2rem'} fontWeight={'BOLD'} backgroundColor={'pink'} textAlign={'center'} margin={'auto'}>
+                                {field.val || 0}
                             </Typography>
                         ))}
 

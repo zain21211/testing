@@ -7,14 +7,7 @@ import { PayVouForm } from './components/payVouForm';
 
 
 const PaymentVoucher = () => {
-    const {
-        formData,
-        displayValue,
-        descRef,
-        handleChange,
-        handleCashAmountChange,
-        clearForm,
-    } = usePayVouForm();
+
 
     const {
         creditCust,
@@ -27,6 +20,15 @@ const PaymentVoucher = () => {
         handleDebitFlag,
         clearCustomerSelections,
     } = usePayVouCust();
+
+    const {
+        formData,
+        displayValue,
+        descRef,
+        handleChange,
+        handleCashAmountChange,
+        clearForm,
+    } = usePayVouForm(isCredit || isDebit);
 
     const {
         submitting,

@@ -34,7 +34,6 @@ const RecoveryPaper = () => {
   const routePath = location.pathname;
   const storageKey = `accountID-${routePath}`;
   const [searchParams] = useSearchParams();
-  const acid = searchParams.get('acid');
   const { coordinates, address } = useGeolocation();
   const isOnline = useRealOnlineStatus();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -105,9 +104,10 @@ const RecoveryPaper = () => {
 
   // Effects
   useEffect(() => {
-    console.log('Selected customer changed:', acid);
-    dispatch(setIDWithKey({ key: 'recovery', value: parseInt(acid) }));
-  }, [acid, dispatch]);
+    const id = searchParams.get('acid');
+    dispatch(setIDWithKey({ key: 'recovery', value: parseInt(id) }));
+  }, [searchParams, dispatch]);
+  // Effects
 
   useEffect(() => {
     const newRemainingBalance = calculateRemainingBalance(balance, {

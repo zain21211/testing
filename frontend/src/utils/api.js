@@ -70,7 +70,6 @@ export const fetchDebitCustomers = async () => {
   const { data } = await client.get("/customers/debit", {
     params: { username: JSON.parse(localStorage.getItem("user"))?.username },
   });
-  console.log("debit: ", data);
   return data;
 };
 
@@ -78,11 +77,9 @@ export const fetchCreditCustomers = async () => {
   const { data } = await client.get("/customers/credit", {
     params: { username: JSON.parse(localStorage.getItem("user"))?.username },
   });
-  console.log("credit: ", data);
   return data;
 };
 
-// src/api/api.js
 // src/api/api.js
 export const fetchInactiveItems = async ({
   acid,

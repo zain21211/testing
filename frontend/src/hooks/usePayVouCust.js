@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { clearSelection } from "../store/slices/CustomerSearch";
 

@@ -168,103 +168,6 @@ const StatusFilter = React.memo(({ onFilterChange }) => {
         </FormControl>
     );
 });
-
-// export const RemarkDialog = React.memo(
-//     ({ open, onClose, acid, name, onSubmitRemark, pastRemarks }) => {
-//         const [remark, setRemark] = useState("");
-//         // const [pastRemarks, setPastRemarks] = useState([]);
-//         const [error, setError] = useState(null);
-
-//         const navigate = useNavigate();
-
-//         // useEffect(() => {
-//         //     // const fetchRemarks = async () => {
-//         //     //     if (open && acid) {
-//         //     //         try {
-//         //     //             const res = await axios.get(`${API_URL}/turnover/remarks`, {
-//         //     //                 params: { acid },
-//         //     //             });
-//         //     //             setPastRemarks(res.data || []);
-//         //     //         } catch (err) {
-//         //     //             console.error("Failed to fetch remarks:", err);
-//         //     //             setError("Failed to fetch past remarks.");
-//         //     //         }
-//         //     //     }
-//         //     // };
-//         //     onFetch(open, acid, setPastRemarks);
-//         // }, [open, acid]);
-
-//         const handleNavigate = useCallback(
-//             (page) => {
-//                 if (!acid) return;
-//                 const startDate = new Date();
-//                 startDate.setMonth(startDate.getMonth() - 3);
-//                 const url = `/${page}?name=${encodeURIComponent(
-//                     name || ""
-//                 )}&acid=${encodeURIComponent(acid)}&startDate=${startDate.toISOString().split("T")[0]
-//                     }&endDate=${new Date().toISOString().split("T")[0]}`;
-//                 navigate(url);
-//             },
-//             [acid, name, navigate]
-//         );
-
-//         const handleSubmit = () => {
-//             if (!remark.trim()) return;
-//             onSubmitRemark(acid, remark);
-//             setRemark("");
-//             onClose();
-//         };
-
-//         return (
-//             <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-//                 <DialogTitle>Customer Actions: {acid}</DialogTitle>
-//                 <DialogContent>
-//                     <TextField
-//                         label="Enter New Remark"
-//                         fullWidth
-//                         value={remark}
-//                         onChange={(e) => setRemark(e.target.value)}
-//                         margin="normal"
-//                     />
-//                     {error && <Typography color="error">{error}</Typography>}
-//                     {pastRemarks?.length > 0 && (
-//                         <DataTable data={pastRemarks} columns={REMARK_COLUMNS} />
-//                     )}
-//                 </DialogContent>
-//                 <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
-//                     <Box>
-//                         <Button
-//                             variant="contained"
-//                             onClick={() => handleNavigate("order")}
-//                             color="primary"
-//                             sx={{ mr: 1 }}
-//                         >
-//                             Order
-//                         </Button>
-//                         <Button
-//                             variant="contained"
-//                             onClick={() => handleNavigate("recovery")}
-//                             color="secondary"
-//                             sx={{ mr: 1 }}
-//                         >
-//                             Recovery
-//                         </Button>
-//                         <Button
-//                             variant="contained"
-//                             onClick={() => handleNavigate("ledger")}
-//                             color="warning"
-//                         >
-//                             Ledger
-//                         </Button>
-//                     </Box>
-//                     <Button onClick={handleSubmit} color="success" variant="contained">
-//                         Submit Remark
-//                     </Button>
-//                 </DialogActions>
-//             </Dialog>
-//         );
-//     }
-// );
 // useRemarkDialog.ts
 
 export function useRemarkDialog({ open, acid, name, onSubmitRemark, onClose }) {
@@ -274,6 +177,7 @@ export function useRemarkDialog({ open, acid, name, onSubmitRemark, onClose }) {
 
     const handleNavigate = useCallback(
         (page) => {
+            console.log(page)
             if (!acid) return;
             const startDate = new Date();
             startDate.setMonth(startDate.getMonth() - 3);
@@ -304,20 +208,6 @@ export function useRemarkDialog({ open, acid, name, onSubmitRemark, onClose }) {
     };
 }
 // RemarkDialogUI.tsx
-// import React from "react";
-// import {
-//     Dialog,
-//     DialogTitle,
-//     DialogContent,
-//     DialogActions,
-//     Button,
-//     TextField,
-//     Typography,
-//     Box,
-// } from "@mui/material";
-// import DataTable from "./DataTable";
-// import { REMARK_COLUMNS } from "./constants";
-
 export const RemarkDialogUI = ({
     open,
     onClose,
@@ -330,6 +220,7 @@ export const RemarkDialogUI = ({
     handleNavigate,
     handleSubmit,
 }) => {
+    console.log(handleNavigate)
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
             <DialogTitle>Customer Actions: {acid}</DialogTitle>
@@ -342,7 +233,7 @@ export const RemarkDialogUI = ({
                     margin="normal"
                 />
                 {error && <Typography color="error">{error}</Typography>}
-                {pastRemarks.length > 0 && (
+                {pastRemarks?.length > 0 && (
                     <DataTable data={pastRemarks} columns={REMARK_COLUMNS} />
                 )}
             </DialogContent>
@@ -380,9 +271,6 @@ export const RemarkDialogUI = ({
     );
 };
 // RemarkDialog.tsx
-// import { useRemarkDialog } from "./useRemarkDialog";
-// import { RemarkDialogUI } from "./RemarkDialogUI";
-
 export const RemarkDialog = React.memo(
     ({ open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer }) => {
         const { remark, setRemark, error, handleNavigate, handleSubmit } =
@@ -390,10 +278,14 @@ export const RemarkDialog = React.memo(
 
         if (!onRender) {
             alert("nothing to  render")
-            return;
+            return null;
         }
+
+        // FIX: Pass the `handleSubmit` function from the hook to the onRender prop.
+        // It contains the full logic (calling onSubmitRemark, closing dialog, etc.).
+        // Also pass all other relevant values.
         return (
-            onRender(customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose, pastRemarks)
+            onRender(customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, handleSubmit, onClose)
         );
     }
 );
@@ -708,22 +600,33 @@ const TurnoverReport = () => {
         }),
         [user]
     );
-    const remarkDialogUi = (remark, setRemark, pastRemarks, error, acid, handleNavigate, handleSubmit, onClose) => {
+
+    // FIX: Correctly define the function signature to match the arguments passed from onRender.
+    // This ensures `handleNavigate` and `handleSubmit` are assigned to the correct variables.
+    const remarkDialogUi = (
+        customer,
+        remark,
+        setRemark,
+        pastRemarks,
+        error,
+        acid,
+        handleNavigate,
+        handleSubmit,
+        onClose
+    ) => {
         return (
-            <Box>
-                <RemarkDialogUI
-                    open={open}
-                    onClose={onClose}
-                    acid={acid}
-                    name={name}
-                    pastRemarks={pastRemarks}
-                    remark={remark}
-                    setRemark={setRemark}
-                    error={error}
-                    handleNavigate={handleNavigate}
-                    handleSubmit={handleSubmit}
-                />
-            </Box>
+            <RemarkDialogUI
+                open={dialogOpen} // Use state from the parent component scope
+                onClose={onClose}
+                acid={acid}
+                name={customer?.Subsidary || customer?.UrduName} // Use the passed `customer` object
+                pastRemarks={pastRemarks}
+                remark={remark}
+                setRemark={setRemark}
+                error={error}
+                handleNavigate={handleNavigate}
+                handleSubmit={handleSubmit}
+            />
         )
     }
     // --- DATA & FILTERING STATE ---
@@ -896,6 +799,7 @@ const TurnoverReport = () => {
                     name={selectedTrader.Subsidary || selectedTrader.UrduName}
                     onSubmitRemark={handlePostRemark}
                     pastRemarks={pastRemarks}
+                    customer={selectedTrader} // FIX: Pass the selectedTrader object as the customer prop.
                 />
             )}
         </Container>

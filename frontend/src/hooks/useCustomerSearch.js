@@ -1,5 +1,5 @@
 // src/hooks/useCustomerSearch.js
-import { useEffect, useMemo, useCallback, useRef, useState, use } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { useFetch } from "./useFetch";
@@ -92,6 +92,8 @@ export const useCustomerSearch = ({
     dispatch(fetchMasterCustomerList());
   }, [dispatch]);
 
+  useEffect(() => {}, [localCustomerList]);
+
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const customerInputRef = useRef(null);
   const listRef = useRef(null);
@@ -128,9 +130,12 @@ export const useCustomerSearch = ({
   useEffect(() => {
     isCust && isCust(data.length !== 0);
     // alert(`${data.length !== 0}`);
+    // setLocalCustomerList(data);
 
-    if (data.length > 0) {
+    if (!isEqual(data, localCustomerList)) {
       setLocalCustomerList(data);
+    }
+    if (data.length > 0) {
       if (!isAdmin && (formType === "debit" || formType === "credit")) return;
       const shouldUpdate = !isEqual(data, masterCustomerList);
       if (shouldUpdate) {
@@ -138,11 +143,12 @@ export const useCustomerSearch = ({
       }
     }
     // 🚨 don't add masterCustomerList here, or you loop forever
-  }, [data, dispatch, localCustomerList]);
+  }, [data, dispatch]);
 
-  useEffect(() => {
-    if (onSelect) onSelect(selectedCustomer);
-  }, [selectedCustomer, onSelect]);
+  // useEffect(() => {
+  //   if (onSelect) onSelect(selectedCustomer);
+  //   console.log(path, selectedCustomer);
+  // }, [selectedCustomer, onSelect]);
 
   useEffect(() => {
     if (

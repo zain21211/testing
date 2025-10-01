@@ -21,6 +21,7 @@ export const usePayVouSub = () => {
     setError(null);
     setSuccess(false);
 
+    console.log(debitCust, creditCust);
     const accounts = [
       debitCust?.acid && { type: "debit", acid: debitCust.acid },
       creditCust?.acid && { type: "credit", acid: creditCust.acid },

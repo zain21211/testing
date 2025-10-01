@@ -140,9 +140,6 @@ const CustomerDetails = ({
         navigate(url); // Navigate within the app (might need react-router setup)
     }, [acid, navigate]); // Added navigate dependency
 
-    useEffect(() => {
-        console.log("Balance or cashAmount changed:", balance, cashAmount);
-    }, [cashAmount, balance]);
     return (
         <Stack spacing={2} >
             <Box sx={{

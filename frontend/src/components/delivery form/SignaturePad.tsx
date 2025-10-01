@@ -19,23 +19,20 @@ const SignaturePad: React.FC = (target: any) => {
   };
 
   return (
-    <Box display="flex" flexDirection="column" gap={2} backgroundColor={'black'} p={2}alignItems="center">
-      <SignatureCanvas
-        ref={sigCanvas}
-        penColor="black"
-        backgroundColor="white"
-        canvasProps={{
-          width: 500,
-          height: 200,
-          className: "border border-gray-400 rounded-lg",
-        }}
-      />
+    <Box display="flex" flexDirection="column" gap={2} alignItems="center">
+       <SignatureCanvas
+      ref={sigCanvas}
+                        penColor="black"
+                        canvasProps={{
+                            width: 450,
+                            height: 400,
+                            className: "sigCanvas", // for CSS styling
+                            style: { backgroundColor: "lightgrey", border: "1px solid #ccc" }, // inline
+                        }}
+                    />
       <Box display="flex" gap={2}>
         <Button variant="contained" color="error" onClick={clear}>
           Clear
-        </Button>
-        <Button variant="contained" color="success" onClick={save}>
-          Save
         </Button>
       </Box>
 

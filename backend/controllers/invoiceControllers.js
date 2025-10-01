@@ -121,7 +121,7 @@ const invoiceControllers = {
   },
 
   getDeliveryList: async (req, res) => {
-    const { usertype = "" } = req.query;
+    const { usertype = "", route = "" } = req.query;
 
     // const vehical = "km";
     const vehical = usertype.split("-")[1] || "";
@@ -132,6 +132,7 @@ const invoiceControllers = {
      c.id as ACID, 
      c.urduname as UrduName, 
 	   d.amount,
+     c.route,
      d.shopper,     
 	 (sum(l.debit) - sum(l.credit)) - d.amount as prevBalance,
 	 sum(l.debit) - sum(l.credit) as currentBalance
@@ -141,8 +142,9 @@ on d.acid = c.id
 join ledgers l
 on d.acid = l.acid
 WHERE d.s_status = 'loaded'
-and vehicle like '%' + @vehical + '%'
-group by d.doc, c.id, c.urduname, d.amount, d.shopper, c.rno
+--and vehicle like '%' + @vehical + '%'
+and c.route like  '%' + @vehical + '%'
+group by d.doc, c.id, c.urduname, d.amount, d.shopper, c.rno, c.route
 --order by  d.doc desc;
 order by c.rno;
 `;
@@ -151,6 +153,7 @@ order by c.rno;
       const pool = await dbConnection();
       const request = pool.request();
       request.input("vehical", sql.VarChar, vehical);
+      // request.input("vehical", sql.VarChar, vehical);
 
       const result = await request.query(query);
       res.status(200).json(result.recordset);

@@ -3,10 +3,9 @@ const dbConnection = require("../database/connection"); // Import your database 
 const imageDb = require("../database/imagedb"); // Import your database connection
 
 function cleanNumbers(input) {
-  console.log(input);
-  const cleaned = input.replace(/[^0-9]/g, ""); // keep only digits
+  if (!input) return 0;
+  const cleaned = input?.replace(/[^0-9]/g, ""); // keep only digits
   const num = cleaned ? parseFloat(cleaned) : 0; // convert to number
-  console.log(num);
   return num;
 }
 

@@ -35,6 +35,7 @@ import DeliveryContent from "./DeliveryContent";
 import useGeolocation from "../../hooks/geolocation";
 import { cleanNumbers, cleanString } from "../../utils/cleanString";
 import Card from "../Card";
+import { Close, CloseOutlined } from "@mui/icons-material";
 
 // Local Component Imports (assuming they are in the same directory or configured path)
 // import DataTable from "./table";
@@ -49,6 +50,9 @@ export const RemarkDialogUI = ({
     handleSubmit,
     content: Content,
     cash,
+    secondaryFields,
+    handleRadioChange,
+    extra,
     handleChange,
 }) => {
     const captureRef = useRef();
@@ -106,35 +110,25 @@ export const RemarkDialogUI = ({
             color: "blue",
             backgroundColor: "#e8eaf6",
             disabled: true,
-            val: (customer.currentBalance - (cash[customer.ACID] || 0)).toFixed(0) || "err",
+            val:
+                (customer.currentBalance - (cash[customer.ACID] || 0)).toFixed(0) ||
+                "err",
         },
-    ];
-
-    const secondaryFields = [
-        {
-            name: "Shopper",
-            col: 2,
-            align: "left",
-            pa: 1,
-            frontsize: 14,
-            color: "teal",
-            backgroundColor: "#e0f2f1",
-            val: customer.shopper,
-        },
-        // {
-        //     name: "Name",
-        //     col: 2,
-        //     align: "left",
-        //     pa: 1,
-        //     frontsize: 14,
-        //     color: "teal",
-        //     backgroundColor: "#e0f2f1",
-        //     val: customer.UrduName,
-        // },
     ];
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-            <DialogTitle>Customer: {customer.UrduName}</DialogTitle>
+            <DialogTitle>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}
+                >
+                    <Typography>Customer: {customer.UrduName}</Typography>
+                    <Button onClick={onClose}><CloseOutlined /></Button>
+                </Box>
+            </DialogTitle>
             <DialogContent>
                 <Content
                     error={error}
@@ -142,6 +136,8 @@ export const RemarkDialogUI = ({
                     shopper={customer.shopper}
                     id={customer.ACID}
                     dialogFields={dialogFields}
+                    extra={extra}
+                    handleRadioChange={handleRadioChange}
                     secondaryFields={secondaryFields}
                     captureRef={captureRef}
                     handleChange={handleChange}
@@ -197,9 +193,53 @@ const DeliveryForm = () => {
     const [selectedTrader, setSelectedTrader] = useState(null);
     const [cash, setCash] = useState({});
     // const captureRef = useRef();
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(false);
     const { coordinates, address } = useGeolocation();
     const { addEntry } = useEntries();
+    const [secondaryFields, setSecondaryFields] = useState([]);
+    const [extra, setExtra] = useState({
+    }); // for Extra recovery fields
+
+    useEffect(() => {
+        console.log(extra)
+    }, [extra])
+
+    const display = val => {
+        console.log('this is the val', typeof val, extra[val])
+    }
+    const updateExtra = (label, id, val) => {
+        const cleaned = cleanNumbers(val);
+        const number = parseFloat(cleaned);
+        setExtra((prev) => {
+            const updated = { ...prev, [label.trim()]: number };
+            console.log("Updated:", label, id, val);
+            return updated;
+        });
+    };
+
+
+
+    const handleRadioChange = (label) => {
+        setSecondaryFields((prev) =>
+            prev.some((item) => item.name === label) // check by name
+                ? prev.filter((item) => item.name !== label) // remove if exists
+                : [
+                    ...prev,
+                    {
+                        name: label,
+                        col: 2,
+                        align: "left",
+                        pa: 1,
+                        frontsize: 14,
+                        color: "teal",
+                        backgroundColor: "#e0f2f1",
+                        val: extra[label] || 0,
+                        handleChange: (id, val) => updateExtra(label, id, val),
+                    },
+                ]
+        );
+    };
+
     const handleChange = (id, val) => {
         const cleaned = cleanNumbers(val);
         const number = parseFloat(cleaned);
@@ -229,6 +269,9 @@ const DeliveryForm = () => {
                     handleChange={handleChange}
                     customer={customer}
                     error={error}
+                    extra={extra}
+                    secondaryFields={secondaryFields}
+                    handleRadioChange={handleRadioChange}
                     handleNavigate={handleNavigate}
                     handleSubmit={handleSubmit}
                     content={DeliveryContent}
@@ -271,6 +314,7 @@ const DeliveryForm = () => {
                 id: acid,
                 amounts: {
                     cash: cash[acid],
+                    ...extra,
                 },
                 userName: user?.username || "Unknown User",
                 timestamp: new Date().toISOString(),
@@ -285,22 +329,21 @@ const DeliveryForm = () => {
                 });
 
                 await axios.put(`${url}/invoices/deliveryList/update`, {
-                    status: 'delivered',
+                    status: "delivered",
                     id: doc,
-
                 });
 
                 fetchList();
-                closeDialog()
+                closeDialog();
                 setStatus(200);
+                setSecondaryFields([])
+                setExtra({})
             } catch (error) {
-                alert(`${error}`)
+                alert(`${error}`);
                 setStatus(500);
-
             } finally {
                 setLoading(false);
             }
-
         },
         [user.username, cash]
     );
@@ -312,7 +355,7 @@ const DeliveryForm = () => {
     useEffect(() => {
         if (status)
             setTimeout(() => {
-                setStatus(null)
+                setStatus(null);
             }, 2000);
     }, [status]);
 
@@ -332,30 +375,37 @@ const DeliveryForm = () => {
         setDialogOpen(false);
         setSelectedTrader(null);
     }, []);
-    const { customers, loading: listLoading, error, fetchList } = useFetchList("delivery");
+    const {
+        customers,
+        loading: listLoading,
+        error,
+        fetchList,
+        routes
+    } = useFetchList("delivery");
 
     // --- RENDER ---
     return (
         <Container sx={{ p: 0 }}>
             <Box
                 sx={{
-                    display: userRoles.isAdmin || userRoles.isZain ? "block" : "none",
+                    // display: userRoles.isAdmin || userRoles.isZain ? "block" : "none",
                     m: 2,
                 }}
             >
-                <TransporterFilter onFilterChange={fetchList} />
+                <TransporterFilter onFilterChange={fetchList} routes={routes} />
             </Box>
 
             {/* not found */}
-            {(customers.length === 0 && !listLoading) && (
+            {customers.length === 0 && !listLoading && (
                 <Box
                     sx={{
                         display: "flex",
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '69vh'
-                    }}>
-                    <Card text={'no customer found'} code={404} color="grey" />
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "69vh",
+                    }}
+                >
+                    <Card text={"no customer found"} code={404} color="grey" />
                 </Box>
             )}
 
@@ -364,11 +414,16 @@ const DeliveryForm = () => {
                 <Box
                     sx={{
                         display: "flex",
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '69vh'
-                    }}>
-                    <Card text={'your content is loading ...'} code={"Loading"} color="darkblue" />
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "69vh",
+                    }}
+                >
+                    <Card
+                        text={"your content is loading ..."}
+                        code={"Loading"}
+                        color="darkblue"
+                    />
                 </Box>
             )}
 
@@ -377,16 +432,16 @@ const DeliveryForm = () => {
                 <Box
                     sx={{
                         display: "flex",
-                        justifyContent: 'center',
-                        alignItems: 'center',
+                        justifyContent: "center",
+                        alignItems: "center",
                         // height: '69vh'
-                    }}>
-                    <Card text={'posted'} code={status} color="green" />
+                    }}
+                >
+                    <Card text={"posted"} code={status} color="green" />
                 </Box>
             )}
 
-            <Box sx={{ display: listLoading ? 'none' : "grid", gap: 3, mb: "10rem" }}>
-
+            <Box sx={{ display: listLoading ? "none" : "grid", gap: 3, mb: "10rem" }}>
                 {customers.map((customer) => (
                     <TraderCard
                         key={customers.acid}

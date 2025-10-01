@@ -35,6 +35,7 @@ export const useFetchList = (list = "load") => {
         ...new Set(data.filter((item) => item.route).map((item) => item.route)),
       ];
 
+      console.log(ro, data);
       setCustomers(data);
       setRoutes(ro);
     } catch (err) {

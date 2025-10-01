@@ -44,7 +44,6 @@ export const useEntries = () => {
   const makeCashEntry = useCallback(
     async (entry, coordinates, address) => {
       try {
-        console.log(entry);
         const { amounts, id, userName, description, timestamp } = entry;
         const entriesToPost = Object.entries(amounts).filter(
           ([_, amount]) => amount > 0
@@ -56,12 +55,11 @@ export const useEntries = () => {
 
         for (const [method, amount] of entriesToPost) {
           const payload = {
-            paymentMethod:
-              method === "crownWallet"
-                ? "crownone"
-                : method === "meezanBank"
-                ? "mbl"
-                : method,
+            paymentMethod: method.toLowerCase().includes("crown")
+              ? "crownone"
+              : method.toLowerCase().includes("meezan")
+              ? "mbl"
+              : method,
             custId: id,
             receivedAmount: amount,
             userName,

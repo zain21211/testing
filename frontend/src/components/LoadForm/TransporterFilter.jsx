@@ -40,7 +40,7 @@ const TransporterFilter = ({ onFilterChange, routes }) => {
           fontSize: '1.5rem'
           , minWidth: 100
         }}
-        onClick={() => onFilterChange()}>ALL</Button>
+        onClick={() => onFilterChange(route)}>GET</Button>
 
     </Box>
   );

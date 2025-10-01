@@ -10,19 +10,84 @@ import {
     DialogActions,
 } from "@mui/material";
 import SignatureCanvas from "react-signature-canvas";
+import SignaturePad from "./SignaturePad";
 import { formatCurrency } from "../../utils/formatCurrency";
+import RadioButtons from "./RadioButtons";
+const biggerInputTextSize = '1.4rem'; // For text inside input fields
+const biggerShrunkLabelSize = '0.9rem';  // For labels when they shrink (float above)
+const biggerCheckboxLabelSize = '1rem'; // For checkbox labels
 
-const DeliveryContent = ({ id, name, shopper, error, captureRef, dialogFields, secondaryFields, handleChange }) => {
+const bigger = {
+    "& .MuiInputBase-input.Mui-disabled": {
+        textAlign: "right",
+        fontWeight: "bold",
+        fontFamily: "'Poppins', sans-serif",
+        WebkitTextFillColor: "black !important",
+        fontSize: biggerInputTextSize,
+        "&::-webkit-outer-spin-button": {
+            WebkitAppearance: "none",
+            margin: 0,
+        },
+        "&::-webkit-inner-spin-button": {
+            WebkitAppearance: "none",
+            margin: 0,
+        },
+        "&[type=number]": {
+            MozAppearance: "textfield", // Firefox
+        },
+    },
+    "& .MuiInputLabel-root.Mui-disabled": {
+        fontSize: biggerShrunkLabelSize,
+        fontFamily: "'Poppins', sans-serif",
+        color: "rgba(0, 0, 0, 0.6)" // Default disabled label color
+    },
+    "& .MuiInputBase-input": {
+        textAlign: "right",
+        fontSize: biggerInputTextSize,
+        fontWeight: 'bold',
+        fontFamily: "'Poppins', sans-serif",
+        // fontFamily: "'Roboto Mono', monospace",
+        "&::-webkit-outer-spin-button": {
+            WebkitAppearance: "none",
+            margin: 0,
+        },
+        "&::-webkit-inner-spin-button": {
+            WebkitAppearance: "none",
+            margin: 0,
+        },
+        "&[type=number]": {
+            MozAppearance: "textfield", // Firefox
+        },
+    },
+    '& .MuiInputLabel-root.MuiInputLabel-shrink': {
+        fontSize: biggerShrunkLabelSize
+    },
 
+}
+
+const DeliveryContent = ({ id, name,
+    shopper, error, captureRef, dialogFields, extra,
+    secondaryFields, handleChange, handleRadioChange
+}) => {
+    console.log(secondaryFields)
     return (
         <>
             <Box
                 ref={captureRef}
             >
+                <Typography fontSize={'3rem'} fontWeight={'BOLD'} sx={{
+                    fontFamily: "Jameel Noori Nastaleeq, serif",
+                    letterSpacing: 'normal',
+                    // backgroundColor: 'pink',
+                    textAlign: 'center',
 
+                }}>
+                    {name}
+                </Typography>
                 <Box
                     sx={{
-                        p: 5,
+                        px: 1,
+                        py: 1,
                         display: 'flex',
                         gap: 2,
                         justifyContent: 'space-between',
@@ -30,6 +95,7 @@ const DeliveryContent = ({ id, name, shopper, error, captureRef, dialogFields, s
                     }}>
                     <Box
                         sx={{
+                            width: '47%',
                             display: 'grid', gap: 1,
                             gridTemplateColumns: 'repeat(1, 1fr)'
                         }}>
@@ -38,6 +104,7 @@ const DeliveryContent = ({ id, name, shopper, error, captureRef, dialogFields, s
                                 label={field.name}
                                 fullWidth
                                 disabled={field.disabled}
+                                sx={{ ...bigger, textAlign: field.align, }}
                                 InputProps={{
                                     sx: {
                                         textAlign: field.align,
@@ -58,20 +125,57 @@ const DeliveryContent = ({ id, name, shopper, error, captureRef, dialogFields, s
 
                         ))}
                     </Box>
-                    <Box>
-                        <Typography fontSize={'3rem'} fontWeight={'BOLD'} sx={{
-                            fontFamily: "Jameel Noori Nastaleeq, serif",
-                            // backgroundColor: 'pink',
-                            textAlign: 'right',
-
+                    <Box
+                        sx={{
+                            width: { xs: '55%', sm: '55%', md: 'auto' },
                         }}>
-                            {name}
+
+                        {/* for radio buttons */}
+                        <Box sx={{
+                            mb: 3,
+                            display: 'flex',
+                            justifyContent: 'center'
+                        }}>
+                            <RadioButtons
+                                selected={secondaryFields.map(field => field.name)}
+                                handleChange={handleRadioChange}
+                            />
+                        </Box>
+
+                        {secondaryFields.length > 0 && (secondaryFields.map(field => (
+                            <>
+                                <TextField
+                                    label={field.name}
+                                    fullWidth
+                                    disabled={field.disabled}
+                                    sx={{ ...bigger, textAlign: field.align, mb: 1, }}
+                                    InputProps={{
+                                        sx: {
+                                            textAlign: field.align,
+                                            color: field.color,
+                                            backgroundColor: field.backgroundColor,
+                                        },
+                                    }}
+                                    value={
+                                        formatCurrency(extra[field.name])
+                                    }
+                                    onFocus={e => e.target.select()}
+                                    onChange={(e) => field.handleChange(id, e.target.value)}
+                                />
+                            </>
+                        )))}
+                        <Typography fontSize={'2rem'} fontWeight={'BOLD'} backgroundColor={'pink'} textAlign={'right'} margin={'auto'}
+                            sx={{
+                                dir: 'rtl',
+                                px: 1,
+                            }}>
+                            <u>{shopper || 0}</u> :<span style={{
+                                fontFamily: "Jameel Noori Nastaleeq, serif",
+                                letterSpacing: 'normal',
+                                fontSize: '2.5rem',
+                            }}> نگ موصول ہوا</span>
                         </Typography>
-                        {secondaryFields.map(field => (
-                            <Typography fontSize={'2rem'} fontWeight={'BOLD'} backgroundColor={'pink'} textAlign={'center'} margin={'auto'}>
-                                {field.val || 0}
-                            </Typography>
-                        ))}
+
 
                     </Box>
                 </Box>
@@ -82,15 +186,8 @@ const DeliveryContent = ({ id, name, shopper, error, captureRef, dialogFields, s
                         alignContent: 'center',
                         width: '100%'
                     }}>
-                    <SignatureCanvas
-                        penColor="black"
-                        canvasProps={{
-                            width: 450,
-                            height: 400,
-                            className: "sigCanvas", // for CSS styling
-                            style: { backgroundColor: "lightgrey", border: "1px solid #ccc" }, // inline
-                        }}
-                    />
+                    <SignaturePad />
+
                 </Box>
             </Box>
             {error && <Typography color="error">{error}</Typography>}

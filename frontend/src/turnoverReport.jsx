@@ -285,7 +285,7 @@ export const RemarkDialog = React.memo(
         // It contains the full logic (calling onSubmitRemark, closing dialog, etc.).
         // Also pass all other relevant values.
         return (
-            onRender(customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, handleSubmit, onClose)
+            onRender(customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose)
         );
     }
 );

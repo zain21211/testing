@@ -454,6 +454,7 @@ WHERE Id = @Id;
   // Images upadate
   updateImages: async (req, res) => {
     const { acid, customer, shop, agreement } = req.body;
+    console.log(acid);
     try {
       const pool = await imageDb();
       if (!acid) {
@@ -468,11 +469,21 @@ WHERE Id = @Id;
       };
 
       const query = `
-        UPDATE COAIMAGES SET 
-          Customer=@customer,
-          Shop=@shop,
-          Agreement=@agreement
-        WHERE acid=@acid
+        IF EXISTS (SELECT 1 FROM COAIMAGES WHERE acid = @acid)
+BEGIN
+    UPDATE COAIMAGES
+    SET 
+        Customer = @customer,
+        Shop = @shop,
+        Agreement = @agreement
+    WHERE acid = @acid;
+END
+ELSE
+BEGIN
+    INSERT INTO COAIMAGES (acid, Customer, Shop, Agreement)
+    VALUES (@acid, @customer, @shop, @agreement);
+END
+
     `;
 
       const request = pool.request();

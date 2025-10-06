@@ -1,6 +1,8 @@
 const mssql = require("mssql");
 const dbConnection = require("../database/connection"); // Import your database connection
 const imageDb = require("../database/imagedb"); // Import your database connection
+// const { getPakistanISODateString } = require("./CashEntryControllers");
+const getPakistanISODateString = require("../utils/PakTime");
 
 function cleanNumbers(input) {
   if (!input) return 0;
@@ -415,7 +417,7 @@ WHERE Id = @Id;
 
   // Images insert
   createImages: async (req, res) => {
-    const { acid, customer, shop, agreement } = req.body;
+    const { acid, customer, shop, agreement, username, date } = req.body;
     try {
       const pool = await imageDb();
       if (!acid) {
@@ -430,14 +432,16 @@ WHERE Id = @Id;
       };
 
       const query = `
-      INSERT INTO coaimages ( ACID, Customer, Shop, Agreement)
-      VALUES ( @acid, @customer, @shop, @agreement)
+      INSERT INTO coaimages ( ACID, Customer, Shop, Agreement, imageby, datetime)
+      VALUES ( @acid, @customer, @shop, @agreement, @username, @Date)
     `;
 
       const request = pool.request();
       request.input("acid", mssql.Int, acid);
       request.input("customer", mssql.Image, toBuffer(customer));
       request.input("shop", mssql.Image, toBuffer(shop));
+      request.input("username", mssql.VarChar, username || "unknown");
+      request.input("Date", mssql.DateTime, date);
       request.input("agreement", mssql.Image, toBuffer(agreement));
 
       await request.query(query);
@@ -453,8 +457,17 @@ WHERE Id = @Id;
 
   // Images upadate
   updateImages: async (req, res) => {
-    const { acid, customer, shop, agreement } = req.body;
-    console.log(acid);
+    const {
+      acid,
+      customer,
+      shop,
+      agreement,
+      username,
+      date = new Date(),
+    } = req.body;
+
+    const dateTime = getPakistanISODateString(date);
+    console.log("Updating images with date:", new Date(dateTime));
     try {
       const pool = await imageDb();
       if (!acid) {
@@ -473,6 +486,8 @@ WHERE Id = @Id;
 BEGIN
     UPDATE COAIMAGES
     SET 
+        datetime=@Date,
+        imageby=@username,
         Customer = @customer,
         Shop = @shop,
         Agreement = @agreement
@@ -480,8 +495,8 @@ BEGIN
 END
 ELSE
 BEGIN
-    INSERT INTO COAIMAGES (acid, Customer, Shop, Agreement)
-    VALUES (@acid, @customer, @shop, @agreement);
+    INSERT INTO COAIMAGES (acid, Customer, Shop, Agreement, imageby, datetime)
+    VALUES (@acid, @customer, @shop, @agreement, @username, @Date);
 END
 
     `;
@@ -491,6 +506,8 @@ END
       request.input("customer", mssql.Image, toBuffer(customer));
       request.input("shop", mssql.Image, toBuffer(shop));
       request.input("agreement", mssql.Image, toBuffer(agreement));
+      request.input("username", mssql.VarChar, username || "unknown");
+      request.input("Date", mssql.VarChar, dateTime);
 
       await request.query(query);
 

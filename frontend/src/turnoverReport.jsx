@@ -489,7 +489,7 @@ const TraderInfoCard = ({ trader }) => (
 const TraderDetailsCard = ({ trader, fields }) => {
     const renderField = (key, trader, value) => {
         if (value === undefined || value === null) return null;
-        if (["Sale Date", "Recovery Date", "Credit Limit", "Balance", "number"].includes(key)) return null;
+        if (["Sale Date", "Recovery Date", "Credit Limit", "Balance", "number", 'doc'].includes(key)) return null;
         if (key === "Turnover Days" && value < 7) return null;
 
         let formattedDate = "";
@@ -508,6 +508,8 @@ const TraderDetailsCard = ({ trader, fields }) => {
             extraInfo = formatCurrency(trader["Balance"]);
         } else if (key === "ACID" && trader["number"]) {
             extraInfo = trader["number"];
+        } else if (key === "UrduName" && trader["doc"]) {
+            extraInfo = trader["doc"];
         }
 
         const displayValue = typeof value === "number" ? formatCurrency(value) : value;
@@ -534,8 +536,19 @@ const TraderDetailsCard = ({ trader, fields }) => {
                     color: isOverdue || isDateOld ? "red" : "text.secondary",
                 }}
             >
-                <strong>{isUrdu ? "" : `${label}: `}</strong>
-                {displayValue}
+                <span
+                    style={{
+                        display: "inline-flex",
+                        gap: "4px",
+                        flexDirection: isUrdu ? "row-reverse" : "row",
+                    }}
+                >
+                    <strong>{isUrdu ? "" : `${label}`}</strong>
+                    <span>{displayValue}</span>
+                </span>
+
+
+
                 {(formattedDate || extraInfo) && (
                     <span style={{ color: isOverdue ? "green" : isDateOld ? "red" : "" }}>
                         {` | ${formattedDate || extraInfo}`}

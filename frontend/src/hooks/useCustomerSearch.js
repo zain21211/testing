@@ -129,14 +129,16 @@ export const useCustomerSearch = ({
   // Sync master list
   useEffect(() => {
     isCust && isCust(data.length !== 0);
-    // alert(`${data.length !== 0}`);
+
     // setLocalCustomerList(data);
 
-    if (!isEqual(data, localCustomerList)) {
+    if (!isEqual(data, localCustomerList) && fetchError?.status === 404) {
       setLocalCustomerList(data);
     }
+
     if (data.length > 0) {
       if (!isAdmin && (formType === "debit" || formType === "credit")) return;
+      setLocalCustomerList(data);
       const shouldUpdate = !isEqual(data, masterCustomerList);
       if (shouldUpdate) {
         dispatch(persistMasterCustomerList(data));

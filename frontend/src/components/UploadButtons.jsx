@@ -1,72 +1,87 @@
-import { Box, Button } from "@mui/material";
+import { useState } from "react";
+import {
+    Box,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogActions,
+} from "@mui/material";
 
 export default function UploadButtons({ handleImageChange }) {
+    const [open, setOpen] = useState(false);
+    const [currentType, setCurrentType] = useState("");
+
+    // Open the dialog for selected type
+    const handleOpen = (type) => {
+        setCurrentType(type);
+        setOpen(true);
+    };
+
+    // Handle file input click
+    const handleSelect = (source) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+
+        // If user chose camera, add capture
+        if (source === "camera") input.capture = "environment";
+
+        input.onchange = (e) => handleImageChange(e, currentType);
+        input.click();
+        setOpen(false);
+    };
+
     return (
-        <Box
-            sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2, width: "100%" }}
-        >
-            {/* Customer photo input */}
-            <input
-                accept="image/*"
-                capture="user"
-                style={{ display: "none" }}
-                id="customer-upload"
-                type="file"
-                onChange={(e) => handleImageChange(e, "customer")}
-            />
-            <label htmlFor="customer-upload">
-                <Button
-                    variant="contained"
-                    component="span"
-                    color="primary"
-                    fullWidth
-                    sx={{ fontSize: "1.2rem" }}
-                >
-                    Customer
-                </Button>
-            </label>
+        <>
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: 2,
+                    width: "100%",
+                }}
+            >
+                {[
+                    { label: "Customer", color: "primary" },
+                    { label: "Shop", color: "secondary" },
+                    { label: "Agreement", color: "secondary" },
+                ].map(({ label, color }) => (
+                    <Button
+                        key={label}
+                        variant="contained"
+                        color={color}
+                        fullWidth
+                        sx={{ fontSize: "1.2rem" }}
+                        onClick={() => handleOpen(label.toLowerCase())}
+                    >
+                        {label}
+                    </Button>
+                ))}
+            </Box>
 
-            {/* Shop photo input */}
-            <input
-                accept="image/*"
-                capture="environment"
-                style={{ display: "none" }}
-                id="shop-upload"
-                type="file"
-                onChange={(e) => handleImageChange(e, "shop")}
-            />
-            <label htmlFor="shop-upload">
-                <Button
-                    variant="contained"
-                    component="span"
-                    color="secondary"
-                    fullWidth
-                    sx={{ fontSize: "1.2rem" }}
-                >
-                    Shop
-                </Button>
-            </label>
-
-            {/* Agreement photo input */}
-            <input
-                accept="image/*"
-                capture="environment"
-                style={{ display: "none" }}
-                id="agreement-upload"
-                type="file"
-                onChange={(e) => handleImageChange(e, "agreement")}
-            />
-            <label htmlFor="agreement-upload">
-                <Button
-                    variant="contained"
-                    component="span"
-                    color="secondary"
-                    fullWidth
-                    sx={{ fontSize: "1.2rem" }}
-                >
-                    Agreement
-                </Button>
-            </label>
-        </Box>
+            {/* Dialog for choosing source */}
+            <Dialog open={open} onClose={() => setOpen(false)}>
+                <DialogTitle>Select Image Source</DialogTitle>
+                <DialogActions sx={{ flexDirection: "column", gap: 1, p: 2 }}>
+                    <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => handleSelect("camera")}
+                    >
+                        📸 Take Photo
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={() => handleSelect("file")}
+                    >
+                        🖼️ Choose from Gallery
+                    </Button>
+                    <Button color="error" onClick={() => setOpen(false)}>
+                        Cancel
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 }

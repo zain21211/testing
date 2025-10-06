@@ -35,7 +35,7 @@ import DeliveryContent from "./DeliveryContent";
 import useGeolocation from "../../hooks/geolocation";
 import { cleanNumbers, cleanString } from "../../utils/cleanString";
 import Card from "../Card";
-import { Close, CloseOutlined } from "@mui/icons-material";
+import { Close, CloseOutlined, ContactSupportOutlined } from "@mui/icons-material";
 
 // Local Component Imports (assuming they are in the same directory or configured path)
 // import DataTable from "./table";
@@ -135,6 +135,7 @@ export const RemarkDialogUI = ({
                     name={customer.UrduName}
                     shopper={customer.shopper}
                     id={customer.ACID}
+                    doc={customer.doc}
                     dialogFields={dialogFields}
                     extra={extra}
                     handleRadioChange={handleRadioChange}
@@ -305,11 +306,41 @@ const DeliveryForm = () => {
         return data;
     };
 
+    const posting = async (newEntry, img) => {
+        try {
+            console.log('this is the entry', newEntry, typeof img)
+
+            const coordinates = newEntry.coordinates;
+            const address = newEntry.address;
+
+            await addEntry(newEntry, coordinates, address);
+
+            await axios.post(`${url}/customers/createDeliveryImages`, {
+                acid: newEntry.id,
+                img,
+            });
+
+            await axios.put(`${url}/invoices/deliveryList/update`, {
+                status: "delivered",
+                id: newEntry.doc,
+            });
+        } catch (error) {
+            console.error(error);
+            console.error(error.message);
+            throw error;
+        }
+    }
     const handlePost = useCallback(
         async (acid, doc, captureRef) => {
             setLoading(true);
+
             const img = await handleCapture(captureRef);
 
+            const pendingDeliveryIamges = JSON.parse(localStorage.getItem('pendingDeliveryIamges') || "[]");
+            pendingDeliveryIamges.push(img);
+            localStorage.setItem('pendingDeliveryIamges', JSON.stringify(pendingDeliveryIamges));
+
+            console.log("extra:", extra);
             const newEntry = {
                 id: acid,
                 amounts: {
@@ -318,31 +349,43 @@ const DeliveryForm = () => {
                 },
                 userName: user?.username || "Unknown User",
                 timestamp: new Date().toISOString(),
+                coordinates,
+                address,
+                doc
             };
 
+            const pendingDeliveryEntry = JSON.parse(localStorage.getItem('pendingDeliveryEntry') || "[]");
+            pendingDeliveryEntry.push(newEntry);
+            localStorage.setItem('pendingDeliveryEntry', JSON.stringify(pendingDeliveryEntry));
+
             try {
-                await addEntry(newEntry, coordinates, address);
+                // await addEntry(newEntry, coordinates, address);
 
-                await axios.post(`${url}/customers/createDeliveryImages`, {
-                    acid,
-                    img,
-                });
+                // await axios.post(`${url}/customers/createDeliveryImages`, {
+                //     acid,
+                //     img,
+                // });
 
-                await axios.put(`${url}/invoices/deliveryList/update`, {
-                    status: "delivered",
-                    id: doc,
-                });
+                // await axios.put(`${url}/invoices/deliveryList/update`, {
+                //     status: "delivered",
+                //     id: doc,
+                // });
+                console.log('posting the entry with', newEntry, typeof img)
+
+                await posting(newEntry, img)
 
                 fetchList();
-                closeDialog();
-                setStatus(200);
+                setStatus(800);
                 setSecondaryFields([])
-                setExtra({})
+                // setExtra({})
+                localStorage.removeItem('pendingDeliveryIamges');
+                localStorage.removeItem('pendingDeliveryEntry');
             } catch (error) {
-                alert(`${error}`);
+                console.error("Posting error:", error);
                 setStatus(500);
             } finally {
                 setLoading(false);
+                closeDialog();
             }
         },
         [user.username, cash]
@@ -359,11 +402,11 @@ const DeliveryForm = () => {
             }, 2000);
     }, [status]);
 
-    useEffect(() => {
-        if (!dialogOpen) {
-            fetchList();
-        }
-    }, [dialogOpen]); // Refetch when dialog closes
+    // useEffect(() => {
+    //     if (!dialogOpen) {
+    //         fetchList();
+    //     }
+    // }, [dialogOpen]); // Refetch when dialog closes
 
     // --- DIALOG HANDLERS ---
     const openDialog = useCallback((trader) => {

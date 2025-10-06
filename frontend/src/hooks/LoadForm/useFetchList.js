@@ -1,9 +1,11 @@
 import axios from "axios";
 import { useState, useCallback } from "react";
+import { useLocalStorageState } from "../LocalStorage";
+
 const url = import.meta.env.VITE_API_URL;
 
 export const useFetchList = (list = "load") => {
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useLocalStorageState(`${list}List`, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [routes, setRoutes] = useState([]);
@@ -30,14 +32,16 @@ export const useFetchList = (list = "load") => {
       //   if (!response.ok) {
       //     throw new Error("Failed to fetch customers");
       //   }
-      const data = response.data;
+      const { data, status } = response;
       const ro = [
         ...new Set(data.filter((item) => item.route).map((item) => item.route)),
       ];
 
-      console.log(ro, data);
-      setCustomers(data);
-      setRoutes(ro);
+      if ([200, 400, 404].includes(status)) {
+        console.log("this si sane", status);
+        setRoutes(ro);
+        setCustomers(data);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

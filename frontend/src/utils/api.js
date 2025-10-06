@@ -120,7 +120,9 @@ export const saveCustomer = async (selectedCustomer, finalFormData, images) => {
         client.post("/customers/create", finalFormData),
         client.post("/customers/createImages", {
           ...images,
-          acid: finalFormData.acid, // assuming acid comes from formData
+          acid: finalFormData.acid,
+          date: finalFormData.date, // assuming acid comes from formData
+          username: finalFormData.username, // assuming acid comes from formData
         }),
       ]);
 
@@ -139,6 +141,8 @@ export const saveCustomer = async (selectedCustomer, finalFormData, images) => {
         client.put("/customers/updateImages", {
           ...images,
           acid: selectedCustomer.acid,
+          date: finalFormData.date, // assuming acid comes from formData
+          username: finalFormData.username,
         }),
       ]);
 

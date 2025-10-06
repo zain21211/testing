@@ -1,5 +1,6 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection");
+const getPakistanISODateString = require("../utils/PakTime");
 
 // Moved to top level
 const paymentModes = {
@@ -130,34 +131,6 @@ const expenseMethods = {
     narrationPrefix: "REPAIR: CASH PAID BY",
   },
 };
-
-function getPakistanISODateString() {
-  const now = new Date();
-  const options = {
-    timeZone: "Asia/Karachi",
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  };
-
-  const formatter = new Intl.DateTimeFormat("en-GB", options);
-  const parts = formatter.formatToParts(now);
-  const get = (type) => parts.find((p) => p.type === type)?.value;
-
-  const year = get("year");
-  const month = get("month");
-  const day = get("day");
-  const hour = get("hour");
-  const minute = get("minute");
-  const second = get("second");
-
-  // No timezone offset for DATETIME2
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}`; // Pakistan Standard Time (PKT) is UTC+5
-}
 
 const CashEntryController = {
   insertEntry: async (req, res) => {

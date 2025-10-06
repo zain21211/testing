@@ -65,11 +65,10 @@ const bigger = {
 
 }
 
-const DeliveryContent = ({ id, name,
+const DeliveryContent = ({ id, name, doc,
     shopper, error, captureRef, dialogFields, extra,
     secondaryFields, handleChange, handleRadioChange
 }) => {
-    console.log(secondaryFields)
     return (
         <>
             <Box
@@ -82,7 +81,10 @@ const DeliveryContent = ({ id, name,
                     textAlign: 'center',
 
                 }}>
-                    {name}
+                    {doc}
+                    <span style={{
+                        padding: '0 1rem', color: 'pink'
+                    }}>-</span> {name}
                 </Typography>
                 <Box
                     sx={{

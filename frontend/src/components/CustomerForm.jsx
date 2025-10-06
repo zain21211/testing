@@ -31,7 +31,7 @@ import useUpdateCustomer from "../hooks/useUpdateCustomer";
 import { useLocalStorageState } from "../hooks/LocalStorage";
 import useGeolocation from "../hooks/geolocation";
 import { saveCustomer } from "../utils/api";
-import { date } from "zod/v4";
+
 
 const url = import.meta.env.VITE_API_URL;
 
@@ -326,7 +326,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                                     margin: "auto",
                                 }}
                             >
-                                Create Account
+                                {selectedCustomer ? "Update" : "Create"}
                             </Button>
                         </Box>
                     </Box>

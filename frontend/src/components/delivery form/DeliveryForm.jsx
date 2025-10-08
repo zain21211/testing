@@ -36,6 +36,7 @@ import useGeolocation from "../../hooks/geolocation";
 import { cleanNumbers, cleanString } from "../../utils/cleanString";
 import Card from "../Card";
 import { Close, CloseOutlined, ContactSupportOutlined } from "@mui/icons-material";
+import { set } from "lodash";
 
 // Local Component Imports (assuming they are in the same directory or configured path)
 // import DataTable from "./table";
@@ -193,6 +194,7 @@ const DeliveryForm = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState(null);
     const [cash, setCash] = useState({});
+    const [pendingEntries, setPendingEntries] = useLocalStorageState('pendingDeliveryEntries', []);
     // const captureRef = useRef();
     const [loading, setLoading] = useState(false);
     const { coordinates, address } = useGeolocation();
@@ -202,12 +204,9 @@ const DeliveryForm = () => {
     }); // for Extra recovery fields
 
     useEffect(() => {
-        console.log(extra)
-    }, [extra])
+        console.log('Pending Entries:', pendingEntries);
+    }, [pendingEntries]);
 
-    const display = val => {
-        console.log('this is the val', typeof val, extra[val])
-    }
     const updateExtra = (label, id, val) => {
         const cleaned = cleanNumbers(val);
         const number = parseFloat(cleaned);
@@ -217,8 +216,6 @@ const DeliveryForm = () => {
             return updated;
         });
     };
-
-
 
     const handleRadioChange = (label) => {
         setSecondaryFields((prev) =>
@@ -307,18 +304,34 @@ const DeliveryForm = () => {
     };
 
     const posting = async (newEntry, img) => {
+        let entry = {};
         try {
-            console.log('this is the entry', newEntry, typeof img)
-
             const coordinates = newEntry.coordinates;
             const address = newEntry.address;
 
-            await addEntry(newEntry, coordinates, address);
+            const statusCash = await addEntry(newEntry, coordinates, address);
 
-            await axios.post(`${url}/customers/createDeliveryImages`, {
+            if (!statusCash) {
+                entry[newEntry.id] = { ...newEntry };
+                setPendingEntries((prev) => [...prev, newEntry]);
+                localStorage.removeItem('pendingDeliveryEntry');
+            } else {
+                throw error("Failed to post cash entry");
+            }
+
+            const { status: statusImg } = await axios.post(`${url}/customers/createDeliveryImages`, {
                 acid: newEntry.id,
                 img,
             });
+
+            if (statusImg !== 200 || statusImg !== 201) {
+                setPendingEntries(prev => ({
+                    ...prev,
+                    [newEntry.id]: { ...(prev[newEntry.id] || {}), img },
+                }));
+
+            }
+            localStorage.removeItem('pendingDeliveryImages');
 
             await axios.put(`${url}/invoices/deliveryList/update`, {
                 status: "delivered",
@@ -330,17 +343,17 @@ const DeliveryForm = () => {
             throw error;
         }
     }
+
     const handlePost = useCallback(
         async (acid, doc, captureRef) => {
             setLoading(true);
 
             const img = await handleCapture(captureRef);
 
-            const pendingDeliveryIamges = JSON.parse(localStorage.getItem('pendingDeliveryIamges') || "[]");
-            pendingDeliveryIamges.push(img);
-            localStorage.setItem('pendingDeliveryIamges', JSON.stringify(pendingDeliveryIamges));
+            const pendingDeliveryImages = JSON.parse(localStorage.getItem('pendingDeliveryIamges') || "[]");
+            pendingDeliveryImages.push({ img, acid });
+            localStorage.setItem('pendingDeliveryImages', JSON.stringify(pendingDeliveryImages));
 
-            console.log("extra:", extra);
             const newEntry = {
                 id: acid,
                 amounts: {
@@ -378,8 +391,6 @@ const DeliveryForm = () => {
                 setStatus(800);
                 setSecondaryFields([])
                 // setExtra({})
-                localStorage.removeItem('pendingDeliveryIamges');
-                localStorage.removeItem('pendingDeliveryEntry');
             } catch (error) {
                 console.error("Posting error:", error);
                 setStatus(500);

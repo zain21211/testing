@@ -34,8 +34,15 @@ const PaymentVoucher = () => {
         submitting,
         error,
         success,
+        entries,
         handleSubmit: submitVoucher,
-    } = usePayVouSub();
+    } = usePayVouSub({
+        onSubmissionSuccess: () => {
+            clearForm();
+            descRef?.current?.focus();
+            // clearCustomerSelections();
+        },
+    });
 
     const handleVoucherSubmit = async (event) => {
         event.preventDefault();
@@ -60,6 +67,7 @@ const PaymentVoucher = () => {
                 <PayVouForm
                     isCredit={isCredit}
                     isDebit={isDebit}
+                    entries={entries}
                     onSelectCredit={getCreditCusts}
                     onSetIsCredit={handleCreditFlag}
                     onSelectDebit={getDebitCusts}

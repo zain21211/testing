@@ -2,9 +2,9 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection"); // Ensure this returns sql.connect(config)
 
-exports.getSalesReport = async (req, res) => {
+const getSalesReport = async (req, res) => {
   const {
-    startDate = new Date("2020-01-01").toISOString().split("T")[0],
+    startDate = new Date().toISOString().split("T")[0],
     endDate,
     page = "",
     route = "",
@@ -85,4 +85,46 @@ CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
     console.error("Error fetching sales report:", error);
     res.status(500).json({ error: "Failed to fetch sales report" });
   }
+};
+
+const updateOnHoldStatus = async (req, res) => {
+  const { id, status } = req.body;
+  const s = "estimate";
+
+  if (!id || !status) {
+    return res
+      .status(400)
+      .json({ error: "Missing id or status in request body" });
+  }
+
+  try {
+    const pool = await dbConnection();
+    const result = await pool
+      .request()
+      .input("id", sql.Int, id)
+      .input("status", sql.VarChar, status)
+      .input("s", sql.VarChar, s)
+      .query(
+        `UPDATE PSDetail
+SET status = CASE
+    WHEN status = @status THEN @s
+    ELSE @status
+END
+WHERE doc = @id AND type = 'sale';
+`
+      );
+    // if (result.rowsAffected[0] === 0) {
+    //   return res.status(404).json({ error: "No record found to update" });
+    // }
+
+    res.status(200).json({ message: "Status updated successfully" });
+  } catch (error) {
+    console.error("Error updating status:", error);
+    res.status(500).json({ error: "Failed to update status", error });
+  }
+};
+
+module.exports = {
+  getSalesReport,
+  putOnHoldStatus: updateOnHoldStatus,
 };

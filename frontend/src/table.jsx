@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Typography, useTheme, useMediaQuery } from "@mui/material"; // Import useTheme and useMediaQuery
 import Skeleton from "@mui/material/Skeleton";
 import { VariableSizeList } from "react-window";
+import { useLongPress } from "./hooks/useLongPress";
 
 // --- Helper Components & Hooks ---
 
@@ -73,6 +74,7 @@ const DataTable = ({
   handleDoubleClick,
   handleClick,
   tableHeight = 500,
+  handleLongPress,
 }) => {
   const navigate = useNavigate();
   const currentBreakpoint = useWidth(); // Get the current breakpoint ('xs', 'sm', etc.)
@@ -386,10 +388,13 @@ const DataTable = ({
             ) : (
               tableData.map((row, index) => {
                 const { rowSx, shouldHighlightRow } = getRowStyles(row);
+                const longPressProps = useLongPress(() => handleLongPress(row.Doc || row.doc), 800);
+
                 return (
                   <TableRow
                     hover
                     sx={rowSx}
+                    {...longPressProps}
                     onClick={
                       row.Type?.toLowerCase().includes("sale")
                         ? () => handleDocumentClick(row)

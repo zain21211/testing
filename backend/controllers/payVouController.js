@@ -74,8 +74,14 @@ const byUser = {
   },
 
   post: async (req, res) => {
-    const { date, accounts, amount, description, entryDateTime, user } =
-      req.body;
+    const {
+      date,
+      accounts,
+      amount,
+      description,
+      entryDateTime = new Date(),
+      user,
+    } = req.body;
 
     const time = new Date(entryDateTime);
     time.setHours(time.getHours() + 5);

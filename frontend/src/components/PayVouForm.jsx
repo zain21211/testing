@@ -5,6 +5,7 @@ import { DebitSection } from './DebitSection';
 import { formatCurrency } from '../utils/formatCurrency';
 
 export const PayVouForm = ({
+    entries,
     isCredit,
     isDebit,
     onSelectCredit,
@@ -39,6 +40,12 @@ export const PayVouForm = ({
         <Typography variant="h5" component="h2" gutterBottom>
             Payment Voucher
         </Typography>
+
+        {entries.length > 0 && (
+            <Typography variant="body1" gutterBottom>
+                Pending Vouchers: {entries.length} | Total Amount: {formatCurrency(entries.reduce((sum, entry) => sum + (parseFloat(entry.amount) || 0), 0))}
+            </Typography>
+        )}
 
         <CreditSection
             onSelectCredit={onSelectCredit}

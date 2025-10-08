@@ -9,6 +9,7 @@ import axios from 'axios';
 import useLocalStorageState from 'use-local-storage-state';
 import io from "socket.io-client";
 import { useNavigate } from 'react-router-dom';
+import { useLongPress } from './hooks/useLongPress';
 
 
 // GLOBAL CONSTANTS
@@ -82,8 +83,18 @@ const useFilters = () => {
             { id: "route" },
             { id: "estimate #" },
             { id: "name" },
+            { id: "status" },
         ],
     });
+
+    useEffect(() => {
+        setFilters([
+            { id: "route" },
+            { id: "status" },
+            { id: "estimate #" },
+            // { id: "name" },
+        ]);
+    }, []);
 
     const [endDate, setEndDate] = useLocalStorageState('endDate', {
         defaultValue: Today,
@@ -193,7 +204,7 @@ const useDataFetching = () => {
 // ====== COMPONENTS ======
 
 // Filter Input Component
-const FilterInput = React.memo(({ id, value, onChange, options = [] }) => {
+const FilterInput = React.memo(({ onSubmit, id, value, onChange, options = [] }) => {
     const [inputValue, setInputValue] = useState(value);
 
     useEffect(() => {
@@ -203,10 +214,14 @@ const FilterInput = React.memo(({ id, value, onChange, options = [] }) => {
     return (
         <Autocomplete
             freeSolo
-            options={options}
+            options={Array.isArray(options) ? options : []}
             inputValue={inputValue}
             onInputChange={(event, newInputValue) => setInputValue(newInputValue)}
             onBlur={() => onChange(id, inputValue)}
+            onChange={(event, newValue) => {
+                setInputValue(newValue);
+                onChange(id, newValue);
+            }}
             renderInput={(params) => (
                 <TextField
                     {...params}
@@ -241,7 +256,7 @@ const LoadingState = () => (
 );
 
 // Filter Section Component
-const FilterSection = ({ filters, routes, onFilterChange, onSubmit }) => {
+const FilterSection = ({ filters, routes, statuses, onFilterChange, onSubmit }) => {
     return (
         <>
             <Box
@@ -256,9 +271,10 @@ const FilterSection = ({ filters, routes, onFilterChange, onSubmit }) => {
             >
                 {filters?.map(filter => (
                     <FilterInput
+                        onSubmit={onSubmit}
                         key={filter.id}
                         id={filter.id}
-                        options={filter.id.includes("route") ? routes : []}
+                        options={filter.id.includes("route") ? routes : filter.id.includes("status") ? statuses : []}
                         value={filter.name || ""}
                         onChange={onFilterChange}
                     />
@@ -303,8 +319,19 @@ const SummarySection = ({ tableData, amount, isAllowed }) => {
 };
 
 // Results Table Component
-const ResultsTable = ({ data, columns }) => {
+const ResultsTable = ({ data, columns, fetch, s }) => {
     const { handleNavigate } = useHandleNavigate()
+    const handleLongPress = async (id) => {
+        const status = s || "onHold";
+        const confirmation = window.confirm(`Are you sure you want to put this on ${status}?`)
+
+        if (confirmation) {
+            await axios.put(`${url}/sale-report/onhold`, { id, status: "onHold" });
+            await fetch();
+        } else {
+            console.log("Update cancelled");
+        }
+    };
     return (
         <Box sx={{ fontSize: "2rem" }}>
             <DataTable
@@ -313,6 +340,7 @@ const ResultsTable = ({ data, columns }) => {
                 rowKey={uniqueRowKey}
                 showPagination={true}
                 handleClick={handleNavigate}
+                handleLongPress={handleLongPress}
                 rowsPerPageOptions={[5, 10, 25]}
                 sx={{
                     '& .MuiDataGrid-cell': {
@@ -356,6 +384,11 @@ const PackingList = () => {
         fetchData
     } = useDataFetching();
 
+    useEffect(() => {
+        handleSubmit();
+    }, [filters]);
+
+    const statuses = ['estimate', 'onHold', 'invoice',];
     // Memoized columns
     const memoizedColumns = useMemo(() => {
         return [
@@ -398,18 +431,21 @@ const PackingList = () => {
 
     // Handle form submission
     const handleSubmit = async () => {
+        const [route, invoiceStatus, doc, customer] = filters.map(f => f?.name || null);
+
         const requestBody = {
-            endDate: new Date(endDate).toISOString().split("T")[0] || null,
             startDate: null,
-            route: filters[0].name || null,
-            doc: filters[1].name || null,
-            invoiceStatus: "estimate",
+            endDate: endDate ? new Date(endDate).toISOString().split("T")[0] : null,
+            route,
+            doc,
+            invoiceStatus: invoiceStatus || "estimate",
             page: "pack",
-            customer: filters[2].name || '',
+            customer: customer || '',
         };
 
         await fetchData(requestBody);
     };
+
 
     return (
         <Box sx={{ px: { xs: 1, sm: 5 }, maxWidth: '1600px', margin: 'auto' }}>
@@ -419,9 +455,11 @@ const PackingList = () => {
             <FilterSection
                 filters={filters}
                 routes={routes}
+                statuses={statuses}
                 onFilterChange={handleFilterChange}
                 onSubmit={handleSubmit}
             />
+
 
             {loading && <LoadingState />}
 
@@ -436,6 +474,8 @@ const PackingList = () => {
                     <ResultsTable
                         data={memoizedData}
                         columns={memoizedColumns}
+                        fetch={handleSubmit}
+                        s={filters[1]?.name === "onHold" ? "estimate" : "onHold"}
                     />
                 </Box>
             )}

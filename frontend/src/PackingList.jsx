@@ -388,7 +388,10 @@ const PackingList = () => {
         handleSubmit();
     }, [filters]);
 
-    const statuses = ['estimate', 'onHold', 'invoice',];
+    let statuses = ['estimate', 'onHold'];
+
+    if (isAllowed)
+        statuses.push('invoice')
     // Memoized columns
     const memoizedColumns = useMemo(() => {
         return [

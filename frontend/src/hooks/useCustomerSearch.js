@@ -125,18 +125,34 @@ export const useCustomerSearch = ({
         : localCustomerList,
     [route, localCustomerList]
   );
-
+  useEffect(() => {
+    console.log("All customers updated:", localCustomerList, data);
+  }, [localCustomerList, data]);
   // Sync master list
   useEffect(() => {
     isCust && isCust(data.length !== 0);
-
+    const status = fetchError?.status;
     // setLocalCustomerList(data);
 
-    if (!isEqual(data, localCustomerList) && fetchError?.status === 404) {
+    // if (!isEqual(data, localCustomerList) && fetchError?.status === 404) {
+    // }
+    console.log(
+      "Data changed:",
+      (navigator.onLine || !isEqual(data, localCustomerList)) &&
+        status !== 500 &&
+        status !== undefined &&
+        status !== null,
+      data,
+      localCustomerList,
+      status
+    );
+    if (
+      (navigator.onLine || !isEqual(data, localCustomerList)) &&
+      status !== 500 &&
+      status !== undefined &&
+      status !== null
+    ) {
       setLocalCustomerList(data);
-    }
-
-    if (data.length > 0) {
       if (!isAdmin && (formType === "debit" || formType === "credit")) return;
       setLocalCustomerList(data);
       const shouldUpdate = !isEqual(data, masterCustomerList);
@@ -145,7 +161,7 @@ export const useCustomerSearch = ({
       }
     }
     // 🚨 don't add masterCustomerList here, or you loop forever
-  }, [data, dispatch]);
+  }, [data]);
 
   // useEffect(() => {
   //   if (onSelect) onSelect(selectedCustomer);

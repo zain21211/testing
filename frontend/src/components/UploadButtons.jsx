@@ -7,7 +7,7 @@ import {
     DialogActions,
 } from "@mui/material";
 
-export default function UploadButtons({ handleImageChange }) {
+export default function UploadButtons({ handleImageChange, loading }) {
     const [open, setOpen] = useState(false);
     const [currentType, setCurrentType] = useState("");
 
@@ -41,6 +41,7 @@ export default function UploadButtons({ handleImageChange }) {
                     width: "100%",
                 }}
             >
+                {loading && <p>Loading images...</p>}
                 {[
                     { label: "Customer", color: "primary" },
                     { label: "Shop", color: "secondary" },

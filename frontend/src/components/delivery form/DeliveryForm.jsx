@@ -310,13 +310,13 @@ const DeliveryForm = () => {
             const address = newEntry.address;
 
             const statusCash = await addEntry(newEntry, coordinates, address);
-
+            console.log('Cash entry status:', statusCash);
             if (!statusCash) {
                 entry[newEntry.id] = { ...newEntry };
                 setPendingEntries((prev) => [...prev, newEntry]);
                 localStorage.removeItem('pendingDeliveryEntry');
             } else {
-                throw error("Failed to post cash entry");
+                throw error;
             }
 
             const { status: statusImg } = await axios.post(`${url}/customers/createDeliveryImages`, {
@@ -337,9 +337,10 @@ const DeliveryForm = () => {
                 status: "delivered",
                 id: newEntry.doc,
             });
+
         } catch (error) {
             console.error(error);
-            console.error(error.message);
+            // console.error(error.message);
             throw error;
         }
     }

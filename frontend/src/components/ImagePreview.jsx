@@ -1,7 +1,7 @@
 import { Box, Dialog } from "@mui/material";
 import { useState } from "react";
 
-export default function ImagePreview({ images }) {
+export default function ImagePreview({ images, loading }) {
     const [open, setOpen] = useState(false);
     const [selectedImg, setSelectedImg] = useState(null);
 
@@ -25,6 +25,7 @@ export default function ImagePreview({ images }) {
             justifyContent={"center"}
             alignItems="center"
         >
+            {loading && <p>Loading images...</p>}
             {images.customer && (
                 <Box onClick={() => handleOpen(images.customer)} sx={{ cursor: "pointer" }}>
                     <h3>Customer Photo:</h3>

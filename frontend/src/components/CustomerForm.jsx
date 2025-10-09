@@ -308,6 +308,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                         <DualCameraUpload
                             images={images}
                             handleImageChange={handleImageChange}
+                            loading={imgLoading}
                         />
 
                         <Box sx={{ display: "flex", justifyContent: "center" }}>

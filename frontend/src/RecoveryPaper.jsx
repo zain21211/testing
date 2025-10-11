@@ -332,7 +332,7 @@ const RecoveryPaper = () => {
     return (
       !selectedCustomer ||
       isLoading ||
-      loadingFinancials ||
+      // loadingFinancials ||
       currentEntryTotal <= 0
     );
   }, [
@@ -431,6 +431,7 @@ const RecoveryPaper = () => {
           onSubmitAndReset={handleSubmitAndReset}
           isAddEntryDisabled={isAddEntryDisabled}
           isLoading={isLoading}
+          submitButtonDisabled={entries.filter(entry => entry.status === false).length > 0}
         />
       </Stack>
 

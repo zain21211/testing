@@ -6,7 +6,9 @@ export const FormActionsSection = ({
     onSubmitAndReset,
     isAddEntryDisabled,
     isLoading,
+    submitButtonDisabled
 }) => {
+    console.log("Submit Button Disabled:", submitButtonDisabled);
     return (
         <>
             <Button
@@ -27,7 +29,7 @@ export const FormActionsSection = ({
                 color="error"
                 sx={{ mt: 2, fontSize: '1.2rem' }}
                 onClick={onSubmitAndReset}
-                disabled={isLoading}
+                disabled={isLoading || submitButtonDisabled}
             >
                 Submit and Reset All
             </Button>

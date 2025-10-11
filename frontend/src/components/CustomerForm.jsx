@@ -68,8 +68,8 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
     // CUSTOM HOOKS
     const { coordinates, address, error: geoError } = useGeolocation();
     const { selectedCustomer, setSelectedCustomer } = useUpdateCustomer(name);
-    const { images, setImages, handleImageChange, resetImages } = useCamera();
     const { list, error: disError } = useDiscount(selectedCustomer, null, true);
+    const { images, setImages, handleImageChange, resetImages } = useCamera();
     const { loading: imgLoading } = useFetchCustImgs(selectedCustomer?.acid, handleImageChange, setImages);
 
     // PERMISSIONS

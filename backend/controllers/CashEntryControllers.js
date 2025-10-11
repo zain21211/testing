@@ -156,8 +156,6 @@ const CashEntryController = {
     // Timestamp for when the entry is recorded in the system
     const systemTimestamp = getPakistanISODateString();
 
-    console.log(`cash entry from ${userName} of ${custId} at `, effectiveDate);
-
     if (!paymentMethod || !custId || !receivedAmount || !userName) {
       return res.status(400).json({
         error:

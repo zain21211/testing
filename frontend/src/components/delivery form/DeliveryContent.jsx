@@ -13,6 +13,8 @@ import SignatureCanvas from "react-signature-canvas";
 import SignaturePad from "./SignaturePad";
 import { formatCurrency } from "../../utils/formatCurrency";
 import RadioButtons from "./RadioButtons";
+import { set } from "zod/v4";
+import { useState } from "react";
 const biggerInputTextSize = '1.4rem'; // For text inside input fields
 const biggerShrunkLabelSize = '0.9rem';  // For labels when they shrink (float above)
 const biggerCheckboxLabelSize = '1rem'; // For checkbox labels
@@ -69,31 +71,79 @@ const DeliveryContent = ({ id, name, doc,
     shopper, error, captureRef, dialogFields, extra,
     secondaryFields, handleChange, handleRadioChange, getImage, images
 }) => {
+    const [isImg, setIsImg] = useState(false);
+    const [open, setOpen] = useState(false);
+
+    const handleOpen = () => setOpen(true);
+    const handleClose = () => setOpen(false);
     return (
         <>
             <Box
                 ref={captureRef}
             >
-                <Typography fontSize={'3rem'} fontWeight={'BOLD'} sx={{
-                    fontFamily: "Jameel Noori Nastaleeq, serif",
-                    letterSpacing: 'normal',
-                    // backgroundColor: 'pink',
-                    textAlign: 'center',
-
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                 }}>
-                    {doc}
-                    <span style={{
-                        padding: '0 1rem', color: 'pink'
-                    }}>-</span> {name}
-                </Typography>
-                <Button
-                    onClick={() => getImage(id, 'agreement')}>
-                    Img {images?.agreement ? '✔️' : '❌'}
-                    <image
-                        src={images?.agreement}
-                    />
-                </Button>
-                <Box
+                    <Typography fontSize={'3rem'} fontWeight={'BOLD'} sx={{
+                        fontFamily: "Jameel Noori Nastaleeq, serif",
+                        letterSpacing: 'normal',
+                        // backgroundColor: 'pink',
+                        textAlign: 'right',
+                        width: '75%',
+
+                    }}>
+                        {doc}
+                        <span style={{
+                            padding: '0 1rem', color: 'pink'
+                        }}>-</span> {name}
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        sx={{
+                            backgroundColor: images?.agreement ? 'green' : 'red'
+                            , fontSize: '1.2rem',
+                            fontWeight: 'bold',
+                            width: '15%',
+
+                        }}
+                        disabled={images?.agreement ? false : true}
+                        onClick={handleOpen}>
+                        Img {images?.agreement ? '✔️' : '❌'}
+                    </Button>
+                </Box>
+                <Dialog
+                    open={open}
+                    onClose={handleClose}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogContent
+                        sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            p: 2,
+                        }}
+                    >
+                        {images?.agreement ? (
+                            <Box
+                                component="img"
+                                src={images.agreement}
+                                alt="Agreement"
+                                sx={{
+                                    maxWidth: "100%",
+                                    maxHeight: "80vh",
+                                    objectFit: "contain",
+                                    borderRadius: 2,
+                                }}
+                            />
+                        ) : (
+                            <Box>No image found.</Box>
+                        )}
+                    </DialogContent>
+                </Dialog>                <Box
                     sx={{
                         px: 1,
                         py: 1,
@@ -198,8 +248,9 @@ const DeliveryContent = ({ id, name, doc,
                     <SignaturePad />
 
                 </Box>
-            </Box>
-            {error && <Typography color="error">{error}</Typography>}
+            </Box >
+            {error && <Typography color="error">{error}</Typography>
+            }
         </>
     )
 }

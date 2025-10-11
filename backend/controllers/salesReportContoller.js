@@ -20,7 +20,6 @@ const getSalesReport = async (req, res) => {
   const newEndDate = new Date();
   newEndDate.setDate(newEndDate.getDate() + 7);
   // startDate.setDate(newEndDate.getDate() - 7);
-
   let query = `
  SELECT 
   h.entrydate AS date,

@@ -77,7 +77,6 @@ export const usePayVouSub = ({ onSubmissionSuccess }) => {
       };
 
       try {
-        console.log("Submitting entry:", newEntry);
         await api(newEntry);
       } catch (error) {
         console.warn("Submission failed, saving entry locally:", newEntry);

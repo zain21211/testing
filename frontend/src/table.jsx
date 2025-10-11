@@ -77,6 +77,7 @@ const DataTable = ({
   handleLongPress,
 }) => {
   const navigate = useNavigate();
+  const getLongPressProps = useLongPress(800);
   const currentBreakpoint = useWidth(); // Get the current breakpoint ('xs', 'sm', etc.)
   const tableData = Array.isArray(data) ? data : [];
 
@@ -388,13 +389,13 @@ const DataTable = ({
             ) : (
               tableData.map((row, index) => {
                 const { rowSx, shouldHighlightRow } = getRowStyles(row);
-                const longPressProps = useLongPress(() => handleLongPress(row.Doc || row.doc), 800);
+                // const longPressProps = useLongPress(() => handleLongPress(row.Doc || row.doc), 800);
 
                 return (
                   <TableRow
                     hover
                     sx={rowSx}
-                    {...longPressProps}
+                    {...getLongPressProps(() => handleLongPress(row.Doc || row.doc))}
                     onClick={
                       row.Type?.toLowerCase().includes("sale")
                         ? () => handleDocumentClick(row)

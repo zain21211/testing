@@ -4,7 +4,9 @@ const dbConnection = require("../database/connection"); // Ensure this returns s
 
 const getSalesReport = async (req, res) => {
   const {
-    startDate = new Date().toISOString().split("T")[0],
+    startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     endDate,
     page = "",
     route = "",
@@ -17,6 +19,7 @@ const getSalesReport = async (req, res) => {
 
   const newEndDate = new Date();
   newEndDate.setDate(newEndDate.getDate() + 7);
+  // startDate.setDate(newEndDate.getDate() - 7);
 
   let query = `
  SELECT 
@@ -80,7 +83,9 @@ CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
       .input("doc", sql.VarChar, String(doc ?? ""))
       .query(query);
 
-    res.status(200).json(result.recordset);
+    const data = result.recordset;
+    // res.status(200).json({ data, startDate, newEndDate });
+    res.status(200).json(data);
   } catch (error) {
     console.error("Error fetching sales report:", error);
     res.status(500).json({ error: "Failed to fetch sales report" });

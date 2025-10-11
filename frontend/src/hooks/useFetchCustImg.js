@@ -3,7 +3,12 @@ import axios from "axios";
 
 const url = `${import.meta.env.VITE_API_URL}`;
 
-export default function useFetchCustImgs(id, handleImageChange, setImages) {
+export default function useFetchCustImgs(
+  id,
+  handleImageChange,
+  setImages,
+  col
+) {
   const [loading, setLoading] = useState(false);
   const fetchImgs = async () => {
     try {
@@ -11,6 +16,7 @@ export default function useFetchCustImgs(id, handleImageChange, setImages) {
       const res = await axios.get(`${url}/customers/getImages`, {
         params: {
           acid: id,
+          col,
         },
       });
 
@@ -24,6 +30,7 @@ export default function useFetchCustImgs(id, handleImageChange, setImages) {
   };
 
   useEffect(() => {
+    console.log("Fetching images for ID:", id);
     if (id) fetchImgs();
   }, [id]);
 

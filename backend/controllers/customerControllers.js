@@ -521,16 +521,19 @@ END
   },
 
   getImages: async (req, res) => {
-    const { acid } = req.query;
+    const { acid, col } = req.query;
     try {
       const pool = await imageDb();
       if (!acid) {
         return res.status(400).json({ error: "ACID are required" });
       }
 
+      const cols = col || ["Customer", "Shop", "Agreement"];
+      console.log("Fetching columns:", cols);
+
       const query = `
         SELECT
-          Customer, Shop, Agreement
+        ${cols}
         FROM COAIMAGES
         WHERE acid=@acid
       `;

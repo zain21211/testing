@@ -4,14 +4,18 @@ import { usePayVouForm } from './hooks/usePayVouFrom';
 import { usePayVouCust } from './hooks/usePayVouCust';
 import { usePayVouSub } from './hooks/usePayVouSub';
 import { PayVouForm } from './components/payVouForm';
+import { useDispatch } from 'react-redux';
+import { setSelectedCustomer } from './store/slices/CustomerSearch';
 
 
 const PaymentVoucher = () => {
-
+    const dispatch = useDispatch();
 
     const {
         creditCust,
         debitCust,
+        debitOptions,
+        creditOptions,
         isCredit = true,
         isDebit = true,
         getCreditCusts,
@@ -40,7 +44,23 @@ const PaymentVoucher = () => {
         onSubmissionSuccess: () => {
             clearForm();
             descRef?.current?.focus();
-            // clearCustomerSelections();
+            console.log('before', { isCredit, isDebit, creditOptions, debitOptions });
+            clearCustomerSelections();
+            console.log('after', { isCredit, isDebit, creditOptions, debitOptions });
+            if (!isCredit && !isDebit) return;
+            if (creditOptions.length === 1) {
+                const customerKey = 'paymentCredit';
+                const customer = creditOptions[0];
+                getCreditCusts(customer);
+                dispatch(setSelectedCustomer({ key: customerKey, customer }));
+
+            }
+            if (debitOptions.length === 1) {
+                const customerKey = 'paymentDebit';
+                const customer = debitOptions[0];
+                getDebitCusts(customer);
+                dispatch(setSelectedCustomer({ key: customerKey, customer }));
+            }
         },
     });
 

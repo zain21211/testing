@@ -67,7 +67,7 @@ const bigger = {
 
 const DeliveryContent = ({ id, name, doc,
     shopper, error, captureRef, dialogFields, extra,
-    secondaryFields, handleChange, handleRadioChange
+    secondaryFields, handleChange, handleRadioChange, getImage, images
 }) => {
     return (
         <>
@@ -86,6 +86,13 @@ const DeliveryContent = ({ id, name, doc,
                         padding: '0 1rem', color: 'pink'
                     }}>-</span> {name}
                 </Typography>
+                <Button
+                    onClick={() => getImage(id, 'agreement')}>
+                    Img {images?.agreement ? '✔️' : '❌'}
+                    <image
+                        src={images?.agreement}
+                    />
+                </Button>
                 <Box
                     sx={{
                         px: 1,

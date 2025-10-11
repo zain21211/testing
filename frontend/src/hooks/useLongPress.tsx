@@ -1,9 +1,9 @@
 import { useRef } from "react";
 
-export function useLongPress(callback: () => void, delay = 800) {
+export function useLongPress( delay = 800) {
   const timerRef = useRef<number | null>(null);
 
-  const start = () => {
+  const start = (callback: () => void) => {
     timerRef.current = window.setTimeout(callback, delay);
   };
 
@@ -14,11 +14,11 @@ export function useLongPress(callback: () => void, delay = 800) {
     }
   };
 
-  return {
-    onMouseDown: start,
+  return (callback: () => void)=>({
+      onMouseDown: () => start(callback),
+    onTouchStart: () => start(callback),
     onMouseUp: clear,
     onMouseLeave: clear,
-    onTouchStart: start,
     onTouchEnd: clear,
-  };
+  });
 }

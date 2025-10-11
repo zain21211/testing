@@ -215,7 +215,7 @@ const FilterInput = React.memo(({ onSubmit, id, value, onChange, options = [] })
         <Autocomplete
             freeSolo
             options={Array.isArray(options) ? options : []}
-            inputValue={inputValue}
+            inputValue={inputValue || ""}
             onInputChange={(event, newInputValue) => setInputValue(newInputValue)}
             onBlur={() => onChange(id, inputValue)}
             onChange={(event, newValue) => {
@@ -388,10 +388,11 @@ const PackingList = () => {
         handleSubmit();
     }, [filters]);
 
-    let statuses = ['estimate', 'onHold'];
+    let statuses = ['estimate', 'onHold', 'invoice',];
 
-    if (isAllowed)
-        statuses.push('invoice')
+    // if (isAllowed){
+    //     statuses.push('invoice');
+    // }
     // Memoized columns
     const memoizedColumns = useMemo(() => {
         return [

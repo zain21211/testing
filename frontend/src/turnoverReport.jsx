@@ -272,7 +272,7 @@ export const RemarkDialogUI = ({
 };
 // RemarkDialog.tsx
 export const RemarkDialog = React.memo(
-    ({ open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer }) => {
+    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer }) => {
         const { remark, setRemark, error, handleNavigate, handleSubmit } =
             useRemarkDialog({ open, acid, name, onSubmitRemark, onClose });
 
@@ -285,7 +285,7 @@ export const RemarkDialog = React.memo(
         // It contains the full logic (calling onSubmitRemark, closing dialog, etc.).
         // Also pass all other relevant values.
         return (
-            onRender(customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose)
+            onRender(images, customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose)
         );
     }
 );

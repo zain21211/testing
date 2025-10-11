@@ -130,27 +130,18 @@ export const useCustomerSearch = ({
   }, [localCustomerList, data]);
   // Sync master list
   useEffect(() => {
-    isCust && isCust(data.length !== 0);
-    const status = fetchError?.status;
-    // setLocalCustomerList(data);
+    isCust && isCust(data.length !== 0 || localCustomerList.length !== 0);
+    0;
+    const status =
+      fetchError?.message.toLowerCase() === "network error" ? 500 : 200;
 
-    // if (!isEqual(data, localCustomerList) && fetchError?.status === 404) {
-    // }
-    console.log(
-      "Data changed:",
-      (navigator.onLine || !isEqual(data, localCustomerList)) &&
-        status !== 500 &&
-        status !== undefined &&
-        status !== null,
-      data,
-      localCustomerList,
-      status
-    );
     if (
-      (navigator.onLine || !isEqual(data, localCustomerList)) &&
+      navigator.onLine &&
+      !isEqual(data, localCustomerList) &&
       status !== 500 &&
       status !== undefined &&
-      status !== null
+      status !== null &&
+      !isCustomerLoading
     ) {
       setLocalCustomerList(data);
       if (!isAdmin && (formType === "debit" || formType === "credit")) return;
@@ -169,13 +160,7 @@ export const useCustomerSearch = ({
   // }, [selectedCustomer, onSelect]);
 
   useEffect(() => {
-    if (
-      // prevLength.current !== masterCustomerList.length &&
-      masterCustomerList.length === 1 ||
-      localCustomerList?.length === 1
-    ) {
-      handleSelect(allCustomerOptions[0]);
-    }
+    autoSelect();
     prevLength.current = masterCustomerList.length;
   }, [masterCustomerList, allCustomerOptions, localCustomerList]);
 
@@ -193,6 +178,11 @@ export const useCustomerSearch = ({
     },
     [dispatch, selectedCustomer, customerKey, stableOnSelect, onSelect]
   );
+  const autoSelect = useCallback(() => {
+    if (allCustomerOptions.length === 1) {
+      handleSelect(allCustomerOptions[0]);
+    }
+  }, [allCustomerOptions, handleSelect]);
 
   // Effect 1: Sync ID → selectedCustomer
   useEffect(() => {

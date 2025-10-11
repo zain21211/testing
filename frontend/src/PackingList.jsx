@@ -87,14 +87,14 @@ const useFilters = () => {
         ],
     });
 
-    useEffect(() => {
-        setFilters([
-            { id: "route" },
-            { id: "status" },
-            { id: "estimate #" },
-            // { id: "name" },
-        ]);
-    }, []);
+    // useEffect(() => {
+    //     setFilters([
+    //         { id: "route" },
+    //         { id: "status" },
+    //         { id: "estimate #" },
+    //         // { id: "name" },
+    //     ]);
+    // }, []);
 
     const [endDate, setEndDate] = useLocalStorageState('endDate', {
         defaultValue: Today,

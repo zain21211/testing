@@ -87,15 +87,6 @@ const useFilters = () => {
         ],
     });
 
-    // useEffect(() => {
-    //     setFilters([
-    //         { id: "route" },
-    //         { id: "status" },
-    //         { id: "estimate #" },
-    //         // { id: "name" },
-    //     ]);
-    // }, []);
-
     const [endDate, setEndDate] = useLocalStorageState('endDate', {
         defaultValue: Today,
     });
@@ -256,7 +247,8 @@ const LoadingState = () => (
 );
 
 // Filter Section Component
-const FilterSection = ({ filters, routes, statuses, onFilterChange, onSubmit }) => {
+const FilterSection = ({ filters, routes, statuses, onFilterChange, onSubmit, isAllowed }) => {
+    const fields = filters?.filter(filter => !(filter.id.includes("status") && !isAllowed));
     return (
         <>
             <Box
@@ -269,7 +261,7 @@ const FilterSection = ({ filters, routes, statuses, onFilterChange, onSubmit }) 
                     }
                 }}
             >
-                {filters?.map(filter => (
+                {fields?.map(filter => (
                     <FilterInput
                         onSubmit={onSubmit}
                         key={filter.id}
@@ -388,7 +380,7 @@ const PackingList = () => {
         handleSubmit();
     }, [filters]);
 
-    let statuses = ['estimate', 'onHold', 'invoice',];
+    let statuses = ['estimate', 'onHold', 'invoice', 'all'];
 
     // if (isAllowed){
     //     statuses.push('invoice');
@@ -442,7 +434,7 @@ const PackingList = () => {
             endDate: endDate ? new Date(endDate).toISOString().split("T")[0] : null,
             route,
             doc,
-            invoiceStatus: invoiceStatus || "estimate",
+            invoiceStatus: invoiceStatus === 'all' ? '' : invoiceStatus ? invoiceStatus : "estimate",
             page: "pack",
             customer: customer || '',
         };
@@ -462,6 +454,7 @@ const PackingList = () => {
                 statuses={statuses}
                 onFilterChange={handleFilterChange}
                 onSubmit={handleSubmit}
+                isAllowed={isAllowed}
             />
 
 

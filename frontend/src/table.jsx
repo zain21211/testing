@@ -80,6 +80,8 @@ const DataTable = ({
   const getLongPressProps = useLongPress(800);
   const currentBreakpoint = useWidth(); // Get the current breakpoint ('xs', 'sm', etc.)
   const tableData = Array.isArray(data) ? data : [];
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAllowed = user?.userType?.toLowerCase().includes("admin") || user?.userType?.toLowerCase().includes("operator");
 
   const deleteColumn = columns.find((col) => col.id === "delete");
   const enableDelete = !!(deleteColumn && onDelete && apiEndpoint && rowKey);
@@ -395,7 +397,10 @@ const DataTable = ({
                   <TableRow
                     hover
                     sx={rowSx}
-                    {...getLongPressProps(() => handleLongPress(row.Doc || row.doc))}
+                    {...getLongPressProps(() => {
+                      if (isAllowed)
+                        handleLongPress(row.Doc || row.doc)
+                    })}
                     onClick={
                       row.Type?.toLowerCase().includes("sale")
                         ? () => handleDocumentClick(row)

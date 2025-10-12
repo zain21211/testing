@@ -15,3 +15,12 @@ export function formatNumbers(input) {
 
   return num.toLocaleString("en-US");
 }
+
+export function makeStringPrettier(str = "") {
+  return str
+    .replace(/[_-]+/g, " ") // replace underscores and hyphens with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // add space before capital letters (camelCase → spaced)
+    .replace(/\s+/g, " ") // collapse multiple spaces
+    .trim() // remove leading/trailing spaces
+    .replace(/\b\w/g, (c) => c.toUpperCase()); // capitalize each word
+}

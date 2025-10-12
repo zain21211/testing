@@ -121,39 +121,60 @@ const invoiceControllers = {
   },
 
   getDeliveryList: async (req, res) => {
-    const { usertype = "", route = "" } = req.query;
+    const { usertype = "", username = "", route = "" } = req.query;
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const today = new Date();
+    const dayName = days[today.getDay()];
+
+    console.log(dayName); // 👉 e.g. "Wednesday"
 
     // const vehical = "km";
-    const vehical = usertype.split("-")[1] || "";
+    const type = usertype.split("-")[1] || "";
+    const day = route ? route : type ? dayName.toLowerCase() : "";
+    const isAdmin = usertype.includes("admin") || username.includes("zain");
+    const transporter = isAdmin || type ? "" : username;
 
     const query = `
-    SELECT
-     d.doc, 
-     c.id as ACID, 
-     c.urduname as UrduName, 
-	   d.amount,
-     c.route,
-     d.shopper,     
-	 (sum(l.debit) - sum(l.credit)) - d.amount as prevBalance,
-	 sum(l.debit) - sum(l.credit) as currentBalance
+SELECT
+  d.doc, 
+  c.id AS ACID, 
+  c.urduname AS UrduName, 
+  d.amount,
+  c.route,
+  d.shopper,     
+  (SUM(l.debit) - SUM(l.credit)) - d.amount AS prevBalance,
+  SUM(l.debit) - SUM(l.credit) AS currentBalance
 FROM psdetail d
-join coa c
-on d.acid = c.id
-join ledgers l
-on d.acid = l.acid
-WHERE d.s_status = 'loaded'
---and vehicle like '%' + @vehical + '%'
-and c.route like  '%' + @vehical + '%'
-group by d.doc, c.id, c.urduname, d.amount, d.shopper, c.rno, c.route
---order by  d.doc desc;
-order by c.rno;
-`;
+JOIN coa c
+  ON d.acid = c.id
+JOIN ledgers l
+  ON d.acid = l.acid
+JOIN TourDays t
+  ON c.route = t.Route
+WHERE 
+  d.s_status = 'loaded'
+  AND vehicle LIKE '%' + @transporter + '%'
+  AND c.route LIKE '%' + @vehical + '%'
+  AND t.route LIKE '%' + @vehical + '%'
+GROUP BY 
+  d.doc, c.id, c.urduname, d.amount, d.shopper, c.rno, c.route
+ORDER BY 
+  c.rno;
+    `;
 
     try {
       const pool = await dbConnection();
       const request = pool.request();
-      request.input("vehical", sql.VarChar, vehical);
-      // request.input("vehical", sql.VarChar, vehical);
+      request.input("vehical", sql.VarChar, day);
+      request.input("transporter", sql.VarChar, transporter);
 
       const result = await request.query(query);
       res.status(200).json(result.recordset);

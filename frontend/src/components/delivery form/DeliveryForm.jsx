@@ -63,7 +63,7 @@ export const RemarkDialogUI = ({
     const captureRef = useRef();
     const dialogFields = [
         {
-            name: "Prev Bal",
+            name: "پچھلا بیلنس",
             col: 2,
             align: "right",
             pa: 1,
@@ -74,7 +74,7 @@ export const RemarkDialogUI = ({
             val: customer.prevBalance,
         },
         {
-            name: "Bill Amount",
+            name: "بل کی رقم",
             col: 2,
             align: "right",
             pa: 1,
@@ -85,7 +85,7 @@ export const RemarkDialogUI = ({
             val: customer.amount,
         },
         {
-            name: "Current Bal",
+            name: "موجودہ بیلنس",
             col: 2,
             align: "right",
             pa: 1,
@@ -96,7 +96,7 @@ export const RemarkDialogUI = ({
             val: customer.currentBalance,
         },
         {
-            name: "Cash Recovery",
+            name: "نقد رقم کی واپسی",
             col: 2,
             align: "right",
             pa: 1,
@@ -107,7 +107,7 @@ export const RemarkDialogUI = ({
             val: cash,
         },
         {
-            name: "remaining Bal",
+            name: "باقی بل",
             col: 2,
             align: "right",
             pa: 1,
@@ -192,7 +192,7 @@ export const RemarkDialogUI = ({
 };
 
 // Fields to display on each trader card
-const fields = ["ACID", "UrduName"];
+const fields = ["ACID", "UrduName", 'shopper'];
 const SPECIAL_FIELDS = [];
 const DeliveryForm = () => {
     // --- DIALOG STATE ---
@@ -358,8 +358,6 @@ const DeliveryForm = () => {
         const data = canvas.toDataURL("image/png");
         return data;
     };
-
-
 
     const handlePost = useCallback(
         async (acid, doc, captureRef) => {

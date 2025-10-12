@@ -354,15 +354,26 @@ const Login = () => {
               </>
             )}
             {isList && (
-              <Button
-                component={RouterLink}
-                to="/list" // Non-customers can still go to create order manually
-                variant="contained"
-                size="large"
-                sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#3f51b5" }}
-              >
-                Customer Route Order
-              </Button>
+              <>
+                <Button
+                  component={RouterLink}
+                  to="/list" // Non-customers can still go to create order manually
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#3f51b5" }}
+                >
+                  Customer Route Order
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/delivery" // Non-customers can still go to create order manually
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#a41260ff" }}
+                >
+                  Delivery Form
+                </Button>
+              </>
             )}
 
           </Box>

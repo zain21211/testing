@@ -3,6 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
 import isEqual from "lodash/isEqual";
+import { makeStringPrettier } from "./utils/cleanString";
 
 // MUI Components
 import {
@@ -487,7 +488,9 @@ const TraderInfoCard = ({ trader }) => (
 
 // ✅ Right card (fields block)
 const TraderDetailsCard = ({ trader, fields }) => {
+
     const renderField = (key, trader, value) => {
+        console.log(trader)
         if (value === undefined || value === null) return null;
         if (["Sale Date", "Recovery Date", "Credit Limit", "Balance", "number", 'doc'].includes(key)) return null;
         if (key === "Turnover Days" && value < 7) return null;
@@ -520,6 +523,7 @@ const TraderDetailsCard = ({ trader, fields }) => {
                 : key;
 
         const isUrdu = key === "UrduName";
+        const isNug = key === "shopper";
         const isOverdue = key === "Overdue";
         const isDateOld = rawDate && isOlderThanOneMonth(rawDate);
 
@@ -527,13 +531,15 @@ const TraderDetailsCard = ({ trader, fields }) => {
             <Typography
                 key={key}
                 variant={isUrdu ? "h3" : "h6"}
+                dir={isUrdu || isNug ? "rtl" : "ltr"}
                 sx={{
-                    dir: isUrdu ? "rtl" : "ltr",
-                    textAlign: "right",
                     mb: 1,
-                    fontFamily: isUrdu ? "Jameel Noori Nastaleeq, serif" : "",
+                    gap: 1,
+                    textAlign: "right", // ✅ Always right-aligned for both
+                    alignItems: "center",
                     fontWeight: isUrdu ? "bold" : "normal",
                     color: isOverdue || isDateOld ? "red" : "text.secondary",
+                    fontFamily: isUrdu ? "Jameel Noori Nastaleeq, serif" : "poppins, sans-serif",
                 }}
             >
                 <span
@@ -541,20 +547,34 @@ const TraderDetailsCard = ({ trader, fields }) => {
                         display: "inline-flex",
                         gap: "4px",
                         flexDirection: isUrdu ? "row-reverse" : "row",
+                        alignItems: "center",
                     }}
                 >
-                    <strong>{isUrdu ? "" : `${label}`}</strong>
+                    {!(isUrdu || isNug) && <strong>{`${makeStringPrettier(label)}:`}</strong>}
+                    {isNug && <strong style={{
+                        fontFamily: "Jameel Noori Nastaleeq, serif",
+                        fontSize: "2.5rem",
+
+                    }}>{`نگ:`}</strong>}
                     <span>{displayValue}</span>
                 </span>
 
-
-
                 {(formattedDate || extraInfo) && (
-                    <span style={{ color: isOverdue ? "green" : isDateOld ? "red" : "" }}>
+                    <span
+                        style={{
+                            color: isOverdue ? "green" : isDateOld ? "red" : "",
+                            fontSize: isUrdu || isNug ? "2rem" : "1rem",
+                            marginInlineStart: isUrdu ? "0" : "8px",
+                            marginInlineEnd: isUrdu ? "8px" : "0",
+                            fontFamily: 'poppins, sans-serif',
+                        }}
+                    >
                         {` | ${formattedDate || extraInfo}`}
                     </span>
                 )}
             </Typography>
+
+
         );
     };
 
@@ -617,16 +637,7 @@ const TurnoverReport = () => {
     // FIX: Correctly define the function signature to match the arguments passed from onRender.
     // This ensures `handleNavigate` and `handleSubmit` are assigned to the correct variables.
     const remarkDialogUi = (
-        customer,
-        remark,
-        setRemark,
-        pastRemarks,
-        error,
-        acid,
-        handleNavigate,
-        handleSubmit,
-        onClose
-    ) => {
+        images, customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, handleSubmit, onClose) => {
         return (
             <RemarkDialogUI
                 open={dialogOpen} // Use state from the parent component scope

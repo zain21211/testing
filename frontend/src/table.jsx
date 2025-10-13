@@ -77,7 +77,7 @@ const DataTable = ({
   handleLongPress,
 }) => {
   const navigate = useNavigate();
-  const getLongPressProps = useLongPress(800);
+  const getLongPressProps = useLongPress(1600);
   const currentBreakpoint = useWidth(); // Get the current breakpoint ('xs', 'sm', etc.)
   const tableData = Array.isArray(data) ? data : [];
   const user = JSON.parse(localStorage.getItem("user") || "{}");

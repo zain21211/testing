@@ -20,7 +20,6 @@ import {
     Container,
     Box,
     Typography,
-    TextField,
     Button,
     Dialog,
     DialogTitle,
@@ -33,16 +32,13 @@ import { useFetchList } from "../../hooks/LoadForm/useFetchList";
 import TransporterFilter from "../LoadForm/TransporterFilter";
 import DeliveryContent from "./DeliveryContent";
 import useGeolocation from "../../hooks/geolocation";
-import { cleanNumbers, cleanString } from "../../utils/cleanString";
-import Card from "../Card";
-import { Close, CloseOutlined, ContactSupportOutlined } from "@mui/icons-material";
-import { set } from "lodash";
+import { cleanNumbers, } from "../../utils/cleanString";
+import { CloseOutlined } from "@mui/icons-material";
 import { useVoucherSync } from "../../hooks/useVoucherSync";
 import { useCamera } from "../../hooks/useCamera";
 import useFetchCustImgs from "../../hooks/useFetchCustImg";
+import Card from "../Card";
 
-// Local Component Imports (assuming they are in the same directory or configured path)
-// import DataTable from "./table";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const RemarkDialogUI = ({
@@ -96,7 +92,7 @@ export const RemarkDialogUI = ({
             val: customer.currentBalance,
         },
         {
-            name: "نقد رقم کی واپسی",
+            name: "نقد رقم کی ادائیگی",
             col: 2,
             align: "right",
             pa: 1,
@@ -193,7 +189,7 @@ export const RemarkDialogUI = ({
 
 // Fields to display on each trader card
 const fields = ["ACID", "UrduName", 'shopper'];
-const SPECIAL_FIELDS = [];
+
 const DeliveryForm = () => {
     // --- DIALOG STATE ---
     const [status, setStatus] = useState(null);

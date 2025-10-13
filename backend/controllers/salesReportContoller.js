@@ -4,9 +4,7 @@ const dbConnection = require("../database/connection"); // Ensure this returns s
 
 const getSalesReport = async (req, res) => {
   const {
-    startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0],
+    startDate = new Date("2023-01-01").toISOString().split("T")[0],
     endDate,
     page = "",
     route = "",
@@ -17,6 +15,10 @@ const getSalesReport = async (req, res) => {
     invoiceStatus = "",
   } = req.query;
 
+  isInvoice = invoiceStatus === "invoice" || invoiceStatus === "";
+  const newStartDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
   const newEndDate = new Date();
   newEndDate.setDate(newEndDate.getDate() + 7);
   // startDate.setDate(newEndDate.getDate() - 7);
@@ -72,7 +74,11 @@ CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
     const pool = await dbConnection();
     const result = await pool
       .request()
-      .input("startDate", sql.DateTime, new Date(startDate))
+      .input(
+        "startDate",
+        sql.DateTime,
+        new Date(isInvoice ? newStartDate : startDate)
+      )
       .input("endDate", sql.DateTime, new Date(newEndDate))
       .input("route", sql.VarChar, route)
       .input("customer", sql.VarChar, customer)

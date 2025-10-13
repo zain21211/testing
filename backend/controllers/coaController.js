@@ -26,7 +26,7 @@ const CoaController = {
           ORDER BY l.date DESC
         ) latest
         WHERE 
-          a.ROUTE LIKE @route
+          left(a.ROUTE, 3) LIKE @route
           AND latest.date > '2024-01-01'
         ORDER BY a.route,a.RNO, a.Subsidary;
       `);

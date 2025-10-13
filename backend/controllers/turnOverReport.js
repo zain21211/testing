@@ -196,6 +196,7 @@ ORDER BY o.overdue DESC;
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
+
   postRemarks: async (req, res) => {
     const { datetime, acid, spo, remarks } = req.body;
 
@@ -221,6 +222,7 @@ ORDER BY o.overdue DESC;
       res.status(500).send({ success: false, error: err.message });
     }
   },
+
   getToday: async (req, res) => {
     const { acid } = req.query;
 

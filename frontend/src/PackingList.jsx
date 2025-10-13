@@ -318,7 +318,7 @@ const ResultsTable = ({ data, columns, fetch, s }) => {
         const confirmation = window.confirm(`Are you sure you want to put this on ${status}?`)
 
         if (confirmation) {
-            await axios.put(`${url}/sale-report/onhold`, { id, status: "onHold" });
+            await axios.put(`${url}/sale-report/onhold`, { id, status: status });
             await fetch();
         } else {
             console.log("Update cancelled");

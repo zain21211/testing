@@ -124,7 +124,7 @@ const invoiceControllers = {
     const { usertype = "", username = "", route = "" } = req.query;
     const days = [
       "Sunday",
-      "Monday",
+      // "Monday",
       "Tuesday",
       "Wednesday",
       "Thursday",
@@ -134,50 +134,77 @@ const invoiceControllers = {
     const today = new Date();
     const dayName = days[today.getDay()];
 
-    console.log(dayName); // 👉 e.g. "Wednesday"
-
     // const vehical = "km";
-    const type = usertype.split("-")[1] || "";
+    const type = usertype.split("-")[1] || ""; // sr or kr
     const day = route ? route : type ? dayName.toLowerCase() : "";
     const isAdmin = usertype.includes("admin") || username.includes("zain");
     const transporter = isAdmin || type ? "" : username;
 
-    const query = `
-SELECT
-  d.doc, 
-  c.id AS ACID, 
-  c.urduname AS UrduName, 
-  d.amount,
-  c.route,
-  d.shopper,     
-  (SUM(l.debit) - SUM(l.credit)) - d.amount AS prevBalance,
-  SUM(l.debit) - SUM(l.credit) AS currentBalance
-FROM psdetail d
-JOIN coa c
-  ON d.acid = c.id
-JOIN ledgers l
-  ON d.acid = l.acid
+    let query = `
+WITH LedgerTotals AS (
+    SELECT 
+        acid,
+        SUM(debit) AS TotalDebit,
+        SUM(credit) AS TotalCredit
+    FROM ledgers
+  --  WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's ledger entries
+    GROUP BY acid
+),
+TodayPSDetail AS (
+    SELECT 
+        acid,
+        MAX(date) AS LastDate,
+        doc,
+        COUNT(DISTINCT doc) AS TotalDocs,
+        MAX(amount) AS LastAmount,
+        MAX(shopper) AS shopper,
+       max(vehicle) as vehicle,
+       MAX(s_status) AS s_status
+    FROM psdetail
+    WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's psdetail
+    GROUP BY acid, doc
+)
+SELECT 
+    c.id AS ACID,
+    c.urduname AS UrduName,
+   -- c.route AS CustomerRoute,
+    t.route AS route,
+    -- ISNULL(p.LastDate, NULL) AS LastDate,
+    p.doc as doc,
+   -- ISNULL(p.TotalDocs, 0) AS TotalDocs,
+    ISNULL(p.LastAmount, 0) AS amount,
+    (p.Shopper) AS shopper,
+    (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) - ISNULL(p.LastAmount, 0) AS prevBalance,
+    (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) AS currentBalance
+FROM coa c
 JOIN TourDays t
-  ON c.route = t.Route
+    ON left(c.route, 3) = t.Route
+LEFT JOIN TodayPSDetail p
+    ON p.acid = c.id
+LEFT JOIN LedgerTotals l
+    ON l.acid = c.id
 WHERE 
-  d.s_status = 'loaded'
-  AND vehicle LIKE '%' + @transporter + '%'
-  AND c.route LIKE '%' + @vehical + '%'
-  AND t.route LIKE '%' + @vehical + '%'
-GROUP BY 
-  d.doc, c.id, c.urduname, d.amount, d.shopper, c.rno, c.route
-ORDER BY 
-  c.rno;
+  t.day like @day+'%'
+   and  t.route LIKE @type +'%'
+AND (@vehicle = '' OR p.vehicle LIKE '%' + @vehicle + '%')
+
     `;
+    if (isAdmin) {
+      query += ` AND p.s_status = 'loaded' `;
+    }
+    query += `ORDER BY 
+    c.rno;`;
 
     try {
       const pool = await dbConnection();
       const request = pool.request();
-      request.input("vehical", sql.VarChar, day);
-      request.input("transporter", sql.VarChar, transporter);
+      request.input("day", sql.VarChar, day);
+      request.input("vehicle", sql.VarChar, transporter);
+      request.input("type", sql.VarChar, type);
 
       const result = await request.query(query);
-      res.status(200).json(result.recordset);
+      const data = result.recordset;
+      res.status(200).json(data);
     } catch (err) {
       console.error("Error fetching invoice:", err);
       res

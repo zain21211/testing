@@ -534,18 +534,25 @@ const TraderDetailsCard = ({ trader, fields }) => {
                 dir={isUrdu || isNug ? "rtl" : "ltr"}
                 sx={{
                     mb: 1,
-                    gap: 1,
+                    gap: 2,
+                    backgroundColor: isNug ? "#d7d7d7ff" : "transparent",
+                    width: isNug ? "fit-content" : "100%",
+                    p: isNug ? '0 20px ' : 0,
+                    rendering: isNug ? "optimizeLegibility" : "auto",
+                    borderRadius: isNug ? 2 : 0,
                     textAlign: "right", // ✅ Always right-aligned for both
                     alignItems: "center",
+                    justifyContent: "flex-end",
                     fontWeight: isUrdu ? "bold" : "normal",
                     color: isOverdue || isDateOld ? "red" : "text.secondary",
                     fontFamily: isUrdu ? "Jameel Noori Nastaleeq, serif" : "poppins, sans-serif",
                 }}
             >
+                {/* main INFO */}
                 <span
                     style={{
                         display: "inline-flex",
-                        gap: "4px",
+                        gap: "16px",
                         flexDirection: isUrdu ? "row-reverse" : "row",
                         alignItems: "center",
                     }}
@@ -556,21 +563,29 @@ const TraderDetailsCard = ({ trader, fields }) => {
                         fontSize: "2.5rem",
 
                     }}>{`نگ:`}</strong>}
-                    <span>{displayValue}</span>
+                    <span style={{
+                        fontSize: isNug ? "2rem" : '',
+                        fontFamily: isNug ? "poppins, sans-serif" : '',
+                    }} >{displayValue} </span>
                 </span>
 
+                {/* secondary info */}
                 {(formattedDate || extraInfo) && (
-                    <span
-                        style={{
-                            color: isOverdue ? "green" : isDateOld ? "red" : "",
-                            fontSize: isUrdu || isNug ? "2rem" : "1rem",
-                            marginInlineStart: isUrdu ? "0" : "8px",
-                            marginInlineEnd: isUrdu ? "8px" : "0",
-                            fontFamily: 'poppins, sans-serif',
-                        }}
-                    >
-                        {` | ${formattedDate || extraInfo}`}
-                    </span>
+                    <>
+                        <span style={{ margin: 1 }}>|</span>
+
+                        <span
+                            style={{
+                                color: isOverdue ? "green" : isDateOld ? "red" : "",
+                                fontSize: isUrdu || isNug ? "2rem" : "1rem",
+                                marginInlineStart: isUrdu ? "0" : "8px",
+                                marginInlineEnd: isUrdu ? "8px" : "0",
+                                fontFamily: 'poppins, sans-serif',
+                            }}
+                        >
+                            {` ${formattedDate || extraInfo}`}
+                        </span>
+                    </>
                 )}
             </Typography>
 

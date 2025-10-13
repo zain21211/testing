@@ -187,7 +187,7 @@ WHERE
   t.day like @day+'%'
    and  t.route LIKE @type +'%'
 AND (@vehicle = '' OR p.vehicle LIKE '%' + @vehicle + '%')
-
+and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
     `;
     if (isAdmin) {
       query += ` AND p.s_status = 'loaded' `;

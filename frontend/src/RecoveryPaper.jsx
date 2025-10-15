@@ -100,6 +100,7 @@ const RecoveryPaper = () => {
     handleSyncOneEntry,
     setIsLoading,
     resetEntries,
+    handleRemoveEntry
   } = useEntries();
 
   // Effects
@@ -453,6 +454,7 @@ const RecoveryPaper = () => {
 
         <EntriesListSection
           entries={entries}
+          onRemove={handleRemoveEntry}
           onSyncOneEntry={(entry) => handleSyncOneEntry(entry, coordinates, address)}
         />
 

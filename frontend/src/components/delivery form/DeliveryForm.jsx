@@ -103,7 +103,7 @@ export const RemarkDialogUI = ({
             val: cash,
         },
         {
-            name: "باقی بل",
+            name: "کل باقی بیلنس",
             col: 2,
             align: "right",
             pa: 1,

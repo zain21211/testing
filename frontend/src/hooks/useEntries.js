@@ -16,6 +16,13 @@ export const useEntries = () => {
   const [totalMeezanBank, setTotalMeezanBank] = useState(0);
   const url = import.meta.env.VITE_API_URL;
 
+  const handleRemoveEntry = (id) => {
+    console.log("this si the idd", id);
+    setEntries((prevEntries) =>
+      prevEntries.filter((entry) => entry.creditID !== id)
+    );
+  };
+
   useEffect(() => {
     let overallTotal = 0;
     let cashOnlyTotal = 0;
@@ -43,8 +50,17 @@ export const useEntries = () => {
 
   const makeCashEntry = useCallback(
     async (entry, coordinates, address) => {
+      console.log(entry);
       try {
-        const { amounts, id, userName, description, timestamp } = entry;
+        const {
+          amounts,
+          id,
+          userName,
+          description,
+          timestamp,
+          creditID,
+          debitID,
+        } = entry;
         const entriesToPost = Object.entries(amounts).filter(
           ([_, amount]) => amount > 0
         );
@@ -55,6 +71,8 @@ export const useEntries = () => {
 
         for (const [method, amount] of entriesToPost) {
           const payload = {
+            creditID,
+            debitID,
             paymentMethod: method.toLowerCase().includes("crown")
               ? "crownone"
               : method.toLowerCase().includes("meezan")
@@ -111,7 +129,11 @@ export const useEntries = () => {
     async (newEntry, coordinates, address) => {
       setIsLoading(true);
       let entrySuccessfullyPostedOnline = false;
-
+      const creditID = crypto.randomUUID();
+      const debitID = crypto.randomUUID();
+      newEntry.creditID = creditID;
+      newEntry.debitID = debitID;
+      // console.log(newEntry);
       try {
         entrySuccessfullyPostedOnline = await makeCashEntry(
           newEntry,
@@ -148,5 +170,6 @@ export const useEntries = () => {
     handleSyncOneEntry,
     resetEntries,
     setIsLoading,
+    handleRemoveEntry,
   };
 };

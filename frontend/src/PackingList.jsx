@@ -9,7 +9,6 @@ import axios from 'axios';
 import useLocalStorageState from 'use-local-storage-state';
 import io from "socket.io-client";
 import { useNavigate } from 'react-router-dom';
-import { useLongPress } from './hooks/useLongPress';
 
 
 // GLOBAL CONSTANTS

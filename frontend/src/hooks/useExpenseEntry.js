@@ -21,6 +21,8 @@ export const useExpenseEntry = () => {
   location.address = address;
   const makeExpenseEntry = async (entry) => {
     console.log("Geolocation data:", location, geoError);
+    const debitID = crypto.randomUUID();
+    const creditID = crypto.randomUUID();
     try {
       const { amounts, custId, userName, userType } = entry;
       console.log("makeExpenseEntry called with:", {
@@ -74,6 +76,8 @@ export const useExpenseEntry = () => {
           userName,
           userType,
           location,
+          creditID,
+          debitID,
           date: new Date().toISOString(),
         };
 

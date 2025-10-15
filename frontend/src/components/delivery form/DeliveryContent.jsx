@@ -14,15 +14,21 @@ import SignaturePad from "./SignaturePad";
 import { formatCurrency } from "../../utils/formatCurrency";
 import RadioButtons from "./RadioButtons";
 import { useState } from "react";
+import MyCheckbox from "../Checkbox";
+import { formatedTime } from "../../utils/FormatedTime";
 const biggerInputTextSize = "1.4rem"; // For text inside input fields
 const biggerShrunkLabelSize = "0.9rem"; // For labels when they shrink (float above)
 const biggerCheckboxLabelSize = "1rem"; // For checkbox labels
 
+const onChecked = ' پارٹی بیلنس ٹیلی';
+const onUnchecked = 'پارٹی بیلنس فرق';
+
 const bigger = {
     "& .MuiInputBase-input.Mui-disabled": {
-        textAlign: "right",
+        textAlign: "left",
         fontWeight: "bold",
         fontFamily: "'Poppins', sans-serif",
+        // p: 1,
         // WebkitTextFillColor: "white !important",
         fontSize: biggerInputTextSize,
         // color: 'white',
@@ -44,7 +50,7 @@ const bigger = {
         color: "rgba(0, 0, 0, 0.6)", // Default disabled label color
     },
     "& .MuiInputBase-input": {
-        textAlign: "right",
+        textAlign: "left",
         fontSize: biggerInputTextSize,
         fontWeight: "bold",
         fontFamily: "'Poppins', sans-serif",
@@ -83,6 +89,7 @@ const DeliveryContent = ({
 }) => {
     const [isImg, setIsImg] = useState(false);
     const [open, setOpen] = useState(false);
+    const [flag, setFlag] = useState(true);        // flag for marking tally
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
@@ -160,19 +167,39 @@ const DeliveryContent = ({
                         )}
                     </DialogContent>
                 </Dialog>
+
+                {/* time and checkbox */}
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginY: 1,
+                }}>
+                    {/* time */}
+                    <Typography fontFamily={'poppins, serif'} sx={{ backgroundColor: 'lightgrey', padding: 1, borderRadius: 2, fontWeight: 'bold' }}>
+                        {formatedTime(new Date())}
+                    </Typography>
+
+                    {/* checkbox */}
+                    <MyCheckbox flag={flag} setFlag={setFlag} label={'بیلنس ٹیلی'} />
+
+                </Box>
+
+                {/* dialog fields */}
                 <Box
                     sx={{
                         px: 1,
                         py: 1,
                         display: "flex",
                         gap: 2,
+                        flexDirection: 'row-reverse',
                         justifyContent: "space-between",
-                        alignItems: "center",
+                        // alignItems: "center",
                     }}
                 >
                     <Box
                         sx={{
-                            width: "47%",
+                            width: { xs: '45%', sm: '50%', md: '30%' },
                             display: "grid",
                             gap: 2,
                             gridTemplateColumns: "repeat(1, 1fr)",
@@ -183,9 +210,10 @@ const DeliveryContent = ({
                                 label={field.name}
                                 fullWidth
                                 disabled={field.disabled}
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                                 sx={{
                                     ...bigger,
-                                    textAlign: field.align,
+                                    textAlign: 'left',
 
                                     "& .MuiInputLabel-root": {
                                         fontSize: "2.25rem!important", // ⬅️ Increase size
@@ -193,6 +221,9 @@ const DeliveryContent = ({
                                         fontFamily: "jameel noori nastaleeq, serif!important",
                                         color: "black!important", // ⬅️ Change color if needed
                                         letterSpacing: "normal",
+                                        right: 0,
+                                        left: "auto",
+                                        // transformOrigin: "top right",
                                         // paddingBottom: '5rem',
                                     },
                                 }}
@@ -201,7 +232,7 @@ const DeliveryContent = ({
                                         "& .MuiInputBase-input.Mui-disabled": {
                                             WebkitTextFillColor: field.color,
                                         },
-                                        textAlign: field.align,
+                                        textAlign: 'left',
                                         color: field.color,
                                         backgroundColor: field.backgroundColor,
                                     },
@@ -223,7 +254,8 @@ const DeliveryContent = ({
                     </Box>
                     <Box
                         sx={{
-                            width: { xs: "55%", sm: "55%", md: "auto" },
+                            width: { xs: '55%', sm: '50%', md: '30%' },
+
                         }}
                     >
                         {/* for radio buttons */}
@@ -232,6 +264,7 @@ const DeliveryContent = ({
                                 mb: 3,
                                 display: "flex",
                                 justifyContent: "center",
+
                             }}
                         >
                             <RadioButtons
@@ -240,52 +273,51 @@ const DeliveryContent = ({
                             />
                         </Box>
 
-                        {secondaryFields.length > 0 &&
-                            secondaryFields.map((field) => (
-                                <>
-                                    <TextField
-                                        label={field.name}
-                                        fullWidth
-                                        disabled={field.disabled}
-                                        sx={{ ...bigger, textAlign: field.align, mb: 1 }}
-                                        InputProps={{
-                                            sx: {
+                        {/* for secondaryFields */}
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', Width: { xs: '80%', sm: '80%', md: '100%' } }}>
+                            {secondaryFields.length > 0 &&
+                                secondaryFields.map((field) => (
+                                    <>
+                                        <TextField
+                                            label={field.name}
+                                            fullWidth
+                                            disabled={field.disabled}
+                                            // sx={{ ...bigger, textAlign: field.align, mb: 1 }}
+                                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                                            sx={{
+                                                ...bigger,
                                                 textAlign: field.align,
-                                                color: field.color,
-                                                backgroundColor: field.backgroundColor,
-                                            },
-                                        }}
-                                        value={formatCurrency(extra[field.name])}
-                                        onFocus={(e) => e.target.select()}
-                                        onChange={(e) => field.handleChange(id, e.target.value)}
-                                    />
-                                </>
-                            ))}
-                        <Typography
-                            fontSize={"2rem"}
-                            fontWeight={"BOLD"}
-                            backgroundColor={"pink"}
-                            textAlign={"right"}
-                            margin={"auto"}
-                            sx={{
-                                dir: "rtl",
-                                px: 1,
-                            }}
-                        >
-                            <u>{shopper || 0}</u> :
-                            <span
-                                style={{
-                                    fontFamily: "Jameel Noori Nastaleeq, serif",
-                                    letterSpacing: "normal",
-                                    fontSize: "2.5rem",
-                                }}
-                            >
-                                {" "}
-                                نگ موصول ہوا
-                            </span>
-                        </Typography>
+
+                                                "& .MuiInputLabel-root": {
+                                                    fontSize: "1.5rem!important", // ⬅️ Increase size
+                                                    fontWeight: "bold", // ⬅️ Make bold
+                                                    fontFamily: "poppins, serif!important",
+                                                    color: "black!important", // ⬅️ Change color if needed
+                                                    letterSpacing: "normal",
+                                                    // paddingBottom: '5rem',
+                                                },
+                                            }}
+                                            InputProps={{
+                                                sx: {
+                                                    "& .MuiInputBase-input.Mui-disabled": {
+                                                        WebkitTextFillColor: field.color,
+                                                    },
+                                                    textAlign: field.align,
+                                                    color: field.color,
+                                                    backgroundColor: field.backgroundColor,
+                                                },
+                                            }}
+                                            value={formatCurrency(extra[field.name])}
+                                            onFocus={(e) => e.target.select()}
+                                            onChange={(e) => field.handleChange(id, e.target.value)}
+                                        />
+                                    </>
+                                ))}
+                        </Box>
+
                     </Box>
                 </Box>
+
                 <Box
                     sx={{
                         display: "flex",
@@ -294,7 +326,8 @@ const DeliveryContent = ({
                         width: "100%",
                     }}
                 >
-                    <SignaturePad />
+
+                    <SignaturePad watermark={flag ? onChecked : onUnchecked} footer={`${shopper || 0} :نگ موصول ہوا`} />
                 </Box>
             </Box>
             {error && <Typography color="error">{error}</Typography>}

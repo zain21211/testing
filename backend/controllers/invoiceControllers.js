@@ -124,7 +124,7 @@ const invoiceControllers = {
     const { usertype = "", username = "", route = "" } = req.query;
     const days = [
       "Sunday",
-      // "Monday",
+      "Monday",
       "Tuesday",
       "Wednesday",
       "Thursday",
@@ -204,6 +204,7 @@ and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
 
       const result = await request.query(query);
       const data = result.recordset;
+
       res.status(200).json(data);
     } catch (err) {
       console.error("Error fetching invoice:", err);

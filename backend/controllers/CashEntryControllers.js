@@ -135,6 +135,8 @@ const expenseMethods = {
 const CashEntryController = {
   insertEntry: async (req, res) => {
     const {
+      creditID,
+      debitID,
       paymentMethod = {},
       custId,
       receivedAmount,
@@ -156,7 +158,13 @@ const CashEntryController = {
     // Timestamp for when the entry is recorded in the system
     const systemTimestamp = getPakistanISODateString();
 
-    if (!paymentMethod || !custId || !receivedAmount || !userName) {
+    if (
+      !paymentMethod ||
+      !custId ||
+      !receivedAmount ||
+      !userName ||
+      (!creditID && !debitID)
+    ) {
       return res.status(400).json({
         error:
           "PaymentMethod, custId, receivedAmount, and userName are required.",
@@ -164,6 +172,8 @@ const CashEntryController = {
         custId,
         receivedAmount,
         userName,
+        creditID,
+        debitID,
       });
     }
 
@@ -252,9 +262,6 @@ const CashEntryController = {
 
       const nextDoc = docResult.recordset[0].doc;
 
-      console.log(`time`, effectiveDate);
-      console.log("this is narration : ", narration);
-
       // Insert credit entry (customer or entity being credited)
       const dateOnly = new Date().toISOString().split("T")[0];
       await request
@@ -268,22 +275,37 @@ const CashEntryController = {
         .input("latitude", sql.Float, latitude)
         .input("longitude", sql.Float, longitude)
         .input("address", sql.VarChar, address)
-        .input("entryDateTime1", sql.VarChar, systemTimestamp) // Use systemTimestamp and DateTime2
+        .input("entryDateTime1", sql.VarChar, systemTimestamp)
+        .input("debit", sql.Decimal(18, 2), receivedAmount)
+        .input("acid2", sql.Int, selectedMethodConfig.debitAcid)
+        .input("creditID", sql.VarChar, creditID) // Use systemTimestamp and DateTime2
+        .input("debitID", sql.VarChar, debitID) // Use systemTimestamp and DateTime2
         .query(`
-              IF NOT EXISTS (
-      SELECT TOP 1 * FROM ledgers
-      WHERE 
-        type = @type1 AND
-        acid = @acid1 AND
-        credit = @credit AND
-        NARRATION = @narration1 AND
-        ABS(DATEDIFF(SECOND, EntryDateTime, @entryDateTime1)) < 60
-    )
-    BEGIN
-          INSERT INTO ledgers (address, latitude, longitude, date, type,doc, acid, credit, NARRATION, EntryBy, EntryDateTime)
-          VALUES (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1)
-          END
-        `);
+IF EXISTS (
+    SELECT 1 
+    FROM ledgers 
+WHERE transactionID IN (@creditID, @debitID)
+)
+
+BEGIN
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+INSERT INTO ledgers 
+(address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
+VALUES 
+(@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1, @creditID);
+
+INSERT INTO ledgers 
+(address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
+VALUES 
+(@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1, @debitID);
+
+COMMIT TRANSACTION;
+
+      `);
 
       //         const id = await request // request object is already bound to the transaction
       //         .input("user", sql.VarChar, userName)
@@ -294,26 +316,6 @@ const CashEntryController = {
       // console.log("id", id)
       // console.log("cash acc", cashAcc)
       // Insert debit entry (cash/bank/expense account)
-      await request // request object is already bound to the transaction
-        .input("acid2", sql.Int, selectedMethodConfig.debitAcid)
-        // .input("acid2", sql.Int, selectedMethodConfig.type.toLowerCase().includes("cash") || !cashAcc ? selectedMethodConfig.debitAcid : cashAcc)
-        .input("debit", sql.Decimal(18, 2), receivedAmount).query(`
-    IF NOT EXISTS (
-      SELECT TOP 1 * FROM ledgers
-      WHERE 
-        type = @type1 AND
-        acid = @acid2 AND
-        debit = @debit AND
-        NARRATION = @narration1 AND
-        ABS(DATEDIFF(SECOND, EntryDateTime, @entryDateTime1)) < 60
-    )
-    BEGIN
-      INSERT INTO ledgers 
-      (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime)
-      VALUES 
-      (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1)
-    END
-  `);
 
       // const entryResult = await request
 

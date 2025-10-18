@@ -38,6 +38,7 @@ import { useVoucherSync } from "../../hooks/useVoucherSync";
 import { useCamera } from "../../hooks/useCamera";
 import useFetchCustImgs from "../../hooks/useFetchCustImg";
 import Card from "../Card";
+import CashDetails from "./CashDetails";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -45,6 +46,7 @@ export const RemarkDialogUI = ({
     open,
     onClose,
     images,
+    setIsTally,
     customer,
     error,
     handleNavigate,
@@ -112,7 +114,7 @@ export const RemarkDialogUI = ({
             backgroundColor: "#e8eaf6",
             disabled: true,
             val:
-                (customer.currentBalance - (cash[customer.ACID] || 0)).toFixed(0) ||
+                (customer?.currentBalance - (cash?.[customer?.ACID] || 0)).toFixed(0) ||
                 "err",
         },
     ];
@@ -133,6 +135,7 @@ export const RemarkDialogUI = ({
             </DialogTitle>
             <DialogContent>
                 <Content
+                    setIsTally={setIsTally}
                     error={error}
                     images={images}
                     name={customer.UrduName}
@@ -192,10 +195,11 @@ const fields = ["ACID", "UrduName", 'shopper'];
 
 const DeliveryForm = () => {
     // --- DIALOG STATE ---
+    const [isTally, setIsTally] = useState(true);
     const [status, setStatus] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState(null);
-    const [cash, setCash] = useState({});
+    const [cash, setCash] = useLocalStorageState('DeliveryCash', {});
     const [pendingEntries, setPendingEntries] = useLocalStorageState('pendingDeliveryEntries', { defaultValue: [] });
     // const captureRef = useRef();
     const [loading, setLoading] = useState(false);
@@ -203,7 +207,7 @@ const DeliveryForm = () => {
     const { addEntry } = useEntries();
     const [secondaryFields, setSecondaryFields] = useState([]);
     const [extra, setExtra] = useState({}); // for Extra recovery fields
-
+    const [openDetails, setOpenDetails] = useState(false)
     const { images, setImages, handleImageChange, resetImages } = useCamera();
     const { loading: imgLoading } = useFetchCustImgs(selectedTrader?.ACID, handleImageChange, setImages, 'agreement');
 
@@ -229,8 +233,10 @@ const DeliveryForm = () => {
             }
             if (image) {
                 await axios.post(`${url}/customers/createDeliveryImages`, {
-                    acid: newEntry.id,
                     img,
+                    doc: newEntry.doc,
+                    status: newEntry.status ? 'tally' : 'diff',
+                    date: newEntry.timestamp,
                 });
             }
 
@@ -266,6 +272,9 @@ const DeliveryForm = () => {
             return updated;
         });
     };
+    useEffect(() => {
+        console.log('tally:', isTally)
+    }, [isTally]);
 
     const handleRadioChange = (label) => {
         setSecondaryFields((prev) =>
@@ -307,11 +316,13 @@ const DeliveryForm = () => {
         acid,
         handleNavigate,
         handleSubmit,
-        onClose
+        onClose,
+        setIsTally
     ) => {
         return (
             <Box>
                 <RemarkDialogUI
+                    setIsTally={setIsTally}
                     images={images}
                     open={open}
                     onClose={onClose}
@@ -371,12 +382,14 @@ const DeliveryForm = () => {
                 timestamp: new Date().toISOString(),
                 coordinates,
                 address,
-                doc
+                doc,
+                status: isTally ? 'tally' : 'diff',
+
             };
 
             try {
                 await posting(newEntry, img)
-
+                selectedTrader.entry = 'done';
                 fetchList();
                 setStatus(200);
                 setExtra({})
@@ -437,8 +450,20 @@ const DeliveryForm = () => {
                 }}
             >
                 <TransporterFilter onFilterChange={fetchList} routes={routes} />
-            </Box>
 
+
+            </Box>
+            <Box sx={{
+                marginBottom: 2,
+                position: 'sticky',
+                overflow: 'auto',
+                backgroundColor: 'white',
+                top: 100, // 🟢 important for sticky to work
+                zIndex: 100,
+            }}>
+                <CashDetails open={openDetails} onClose={() => setOpenDetails(false)} cash={cash} />
+
+            </Box>
             {/* not found */}
             {customers.length === 0 && !listLoading && (
                 <Box
@@ -498,6 +523,7 @@ const DeliveryForm = () => {
             {selectedTrader && (
                 <RemarkDialog
                     images={images}
+                    setIsTally={setIsTally}
                     open={dialogOpen}
                     onClose={closeDialog}
                     onRender={remarkDialogUI}

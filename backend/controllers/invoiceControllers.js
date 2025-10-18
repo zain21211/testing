@@ -160,8 +160,8 @@ TodayPSDetail AS (
         MAX(shopper) AS shopper,
        max(vehicle) as vehicle,
        MAX(s_status) AS s_status
-    FROM psdetail
-    WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's psdetail
+     FROM psdetail
+  --  WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's psdetail
     GROUP BY acid, doc
 )
 SELECT 

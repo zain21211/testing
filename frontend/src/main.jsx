@@ -1,3 +1,5 @@
+import React from 'react'
+
 import './App.css';
 import store from './store/index.js';
 import { Provider } from "react-redux";

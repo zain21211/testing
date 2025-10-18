@@ -23,7 +23,7 @@
   },
 
   // Icons like Firebase Studio
-  "workbench.iconTheme": "material-icon-theme",
+  "workbench.iconTheme": "vscode-icons",
 
   // Formatting similar to Studio
   "editor.formatOnSave": true,

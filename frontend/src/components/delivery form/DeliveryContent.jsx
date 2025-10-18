@@ -13,7 +13,7 @@ import SignatureCanvas from "react-signature-canvas";
 import SignaturePad from "./SignaturePad";
 import { formatCurrency } from "../../utils/formatCurrency";
 import RadioButtons from "./RadioButtons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MyCheckbox from "../Checkbox";
 import { formatedTime } from "../../utils/FormatedTime";
 const biggerInputTextSize = "1.4rem"; // For text inside input fields
@@ -74,6 +74,7 @@ const bigger = {
 
 const DeliveryContent = ({
     id,
+    setIsTally,
     name,
     doc,
     shopper,
@@ -93,6 +94,10 @@ const DeliveryContent = ({
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
+
+    useEffect(() => {
+        setIsTally(flag)
+    }, [flag])
     return (
         <>
             <Box ref={captureRef}>

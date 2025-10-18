@@ -273,7 +273,7 @@ export const RemarkDialogUI = ({
 };
 // RemarkDialog.tsx
 export const RemarkDialog = React.memo(
-    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer }) => {
+    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally }) => {
         const { remark, setRemark, error, handleNavigate, handleSubmit } =
             useRemarkDialog({ open, acid, name, onSubmitRemark, onClose });
 
@@ -286,7 +286,7 @@ export const RemarkDialog = React.memo(
         // It contains the full logic (calling onSubmitRemark, closing dialog, etc.).
         // Also pass all other relevant values.
         return (
-            onRender(images, customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose)
+            onRender(images, customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose, setIsTally)
         );
     }
 );
@@ -490,7 +490,6 @@ const TraderInfoCard = ({ trader }) => (
 const TraderDetailsCard = ({ trader, fields }) => {
 
     const renderField = (key, trader, value) => {
-        console.log(trader)
         if (value === undefined || value === null) return null;
         if (["Sale Date", "Recovery Date", "Credit Limit", "Balance", "number", 'doc'].includes(key)) return null;
         if (key === "Turnover Days" && value < 7) return null;
@@ -606,28 +605,32 @@ const TraderDetailsCard = ({ trader, fields }) => {
 };
 
 // ✅ Parent wrapper
-export const TraderCard = React.memo(({ trader, fields, onClick, flag = false }) => (
-    <Card
-        onClick={onClick}
-        sx={{
-            boxShadow: 3,
-            display: "grid",
-            gridTemplateColumns: flag ? "repeat(5, 1fr)" : "repeat(3, 1fr)",
-            cursor: "pointer",
-            "&:hover": {
-                boxShadow: 6,
-                transform: "scale(1.02)",
-                transition: "transform 0.2s",
-            },
-        }}
-    >
+export const TraderCard = React.memo(({ trader, fields, onClick, flag = false }) => {
+    console.log(trader)
+    return (
+        <Card Card
+            onClick={onClick}
+            sx={{
+                boxShadow: 3,
+                display: "grid",
+                backgroundColor: trader.entry === 'done' ? 'green' : '',
+                gridTemplateColumns: flag ? "repeat(5, 1fr)" : "repeat(3, 1fr)",
+                cursor: "pointer",
+                "&:hover": {
+                    boxShadow: 6,
+                    transform: "scale(1.02)",
+                    transition: "transform 0.2s",
+                },
+            }}
+        >
 
-        {flag && (
-            <TraderInfoCard trader={trader} />
-        )}
-        <TraderDetailsCard trader={trader} fields={fields} />
-    </Card>
-));
+            {flag && (
+                <TraderInfoCard trader={trader} />
+            )}
+            <TraderDetailsCard trader={trader} fields={fields} />
+        </Card >
+    )
+});
 
 const TurnoverReport = () => {
     // --- DIALOG STATE ---

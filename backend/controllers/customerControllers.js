@@ -557,10 +557,16 @@ END
   },
 
   createDeliveryImages: async (req, res) => {
-    const { acid, img } = req.body;
+    const {
+      doc,
+      img,
+      type = "sale",
+      status = "",
+      date = new Date(),
+    } = req.body;
     try {
       const pool = await imageDb();
-      if (!acid) {
+      if (!doc) {
         return res.status(400).json({ error: "ACID are required" });
       }
 
@@ -572,17 +578,20 @@ END
       };
 
       const query = `
-      INSERT INTO recovery ( ACID, image)
-      VALUES ( @acid, @img)
+      INSERT INTO name_reciepts ( doc, image, type, status, datetime)
+      VALUES ( @doc, @img, @type, @status, @datetime)
     `;
 
       const request = pool.request();
-      request.input("acid", mssql.Int, acid);
+      request.input("doc", mssql.Int, doc);
+      request.input("type", mssql.VarChar, type);
+      request.input("status", mssql.VarChar, status);
+      request.input("datetime", mssql.DateTime, date);
       request.input("img", mssql.VarBinary, toBuffer(img));
 
       await request.query(query);
 
-      res.status(201).json({ message: "Images uploaded successfully", acid });
+      res.status(201).json({ message: "Images uploaded successfully", doc });
     } catch (error) {
       console.error("❌ uploadCoaImages error:", error);
       res

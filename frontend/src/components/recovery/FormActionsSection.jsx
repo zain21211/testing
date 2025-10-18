@@ -6,23 +6,26 @@ export const FormActionsSection = ({
     onSubmitAndReset,
     isAddEntryDisabled,
     isLoading,
-    submitButtonDisabled
+    submitButtonDisabled,
+    form = 'recovery',
 }) => {
     console.log("Submit Button Disabled:", submitButtonDisabled);
     return (
         <>
-            <Button
-                variant="contained"
-                fullWidth
-                onClick={onAddEntry}
-                disabled={isAddEntryDisabled}
-                sx={{
-                    fontSize: '1.5rem',
-                    padding: '10px 0',
-                }}
-            >
-                Add Entry
-            </Button>
+            {form === 'recovery' && (
+                <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={onAddEntry}
+                    disabled={isAddEntryDisabled}
+                    sx={{
+                        fontSize: '1.5rem',
+                        padding: '10px 0',
+                    }}
+                >
+                    Add Entry
+                </Button>
+            )}
             <Button
                 variant="contained"
                 fullWidth

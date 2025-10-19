@@ -76,6 +76,7 @@ const DeliveryContent = ({
     id,
     setIsTally,
     name,
+    onReset,
     doc,
     shopper,
     error,
@@ -97,7 +98,8 @@ const DeliveryContent = ({
 
     useEffect(() => {
         setIsTally(flag)
-    }, [flag])
+    }, [flag]);
+
     return (
         <>
             <Box ref={captureRef}>
@@ -175,16 +177,19 @@ const DeliveryContent = ({
 
                 {/* time and checkbox */}
                 <Box sx={{
-                    display: 'flex',
+                    display: 'grid',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
+                    alignContent: 'center',
+                    justifyItems: 'center',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
                     marginY: 1,
+                    gap: 2
                 }}>
                     {/* time */}
                     <Typography fontFamily={'poppins, serif'} sx={{ backgroundColor: 'lightgrey', padding: 1, borderRadius: 2, fontWeight: 'bold' }}>
                         {formatedTime(new Date())}
                     </Typography>
-
+                    <Button variant="contained" onClick={onReset}>return</Button>
                     {/* checkbox */}
                     <MyCheckbox flag={flag} setFlag={setFlag} label={'بیلنس ٹیلی'} />
 

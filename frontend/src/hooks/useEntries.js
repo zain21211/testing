@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocalStorageState } from "./LocalStorage";
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 export const useEntries = () => {
   const [entries, setEntries] = useLocalStorageState(
@@ -129,8 +130,10 @@ export const useEntries = () => {
     async (newEntry, coordinates, address) => {
       setIsLoading(true);
       let entrySuccessfullyPostedOnline = false;
-      const creditID = crypto.randomUUID();
-      const debitID = crypto.randomUUID();
+      // const creditID = crypto.randomUUID();
+      // const debitID = crypto.randomUUID();
+      const creditID = uuidv4();
+      const debitID = uuidv4();
       newEntry.creditID = creditID;
       newEntry.debitID = debitID;
       // console.log(newEntry);

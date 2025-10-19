@@ -39,6 +39,7 @@ import { useCamera } from "../../hooks/useCamera";
 import useFetchCustImgs from "../../hooks/useFetchCustImg";
 import Card from "../Card";
 import CashDetails from "./CashDetails";
+import EntriesDisplay from "./EntriesDisplay";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -49,6 +50,7 @@ export const RemarkDialogUI = ({
     setIsTally,
     customer,
     error,
+    setCustomer,
     handleNavigate,
     handleSubmit,
     content: Content,
@@ -118,6 +120,23 @@ export const RemarkDialogUI = ({
                 "err",
         },
     ];
+    const handleBillReset = async (id) => {
+        setCustomer((prev) => {
+            const newAmount = 0;
+            const newCurrentBalance = prev.prevBalance; // reset to previous balance
+            return {
+                ...prev,
+                amount: newAmount,
+                currentBalance: newCurrentBalance,
+            };
+        });
+
+        await axios.put(`${url}/invoices/return`, {
+            id: customer.doc,
+            status: 'return',
+        });
+    };
+
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
             <DialogTitle>
@@ -141,6 +160,7 @@ export const RemarkDialogUI = ({
                     name={customer.UrduName}
                     shopper={customer.shopper}
                     id={customer.ACID}
+                    onReset={handleBillReset}
                     doc={customer.doc}
                     dialogFields={dialogFields}
                     extra={extra}
@@ -196,6 +216,7 @@ const fields = ["ACID", "UrduName", 'shopper'];
 const DeliveryForm = () => {
     // --- DIALOG STATE ---
     const [isTally, setIsTally] = useState(true);
+    const [entries, setEntries] = useLocalStorageState('DeliveryEntries', { defaultValue: [] });
     const [status, setStatus] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState(null);
@@ -253,7 +274,7 @@ const DeliveryForm = () => {
                 if (index !== -1) {
                     dummy[index] = { ...dummy[index], img };
                 } else {
-                    dummy.push({ id: acid, img });
+                    dummy.push({ doc: newEntry.doc, img });
                 }
 
                 return dummy;
@@ -261,6 +282,7 @@ const DeliveryForm = () => {
             throw error;
         }
     }
+
     useVoucherSync(pendingEntries, setPendingEntries, posting)
 
     const updateExtra = (label, id, val) => {
@@ -272,9 +294,6 @@ const DeliveryForm = () => {
             return updated;
         });
     };
-    useEffect(() => {
-        console.log('tally:', isTally)
-    }, [isTally]);
 
     const handleRadioChange = (label) => {
         setSecondaryFields((prev) =>
@@ -317,12 +336,14 @@ const DeliveryForm = () => {
         handleNavigate,
         handleSubmit,
         onClose,
-        setIsTally
+        setIsTally,
+        setCustomer
     ) => {
         return (
             <Box>
                 <RemarkDialogUI
                     setIsTally={setIsTally}
+                    setCustomer={setCustomer}
                     images={images}
                     open={open}
                     onClose={onClose}
@@ -369,23 +390,24 @@ const DeliveryForm = () => {
     const handlePost = useCallback(
         async (acid, doc, captureRef) => {
             setLoading(true);
-
             const img = await handleCapture(captureRef);
 
             const newEntry = {
+                doc,
+                address,
                 id: acid,
+                coordinates,
+                name: selectedTrader?.UrduName,
+                status: isTally ? 'tally' : 'diff',
+                timestamp: new Date().toISOString(),
+                userName: user?.username || "Unknown User",
                 amounts: {
                     cash: cash[acid],
                     ...extra,
                 },
-                userName: user?.username || "Unknown User",
-                timestamp: new Date().toISOString(),
-                coordinates,
-                address,
-                doc,
-                status: isTally ? 'tally' : 'diff',
-
             };
+            console.log('this is the entry', newEntry)
+            setEntries(prev => [...prev, newEntry])
 
             try {
                 await posting(newEntry, img)
@@ -416,12 +438,6 @@ const DeliveryForm = () => {
             }, 2000);
     }, [status]);
 
-    // useEffect(() => {
-    //     if (!dialogOpen) {
-    //         fetchList();
-    //     }
-    // }, [dialogOpen]); // Refetch when dialog closes
-
     // --- DIALOG HANDLERS ---
     const openDialog = useCallback((trader) => {
         setSelectedTrader(trader);
@@ -432,6 +448,7 @@ const DeliveryForm = () => {
         setDialogOpen(false);
         setSelectedTrader(null);
     }, []);
+
     const {
         customers,
         loading: listLoading,
@@ -443,27 +460,42 @@ const DeliveryForm = () => {
     // --- RENDER ---
     return (
         <Container sx={{ p: 0 }}>
-            <Box
-                sx={{
-                    // display: userRoles.isAdmin || userRoles.isZain ? "block" : "none",
-                    m: 2,
-                }}
-            >
+            {/* {(userRoles.isAdmin || userRoles.isZain) && (
                 <TransporterFilter onFilterChange={fetchList} routes={routes} />
+            )} */}
 
-
-            </Box>
             <Box sx={{
                 marginBottom: 2,
                 position: 'sticky',
                 overflow: 'auto',
                 backgroundColor: 'white',
-                top: 100, // 🟢 important for sticky to work
-                zIndex: 100,
+                top: 60, // 🟢 important for sticky to work
+                zIndex: 50,
             }}>
-                <CashDetails open={openDetails} onClose={() => setOpenDetails(false)} cash={cash} />
+                <Box sx={{
+                    // display: 'flex',
+                    gap: 2,
+                    justifyContent: 'space-between',
+                    alignItems: 'start',
+                    m: 1,
+                    backgroundColor: 'transparent',
+                }}>
+                    <Button variant='contained' onClick={() => setOpenDetails(true)} sx={{
+                        m: 1,
+                    }}>
+                        details
+                    </Button>
+                    <Box sx={{
+                        backgroundColor: 'lightgrey',
+                        p: 1,
+                    }}>
+                        <CashDetails open={openDetails} onClose={() => setOpenDetails(false)} cash={cash} setCash={setCash} />
+                    </Box>
 
+
+                </Box>
             </Box>
+            <EntriesDisplay open={openDetails} onClose={() => setOpenDetails(false)} entries={entries} setEntries={setEntries} />
             {/* not found */}
             {customers.length === 0 && !listLoading && (
                 <Box
@@ -530,6 +562,7 @@ const DeliveryForm = () => {
                     customer={selectedTrader}
                     acid={selectedTrader.ACID}
                     onSubmitRemark={handlePost}
+                    setCustomer={setSelectedTrader}
                     name={selectedTrader.Subsidary || selectedTrader.UrduName}
                 />
             )}

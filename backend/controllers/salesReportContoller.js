@@ -59,7 +59,9 @@ CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
   )
   AND a.route LIKE '%' + @route + '%'
   AND (
-    pd.status LIKE @invoiceStatus + '%' OR pd.status IS NULL
+    (pd.status LIKE @invoiceStatus + '%')
+    OR (@invoiceStatus = 'estimate' AND pd.status IS NULL)
+
   )
 
 `;

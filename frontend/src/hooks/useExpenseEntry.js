@@ -1,6 +1,8 @@
 // hooks/useExpenseEntry.js
 import axios from "axios";
 import useGeolocation from "./geolocation";
+import { v4 as uuidv4 } from "uuid";
+
 const KNOWN_EXPENSE_METHODS = [
   "petrol",
   "entertainment",
@@ -20,9 +22,6 @@ export const useExpenseEntry = () => {
   const { coordinates: location, error: geoError, address } = useGeolocation();
   location.address = address;
   const makeExpenseEntry = async (entry) => {
-    console.log("Geolocation data:", location, geoError);
-    const debitID = crypto.randomUUID();
-    const creditID = crypto.randomUUID();
     try {
       const { amounts, custId, userName, userType } = entry;
       console.log("makeExpenseEntry called with:", {
@@ -70,6 +69,10 @@ export const useExpenseEntry = () => {
 
       for (const [methodKey, amount] of entriesToPost) {
         const lowerMethodKey = methodKey.toLowerCase();
+        // const debitID = crypto.randomUUID();
+        // const creditID = crypto.randomUUID();
+        const debitID = uuidv4();
+        const creditID = uuidv4();
         let payload = {
           custId,
           receivedAmount: amount,

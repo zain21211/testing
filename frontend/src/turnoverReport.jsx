@@ -273,7 +273,7 @@ export const RemarkDialogUI = ({
 };
 // RemarkDialog.tsx
 export const RemarkDialog = React.memo(
-    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally }) => {
+    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally, setCustomer }) => {
         const { remark, setRemark, error, handleNavigate, handleSubmit } =
             useRemarkDialog({ open, acid, name, onSubmitRemark, onClose });
 
@@ -286,7 +286,7 @@ export const RemarkDialog = React.memo(
         // It contains the full logic (calling onSubmitRemark, closing dialog, etc.).
         // Also pass all other relevant values.
         return (
-            onRender(images, customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose, setIsTally)
+            onRender(images, customer, remark, setRemark, pastRemarks, error, acid, handleNavigate, onSubmitRemark, onClose, setIsTally, setCustomer)
         );
     }
 );
@@ -606,7 +606,6 @@ const TraderDetailsCard = ({ trader, fields }) => {
 
 // ✅ Parent wrapper
 export const TraderCard = React.memo(({ trader, fields, onClick, flag = false }) => {
-    console.log(trader)
     return (
         <Card Card
             onClick={onClick}

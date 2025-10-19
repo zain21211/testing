@@ -2,7 +2,7 @@ import React from 'react';
 import { List, ListItem, ListItemText, Typography, Box, Button } from '@mui/material';
 import { formatCurrency } from '../../utils/formatCurrency';
 import ClearIcon from '@mui/icons-material/Clear';
-export const EntriesListSection = ({ entries, onSyncOneEntry, onRemove }) => {
+export const EntriesListSection = ({ entries = [], onSyncOneEntry, onRemove }) => {
     if (entries.length === 0) {
         return <Typography variant="body2" color="text.secondary">No entries added yet.</Typography>;
     }
@@ -75,12 +75,12 @@ export const EntriesListSection = ({ entries, onSyncOneEntry, onRemove }) => {
                                 },
                             }}
                         >
-                            <Button onClick={() => onRemove(entry.creditID)}
+                            {/* <Button onClick={() => onRemove(entry.creditID)}
                                 sx={{
                                     color: 'red'
                                 }}>
                                 <ClearIcon />
-                            </Button>
+                            </Button> */}
 
                             <Typography
                                 variant="caption"

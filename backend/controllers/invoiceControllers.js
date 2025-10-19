@@ -120,6 +120,38 @@ const invoiceControllers = {
     }
   },
 
+  docReturn: async (req, res) => {
+    const { status = "", id } = req.body;
+
+    try {
+      const pool = await dbConnection();
+
+      const query = `
+    UPDATE psdetail 
+    SET status = @Status 
+    WHERE doc = @Doc;
+    
+  `;
+      const request = pool.request();
+
+      request.input("Status", sql.VarChar, status);
+      request.input("Doc", sql.Int, id);
+      request.query(query);
+
+      res.status(200).json({
+        status: "succeeded",
+        ss: status,
+      });
+    } catch (err) {
+      console.error("Error updating invoice(s):", err);
+      res
+        .status(500)
+        .json({ message: "Error updating invoice(s)", error: err.message });
+    } finally {
+      sql.close();
+    }
+  },
+
   getDeliveryList: async (req, res) => {
     const { usertype = "", username = "", route = "" } = req.query;
     const days = [
@@ -337,6 +369,7 @@ WHERE P.Doc = @DocNumber
       sql.close(); // Always close the connection
     }
   },
+
   updateInvoice: async (req, res) => {
     const { invoice, updatedInvoice, nug, tallyBy, time, acid } = req.body;
 

@@ -284,12 +284,14 @@ const CashEntryController = {
 IF EXISTS (
     SELECT 1 
     FROM ledgers 
-WHERE transactionID IN (@creditID, @debitID)
+    WHERE transactionID IN (@creditID, @debitID)
 )
-
 BEGIN
+    RAISERROR('Duplicate transaction IDs', 16, 1);
+    ROLLBACK TRANSACTION;
     RETURN;
 END;
+
 
 BEGIN TRANSACTION;
 

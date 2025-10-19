@@ -7,7 +7,7 @@ import { Dialog } from "@mui/material";
 import ExpenseInputsSection from '../recovery/ExpenseInputsSection';
 import FormActionsSection from '../recovery/FormActionsSection';
 const expenseKeys = ['petrol', 'toll', 'repair'];
-const CashDetails = ({ open, onClose, cash }) => {
+const CashDetails = ({ open, onClose, cash, setCash }) => {
     const user = JSON.parse(localStorage.getItem('user'))
     const [capturing, setCapturing] = useState(false);
 
@@ -44,6 +44,7 @@ const CashDetails = ({ open, onClose, cash }) => {
             //   await screenshot();
             resetExpenseInputs();
             resetEntries();
+            setCash({})
             //   handleReset();
         } else {
             // Handle error case, maybe show a message to the user

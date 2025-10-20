@@ -59,11 +59,11 @@ const CashDetails = ({ open, onClose, cash, setCash }) => {
         <>
             <TotalsDisplaySection
                 totalCash={totalCash}
-                totalAmount={totalAmount}
-                totalJazzcash={totalJazzcash}
-                totalEasypaisa={totalEasypaisa}
-                totalCrownWallet={totalCrownWallet}
-                totalMeezanBank={totalMeezanBank}
+                totalAmount={totalCash}
+                totalJazzcash={0}
+                totalEasypaisa={0}
+                totalCrownWallet={0}
+                totalMeezanBank={0}
                 currentTotalExpenses={currentTotalExpenses}
             // user={user}
             />

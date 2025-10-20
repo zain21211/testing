@@ -281,6 +281,7 @@ const CashEntryController = {
         .input("creditID", sql.VarChar, creditID) // Use systemTimestamp and DateTime2
         .input("debitID", sql.VarChar, debitID) // Use systemTimestamp and DateTime2
         .query(`
+-- Check for duplicates BEFORE starting a transaction
 IF EXISTS (
     SELECT 1 
     FROM ledgers 
@@ -288,24 +289,31 @@ IF EXISTS (
 )
 BEGIN
     RAISERROR('Duplicate transaction IDs', 16, 1);
-    ROLLBACK TRANSACTION;
     RETURN;
 END;
 
-
 BEGIN TRANSACTION;
 
-INSERT INTO ledgers 
-(address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
-VALUES 
-(@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1, @creditID);
+BEGIN TRY
+    INSERT INTO ledgers 
+    (address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
+    VALUES 
+    (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1, @creditID);
 
-INSERT INTO ledgers 
-(address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
-VALUES 
-(@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1, @debitID);
+    INSERT INTO ledgers 
+    (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
+    VALUES 
+    (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1, @debitID);
 
-COMMIT TRANSACTION;
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+
+    RAISERROR(ERROR_MESSAGE(), 16, 1);
+END CATCH;
+
 
       `);
 

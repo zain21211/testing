@@ -64,9 +64,11 @@ export const TotalsDisplaySection = ({
                         </Typography>
                     )}
                 </Box>
-                <Typography variant="h6" gutterBottom>
-                    Overall Received: <strong>{formatCurrency(totalAmount.toFixed(0))}</strong>
-                </Typography>
+                {totalAmount > totalCash && (
+                    <Typography variant="h6" gutterBottom>
+                        Overall Received: <strong>{formatCurrency(totalAmount.toFixed(0))}</strong>
+                    </Typography>
+                )}
             </Box>
         </Box>
     );

@@ -78,10 +78,6 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
         };
     }, [id]);
     const handleUpdate = async () => {
-        if (!updatedInvoices[id]) {
-            alert("missing invoice data");
-            return;
-        }
 
         if (!nug) {
             nugRef.current?.focus();

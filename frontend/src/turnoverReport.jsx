@@ -3,7 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
 import isEqual from "lodash/isEqual";
-import { makeStringPrettier } from "./utils/cleanString";
+import { cleanNumbers, makeStringPrettier } from "./utils/cleanString";
 
 // MUI Components
 import {
@@ -273,7 +273,7 @@ export const RemarkDialogUI = ({
 };
 // RemarkDialog.tsx
 export const RemarkDialog = React.memo(
-    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally, setCustomer }) => {
+    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally, setCustomer, }) => {
         const { remark, setRemark, error, handleNavigate, handleSubmit } =
             useRemarkDialog({ open, acid, name, onSubmitRemark, onClose });
 
@@ -487,7 +487,7 @@ const TraderInfoCard = ({ trader }) => (
 );
 
 // ✅ Right card (fields block)
-const TraderDetailsCard = ({ trader, fields }) => {
+const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
 
     const renderField = (key, trader, value) => {
         if (value === undefined || value === null) return null;
@@ -509,7 +509,7 @@ const TraderDetailsCard = ({ trader, fields }) => {
         } else if (key === "Overdue" && trader["Balance"]) {
             extraInfo = formatCurrency(trader["Balance"]);
         } else if (key === "ACID" && trader["number"]) {
-            extraInfo = trader["number"];
+            extraInfo = cleanNumbers(trader[key]);
         } else if (key === "UrduName" && trader["doc"]) {
             extraInfo = trader["doc"];
         }
@@ -525,7 +525,7 @@ const TraderDetailsCard = ({ trader, fields }) => {
         const isNug = key === "shopper";
         const isOverdue = key === "Overdue";
         const isDateOld = rawDate && isOlderThanOneMonth(rawDate);
-
+        const flag = doneEntries.includes(trader.ACID)
         return (
             <Typography
                 key={key}
@@ -534,7 +534,7 @@ const TraderDetailsCard = ({ trader, fields }) => {
                 sx={{
                     mb: 1,
                     gap: 2,
-                    backgroundColor: isNug ? "#d7d7d7ff" : "transparent",
+                    backgroundColor: isNug ? "#d7d7d7ff" : flag ? 'green' : "transparent",
                     width: isNug ? "fit-content" : "100%",
                     p: isNug ? '0 20px ' : 0,
                     rendering: isNug ? "optimizeLegibility" : "auto",
@@ -543,7 +543,7 @@ const TraderDetailsCard = ({ trader, fields }) => {
                     alignItems: "center",
                     justifyContent: "flex-end",
                     fontWeight: isUrdu ? "bold" : "normal",
-                    color: isOverdue || isDateOld ? "red" : "text.secondary",
+                    color: isOverdue || isDateOld ? "red" : flag ? 'white' : "text.secondary",
                     fontFamily: isUrdu ? "Jameel Noori Nastaleeq, serif" : "poppins, sans-serif",
                 }}
             >
@@ -582,7 +582,7 @@ const TraderDetailsCard = ({ trader, fields }) => {
                                 fontFamily: 'poppins, sans-serif',
                             }}
                         >
-                            {` ${formattedDate || extraInfo}`}
+                            {` ${formattedDate || cleanNumbers(extraInfo)}`}
                         </span>
                     </>
                 )}
@@ -605,14 +605,17 @@ const TraderDetailsCard = ({ trader, fields }) => {
 };
 
 // ✅ Parent wrapper
-export const TraderCard = React.memo(({ trader, fields, onClick, flag = false }) => {
+export const TraderCard = React.memo(({ trader, fields, onClick, flag = false, doneEntries }) => {
+    const entry = doneEntries.includes(trader.ACID)
+
     return (
         <Card Card
             onClick={onClick}
             sx={{
                 boxShadow: 3,
                 display: "grid",
-                backgroundColor: trader.entry === 'done' ? 'green' : '',
+                color: entry ? 'white!important' : '',
+                backgroundColor: entry ? 'green' : '',
                 gridTemplateColumns: flag ? "repeat(5, 1fr)" : "repeat(3, 1fr)",
                 cursor: "pointer",
                 "&:hover": {
@@ -626,7 +629,7 @@ export const TraderCard = React.memo(({ trader, fields, onClick, flag = false })
             {flag && (
                 <TraderInfoCard trader={trader} />
             )}
-            <TraderDetailsCard trader={trader} fields={fields} />
+            <TraderDetailsCard trader={trader} fields={fields} doneEntries={doneEntries} />
         </Card >
     )
 });

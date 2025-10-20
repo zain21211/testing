@@ -50,5 +50,5 @@ export const useFetchList = (list = "load") => {
     }
   }, []);
 
-  return { customers, loading, error, fetchList, routes };
+  return { customers, setCustomers, loading, error, fetchList, routes };
 };

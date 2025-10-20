@@ -40,6 +40,7 @@ import useFetchCustImgs from "../../hooks/useFetchCustImg";
 import Card from "../Card";
 import CashDetails from "./CashDetails";
 import EntriesDisplay from "./EntriesDisplay";
+import { set } from "lodash";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -198,7 +199,10 @@ export const RemarkDialogUI = ({
                 </Box>
                 <Button
                     onClick={() => {
-                        handleSubmit(customer.ACID, customer.doc, captureRef);
+                        setCustomer(prev => ({ ...prev, entry: 'done' }));
+                        console.log('these are the params: ', customer.ACID, customer.UrduName, customer.doc, captureRef)
+                        console.log('customer: ', customer)
+                        handleSubmit(customer.ACID, customer.UrduName, customer.doc, captureRef);
                     }}
                     color="success"
                     variant="contained"
@@ -222,6 +226,8 @@ const DeliveryForm = () => {
     const [selectedTrader, setSelectedTrader] = useState(null);
     const [cash, setCash] = useLocalStorageState('DeliveryCash', {});
     const [pendingEntries, setPendingEntries] = useLocalStorageState('pendingDeliveryEntries', { defaultValue: [] });
+    const [doneEntries, setDoneEntries] = useLocalStorageState('DeliveryDoneEntries', { defaultValue: [] });
+
     // const captureRef = useRef();
     const [loading, setLoading] = useState(false);
     const { coordinates, address } = useGeolocation();
@@ -231,7 +237,14 @@ const DeliveryForm = () => {
     const [openDetails, setOpenDetails] = useState(false)
     const { images, setImages, handleImageChange, resetImages } = useCamera();
     const { loading: imgLoading } = useFetchCustImgs(selectedTrader?.ACID, handleImageChange, setImages, 'agreement');
-
+    const {
+        customers,
+        setCustomers,
+        loading: listLoading,
+        error,
+        fetchList,
+        routes
+    } = useFetchList("delivery");
     const posting = async (newEntry, image) => {
         const img = image || newEntry.img;
         try {
@@ -255,6 +268,7 @@ const DeliveryForm = () => {
             if (image) {
                 await axios.post(`${url}/customers/createDeliveryImages`, {
                     img,
+                    id: newEntry.id,
                     doc: newEntry.doc,
                     status: newEntry.status ? 'tally' : 'diff',
                     date: newEntry.timestamp,
@@ -388,16 +402,16 @@ const DeliveryForm = () => {
     };
 
     const handlePost = useCallback(
-        async (acid, doc, captureRef) => {
+        async (acid, name, doc, captureRef) => {
             setLoading(true);
             const img = await handleCapture(captureRef);
 
             const newEntry = {
                 doc,
+                name,
                 address,
                 id: acid,
                 coordinates,
-                name: selectedTrader?.UrduName,
                 status: isTally ? 'tally' : 'diff',
                 timestamp: new Date().toISOString(),
                 userName: user?.username || "Unknown User",
@@ -406,12 +420,17 @@ const DeliveryForm = () => {
                     ...extra,
                 },
             };
-            console.log('this is the entry', newEntry)
             setEntries(prev => [...prev, newEntry])
 
             try {
                 await posting(newEntry, img)
-                selectedTrader.entry = 'done';
+                console.log("saving done...")
+                setDoneEntries(prev => {
+                    // avoid duplicates
+                    if (prev.includes(acid)) return prev;
+                    return [...prev, acid];
+                });
+                console.log("saving doned")
                 fetchList();
                 setStatus(200);
                 setExtra({})
@@ -432,6 +451,11 @@ const DeliveryForm = () => {
     }, []);
 
     useEffect(() => {
+        console.log('done entries ', doneEntries)
+    }, [doneEntries]);
+
+
+    useEffect(() => {
         if (status)
             setTimeout(() => {
                 setStatus(null);
@@ -449,20 +473,14 @@ const DeliveryForm = () => {
         setSelectedTrader(null);
     }, []);
 
-    const {
-        customers,
-        loading: listLoading,
-        error,
-        fetchList,
-        routes
-    } = useFetchList("delivery");
+
 
     // --- RENDER ---
     return (
         <Container sx={{ p: 0 }}>
-            {/* {(userRoles.isAdmin || userRoles.isZain) && (
+            {(userRoles.isAdmin || userRoles.isZain) && (
                 <TransporterFilter onFilterChange={fetchList} routes={routes} />
-            )} */}
+            )}
 
             <Box sx={{
                 marginBottom: 2,
@@ -495,7 +513,10 @@ const DeliveryForm = () => {
 
                 </Box>
             </Box>
-            <EntriesDisplay open={openDetails} onClose={() => setOpenDetails(false)} entries={entries} setEntries={setEntries} />
+
+            {/* total entries details display */}
+            <EntriesDisplay open={openDetails} onClose={() => setOpenDetails(false)} entries={entries} setEntries={setEntries} setDoneEntries={setDoneEntries} />
+
             {/* not found */}
             {customers.length === 0 && !listLoading && (
                 <Box
@@ -549,6 +570,7 @@ const DeliveryForm = () => {
                         trader={customer}
                         key={customers.acid}
                         onClick={() => openDialog(customer)}
+                        doneEntries={doneEntries}
                     />
                 ))}
             </Box>

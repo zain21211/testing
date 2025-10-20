@@ -560,14 +560,15 @@ END
     const {
       doc,
       img,
+      id,
       type = "sale",
       status = "",
       date = new Date(),
     } = req.body;
     try {
       const pool = await imageDb();
-      if (!doc) {
-        return res.status(400).json({ error: "ACID are required" });
+      if (!doc && !id) {
+        return res.status(400).json({ error: "ACID or doc are required" });
       }
 
       // helper: convert base64 -> Buffer (works for "image" type)
@@ -578,12 +579,13 @@ END
       };
 
       const query = `
-      INSERT INTO name_reciepts ( doc, image, type, status, datetime)
-      VALUES ( @doc, @img, @type, @status, @datetime)
+      INSERT INTO name_reciepts ( doc, acid, image, type, status, datetime)
+      VALUES ( @doc, @acid, @img, @type, @status, @datetime)
     `;
 
       const request = pool.request();
       request.input("doc", mssql.Int, doc);
+      request.input("acid", mssql.Int, id);
       request.input("type", mssql.VarChar, type);
       request.input("status", mssql.VarChar, status);
       request.input("datetime", mssql.DateTime, date);

@@ -4,7 +4,7 @@ import { takeScreenShot } from '../../fuctions';
 
 import EntriesListSection from '../recovery/EntriesListSection';
 
-const EntriesDisplay = ({ open, onClose, entries, setEntries }) => {
+const EntriesDisplay = ({ open, onClose, entries, setEntries, setDoneEntries }) => {
     const user = JSON.parse(localStorage.getItem('user'))
     const target = useRef(null)
 
@@ -22,7 +22,10 @@ const EntriesDisplay = ({ open, onClose, entries, setEntries }) => {
                     />
                 </Box>
                 <Button variant='contained'
-                    onClick={() => handleScreenshot(target)}
+                    onClick={() => {
+                        setDoneEntries([]);
+                        handleScreenshot(target)
+                    }}
                     sx={{
                         display: entries?.length > 0 ? 'block' : 'none',
                     }}>Screenshot</Button>

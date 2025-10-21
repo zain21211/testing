@@ -7,7 +7,7 @@ const SignaturePad = ({ watermark = "", footer = "" }) => {
 
   useEffect(() => {
     clear();
-    
+
   }, [watermark]);
 
   const clear = () => {
@@ -61,7 +61,11 @@ const SignaturePad = ({ watermark = "", footer = "" }) => {
         }}
       />
 
-      <Button variant="contained" color="error" onClick={clear}>
+      <Button variant="contained" color="error" onClick={() => {
+        const conformation = window.confirm('do you want to clear?');
+        if (!conformation) return;
+        clear()
+      }}>
         Clear
       </Button>
     </Box>

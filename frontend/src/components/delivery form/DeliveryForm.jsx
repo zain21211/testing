@@ -122,6 +122,8 @@ export const RemarkDialogUI = ({
         },
     ];
     const handleBillReset = async (id) => {
+        const conformation = window.confirm('do you want to return the bill?');
+        if (!conformation) return;
         setCustomer((prev) => {
             const newAmount = 0;
             const newCurrentBalance = prev.prevBalance; // reset to previous balance
@@ -521,10 +523,10 @@ const DeliveryForm = () => {
             {customers.length === 0 && !listLoading && (
                 <Box
                     sx={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
                         height: "69vh",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                     }}
                 >
                     <Card text={"no customer found"} code={404} color="grey" />

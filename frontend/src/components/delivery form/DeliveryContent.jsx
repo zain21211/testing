@@ -189,7 +189,7 @@ const DeliveryContent = ({
                     <Typography fontFamily={'poppins, serif'} sx={{ backgroundColor: 'lightgrey', padding: 1, borderRadius: 2, fontWeight: 'bold' }}>
                         {formatedTime(new Date())}
                     </Typography>
-                    <Button variant="contained" onClick={onReset}>return</Button>
+                    <Button variant="contained" onClick={onReset} sx={{ backgroundColor: 'red', fontSize: '1.3rem', fontWeight: 'bold' }}>return</Button>
                     {/* checkbox */}
                     <MyCheckbox flag={flag} setFlag={setFlag} label={'بیلنس ٹیلی'} />
 

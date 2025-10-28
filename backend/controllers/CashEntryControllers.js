@@ -1,6 +1,7 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection");
 const getPakistanISODateString = require("../utils/PakTime");
+// const dbConfig = require("./config");
 
 // Moved to top level
 const paymentModes = {
@@ -249,14 +250,13 @@ const CashEntryController = {
 
     try {
       pool = await dbConnection();
+      // pool = new mssql.ConnectionPool(dbConfig);
 
       // 🔹 Get next DocNumber BEFORE starting transaction
-      const docRequest = new sql.Request(pool);
-      const docResult = await docRequest.input(
-        "type",
-        sql.VarChar,
-        selectedMethodConfig.type
-      ).query(`
+      // const docRequest = new sql.Request(pool);
+      const docResult = await pool
+        .request()
+        .input("type", sql.VarChar, selectedMethodConfig.type).query(`
       UPDATE DocNumber
       SET doc = doc + 1
       OUTPUT DELETED.doc
@@ -356,6 +356,8 @@ END CATCH;
       res
         .status(500)
         .json({ error: "Internal server error", message: error.message, body });
+    } finally {
+      // await pool.close();
     }
     // Removed the trailing 'd'
   },

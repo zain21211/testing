@@ -71,8 +71,8 @@ export const useEntries = () => {
 
         for (const [method, amount] of entriesToPost) {
           const payload = {
-            creditID,
-            debitID,
+            creditID: `${creditID}_${method}`,
+            debitID: `${debitID}_${method}`,
             paymentMethod: method.toLowerCase().includes("crown")
               ? "crownone"
               : method.toLowerCase().includes("meezan")

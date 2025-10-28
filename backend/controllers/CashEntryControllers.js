@@ -1,9 +1,8 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection");
 const getPakistanISODateString = require("../utils/PakTime");
-// const dbConfig = require("./config");
 
-// Moved to top level
+// Payment and expense configurations
 const paymentModes = {
   cash: {
     type: "CRV",
@@ -37,35 +36,31 @@ const paymentModes = {
   },
 };
 
-// Moved to top level
-// For dynamic debitAcid based on userType, debitAcid can be a function
 const expenseMethods = {
   petrol: {
     type: "CPV",
-    getDebitAcid: (userTypeString) => {
-      const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
-      return typeLower.includes("sr") ? 685 : 845;
-    },
+    getDebitAcid: (userTypeString) =>
+      userTypeString?.toLowerCase().includes("sr") ? 685 : 845,
     narrationPrefix: "PETROL: CASH PAID BY",
   },
   entertainment: {
     type: "CPV",
-    getDebitAcid: () => 696, // No userType dependency
+    getDebitAcid: () => 696,
     narrationPrefix: "ENTERTAINMENT: CASH PAID BY",
   },
   zaqat: {
     type: "CPV",
-    getDebitAcid: () => 677, // No userType dependency
+    getDebitAcid: () => 677,
     narrationPrefix: "ZAQAT: CASH PAID BY",
   },
   localpetrol: {
     type: "CPV",
-    getDebitAcid: () => 779, // No userType dependency
+    getDebitAcid: () => 779,
     narrationPrefix: "PETROL: CASH PAID BY",
   },
   localpurchase: {
     type: "CPV",
-    getDebitAcid: () => 632, // No userType dependency
+    getDebitAcid: () => 632,
     narrationPrefix: "PURCHASE: CASH PAID BY",
   },
   bilty: {
@@ -75,8 +70,8 @@ const expenseMethods = {
   },
   toll: {
     type: "CPV",
-    getDebitAcid: (userTypeString, username) => {
-      const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
+    getDebitAcid: (userTypeString) => {
+      const typeLower = userTypeString?.toLowerCase() || "";
       return typeLower.includes("sr")
         ? 685
         : typeLower.includes("kr")
@@ -87,11 +82,11 @@ const expenseMethods = {
   },
   salary: {
     type: "CPV",
-    getDebitAcid: (suer, username) => {
-      const typeLower = username ? username.toLowerCase() : "";
-      return typeLower.includes("arif")
+    getDebitAcid: (_, username) => {
+      const nameLower = username?.toLowerCase() || "";
+      return nameLower.includes("arif")
         ? 667
-        : typeLower.includes("salman")
+        : nameLower.includes("salman")
         ? 670
         : "";
     },
@@ -99,11 +94,9 @@ const expenseMethods = {
   },
   salesbonus: {
     type: "CPV",
-    getDebitAcid: (u, username) => {
-      const typeLower = username ? username.toLowerCase() : "";
-      return typeLower.includes("arif")
-        ? 2126
-        : typeLower.includes("salman")
+    getDebitAcid: (_, username) => {
+      const nameLower = username?.toLowerCase() || "";
+      return nameLower.includes("arif") || nameLower.includes("salman")
         ? 2126
         : "";
     },
@@ -111,11 +104,11 @@ const expenseMethods = {
   },
   exp: {
     type: "CPV",
-    getDebitAcid: (u, username) => {
-      const typeLower = username ? username.toLowerCase() : "";
-      return typeLower.includes("arif")
+    getDebitAcid: (_, username) => {
+      const nameLower = username?.toLowerCase() || "";
+      return nameLower.includes("arif")
         ? 1009
-        : typeLower.includes("salman")
+        : nameLower.includes("salman")
         ? 1162
         : "";
     },
@@ -123,243 +116,254 @@ const expenseMethods = {
   },
   repair: {
     type: "CPV",
-    getDebitAcid: (userTypeString, username) => {
-      const typeLower = userTypeString ? userTypeString.toLowerCase() : "";
-      if (typeLower.includes("sr")) return 686;
-      if (typeLower.includes("operator")) return 695;
-      return 2123;
+    getDebitAcid: (userTypeString) => {
+      const typeLower = userTypeString?.toLowerCase() || "";
+      return typeLower.includes("sr")
+        ? 686
+        : typeLower.includes("operator")
+        ? 695
+        : 2123;
     },
     narrationPrefix: "REPAIR: CASH PAID BY",
   },
 };
 
-const CashEntryController = {
-  insertEntry: async (req, res) => {
-    const {
-      creditID,
-      debitID,
-      paymentMethod = {},
-      custId,
-      receivedAmount,
-      userName,
-      userType, // Make sure this is provided if expense methods need it
-      expenseMethod,
-      desc = "",
-      time,
-      location,
-    } = req.body;
-    const body = req.body;
+// Helper functions
+const validateInputs = (reqBody) => {
+  const { paymentMethod, custId, receivedAmount, userName, creditID, debitID } =
+    reqBody;
 
-    const latitude = location.latitude;
-    const longitude = location.longitude;
-    const address = location.address;
+  if (
+    !paymentMethod ||
+    !custId ||
+    !receivedAmount ||
+    !userName ||
+    !creditID ||
+    !debitID
+  ) {
+    throw new Error(
+      "PaymentMethod, custId, receivedAmount, userName, creditID, and debitID are required."
+    );
+  }
+};
 
-    // Effective date of the transaction
-    const effectiveDate = getPakistanISODateString(time);
-    // Timestamp for when the entry is recorded in the system
-    const systemTimestamp = getPakistanISODateString();
+const getMethodConfig = (
+  paymentMethod,
+  expenseMethod,
+  userType,
+  userName,
+  desc
+) => {
+  const lowerExpenseMethod = expenseMethod?.toLowerCase();
+  const expenseConfig = lowerExpenseMethod
+    ? expenseMethods[lowerExpenseMethod]
+    : null;
+
+  if (expenseConfig) {
+    if (typeof expenseConfig.getDebitAcid !== "function") {
+      throw new Error(
+        `Configuration error: getDebitAcid is not a function for expenseMethod ${expenseMethod}`
+      );
+    }
 
     if (
-      !paymentMethod ||
-      !custId ||
-      !receivedAmount ||
-      !userName ||
-      !creditID ||
-      !debitID
+      ["petrol", "toll", "repair"].includes(lowerExpenseMethod) &&
+      !userType
     ) {
-      return res.status(400).json({
-        error:
-          "PaymentMethod, custId, receivedAmount, and userName are required.",
-        paymentMethod,
-        custId,
-        receivedAmount,
-        userName,
-        creditID,
-        debitID,
-      });
+      throw new Error(
+        `UserType is required for expense method: ${expenseMethod}`
+      );
     }
 
-    let selectedMethodConfig;
-    let narration;
+    return {
+      type: expenseConfig.type,
+      debitAcid: expenseConfig.getDebitAcid(userType, userName),
+      narration: `${expenseConfig.narrationPrefix} ${userName}`,
+    };
+  }
 
-    const lowerExpenseMethod = expenseMethod
-      ? expenseMethod.toLowerCase()
-      : null;
-    const expenseConfig = lowerExpenseMethod
-      ? expenseMethods[lowerExpenseMethod]
-      : null;
+  const lowerPaymentMethod = paymentMethod.toLowerCase();
+  const paymentConfig = paymentModes[lowerPaymentMethod];
 
-    if (expenseConfig) {
-      if (typeof expenseConfig.getDebitAcid !== "function") {
-        console.error(
-          `Configuration error: getDebitAcid is not a function for expenseMethod ${expenseMethod}`
-        );
-        return res
-          .status(500)
-          .json({ error: "Server configuration error for expense method." });
-      }
-      // Check if userType is required for this expense method
-      // This check might be more complex depending on how getDebitAcid is defined for all methods
-      if (
-        expenseMethod === "petrol" ||
-        expenseMethod === "toll" ||
-        expenseMethod === "repair"
-      ) {
-        if (!userType) {
-          return res.status(400).json({
-            error: `UserType is required for expense method: ${expenseMethod}`,
-          });
-        }
-      }
-      selectedMethodConfig = {
-        type: expenseConfig.type,
-        debitAcid: expenseConfig.getDebitAcid(userType, userName),
-        narrationPrefix: expenseConfig.narrationPrefix,
-      };
-      narration = `${selectedMethodConfig.narrationPrefix} ${userName}`;
-    } else if (paymentMethod) {
-      const lowerPaymentMethod = paymentMethod.toLowerCase();
-      const paymentConfig = paymentModes[lowerPaymentMethod];
-      if (!paymentConfig) {
-        return res.status(400).json({
-          error: "Invalid no payment or expense method." + body.paymentMethod,
-        });
-      }
-      selectedMethodConfig = paymentConfig; // debitAcid is directly available
-      narration = `${selectedMethodConfig.narrationPrefix} ${userName} ${desc}`;
-    } else {
-      // This case should ideally not be reached if the first check for paymentMethod is robust
-      // and expenseMethod path is handled. Or, if expenseMethod is given, paymentMethod might be optional.
-      return res.status(400).json({
-        error:
-          "Either a valid payment method or expense method must be provided.",
-      });
-    }
+  if (!paymentConfig) {
+    throw new Error("Invalid payment or expense method.");
+  }
 
-    if (!selectedMethodConfig) {
-      // Should be caught by earlier checks, but as a safeguard
-      return res
-        .status(400)
-        .json({ error: "Invalid payment or expense method configuration." });
-    }
+  return {
+    type: paymentConfig.type,
+    debitAcid: paymentConfig.debitAcid,
+    narration: `${paymentConfig.narrationPrefix} ${userName} ${desc}`,
+  };
+};
 
-    // const pool = await dbConnection();
-    // const transaction = new sql.Transaction(pool);
-    let pool;
-    let transaction;
-
-    try {
-      pool = await dbConnection();
-      // pool = new mssql.ConnectionPool(dbConfig);
-
-      // 🔹 Get next DocNumber BEFORE starting transaction
-      // const docRequest = new sql.Request(pool);
-      const docResult = await pool
-        .request()
-        .input("type", sql.VarChar, selectedMethodConfig.type).query(`
+const getNextDocNumber = async (pool, type) => {
+  const result = await pool.request().input("type", sql.VarChar, type).query(`
       UPDATE DocNumber
       SET doc = doc + 1
       OUTPUT DELETED.doc
       WHERE type = @type
     `);
 
-      const nextDoc = docResult.recordset[0].doc;
+  return result.recordset[0].doc;
+};
 
+const checkDuplicateTransactions = async (transaction, creditID, debitID) => {
+  const result = await transaction
+    .request()
+    .input("creditID", sql.VarChar, creditID)
+    .input("debitID", sql.VarChar, debitID).query(`
+      SELECT 1 FROM ledgers 
+      WHERE transactionID IN (@creditID, @debitID)
+    `);
+
+  return result.recordset.length > 0;
+};
+
+const insertLedgerEntries = async (
+  transaction,
+  effectiveDate,
+  type,
+  doc,
+  custId,
+  debitAcid,
+  amount,
+  narration,
+  userName,
+  location,
+  creditID,
+  debitID,
+  systemTimestamp
+) => {
+  const { latitude, longitude, address } = location;
+  const dateOnly = effectiveDate.split("T")[0];
+
+  await transaction
+    .request()
+    .input("effDate", sql.VarChar, dateOnly)
+    .input("type", sql.VarChar, type)
+    .input("doc", sql.Int, doc)
+    .input("custId", sql.Int, custId)
+    .input("debitAcid", sql.Int, debitAcid)
+    .input("amount", sql.Decimal(18, 2), amount)
+    .input("narration", sql.VarChar, narration)
+    .input("userName", sql.VarChar, userName)
+    .input("latitude", sql.Float, latitude)
+    .input("longitude", sql.Float, longitude)
+    .input("address", sql.VarChar, address)
+    .input("systemTimestamp", sql.VarChar, systemTimestamp)
+    .input("creditID", sql.VarChar, creditID)
+    .input("debitID", sql.VarChar, debitID).query(`
+      INSERT INTO ledgers 
+      (address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
+      VALUES 
+      (@address, @latitude, @longitude, @effDate, @type, @doc, @custId, @amount, @narration, @userName, @systemTimestamp, @creditID);
+      
+      INSERT INTO ledgers 
+      (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
+      VALUES 
+      (@address, @latitude, @longitude, @effDate, @type, @doc, @debitAcid, @amount, @narration, @userName, @systemTimestamp, @debitID);
+    `);
+};
+
+// Main controller
+const CashEntryController = {
+  insertEntry: async (req, res) => {
+    let pool;
+    let transaction;
+
+    try {
+      // Validate inputs
+      validateInputs(req.body);
+
+      const {
+        creditID,
+        debitID,
+        paymentMethod,
+        custId,
+        receivedAmount,
+        userName,
+        userType,
+        expenseMethod,
+        desc = "",
+        time,
+        location,
+      } = req.body;
+
+      const effectiveDate = getPakistanISODateString(time);
+      const systemTimestamp = getPakistanISODateString();
+
+      // Get method configuration
+      const methodConfig = getMethodConfig(
+        paymentMethod,
+        expenseMethod,
+        userType,
+        userName,
+        desc
+      );
+
+      // Get database connection
+      pool = await dbConnection();
+
+      // Get next document number
+      const nextDoc = await getNextDocNumber(pool, methodConfig.type);
+
+      // Start transaction
       transaction = new sql.Transaction(pool);
       await transaction.begin();
 
-      const request = new sql.Request(transaction);
+      // Check for duplicate transactions
+      if (await checkDuplicateTransactions(transaction, creditID, debitID)) {
+        await transaction.rollback();
+        return res.status(400).json({ error: "Duplicate transaction IDs" });
+      }
 
-      // Insert credit entry (customer or entity being credited)
-      const dateOnly = new Date().toISOString().split("T")[0];
-      await request
-        .input("effDate1", sql.VarChar, dateOnly) // Use effectiveDate
-        .input("type1", sql.VarChar, selectedMethodConfig.type)
-        .input("doc1", sql.Int, nextDoc)
-        .input("acid1", sql.Int, custId)
-        .input("credit", sql.Decimal(18, 2), receivedAmount)
-        .input("narration1", sql.VarChar, narration)
-        .input("entryBy1", sql.VarChar, userName)
-        .input("latitude", sql.Float, latitude)
-        .input("longitude", sql.Float, longitude)
-        .input("address", sql.VarChar, address)
-        .input("entryDateTime1", sql.VarChar, systemTimestamp)
-        .input("debit", sql.Decimal(18, 2), receivedAmount)
-        .input("acid2", sql.Int, selectedMethodConfig.debitAcid)
-        .input("creditID", sql.VarChar, creditID) // Use systemTimestamp and DateTime2
-        .input("debitID", sql.VarChar, debitID) // Use systemTimestamp and DateTime2
-        .query(`
--- Check for duplicates BEFORE starting a transaction
-IF EXISTS (
-    SELECT 1 
-    FROM ledgers 
-    WHERE transactionID IN (@creditID, @debitID)
-)
-BEGIN
-    RAISERROR('Duplicate transaction IDs', 16, 1);
-    RETURN;
-END;
+      // Insert ledger entries
+      await insertLedgerEntries(
+        transaction,
+        effectiveDate,
+        methodConfig.type,
+        nextDoc,
+        custId,
+        methodConfig.debitAcid,
+        receivedAmount,
+        methodConfig.narration,
+        userName,
+        location,
+        creditID,
+        debitID,
+        systemTimestamp
+      );
 
-BEGIN TRY
-    INSERT INTO ledgers 
-    (address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
-    VALUES 
-    (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1, @creditID);
-
-    INSERT INTO ledgers 
-    (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
-    VALUES 
-    (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1, @debitID);
-END TRY
-BEGIN CATCH
-END CATCH;
-
-
-
-      `);
-
-      //         const id = await request // request object is already bound to the transaction
-      //         .input("user", sql.VarChar, userName)
-      //         .query(`
-      //           select id from coa where main='cash & bank' and Subsidary like 'collection by ' + @user + '%'
-      //           `);
-      // const cashAcc = id.recordset[0]?.id;
-      // console.log("id", id)
-      // console.log("cash acc", cashAcc)
-      // Insert debit entry (cash/bank/expense account)
-
-      // const entryResult = await request
-
-      //   .query(`
-      //     SELECT date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime
-      //     FROM ledgers
-      //     WHERE type = @type1 AND doc = @doc1
-      //   `);
-
-      //   const entry = entryResult.recordset[0];
-
+      // Commit transaction
       await transaction.commit();
 
       res.json({ success: true, doc: nextDoc });
     } catch (error) {
       console.error("Insert Entry Error:", error);
-      if (transaction && transaction.rolledBack === false) {
-        // Check if transaction exists and not already rolled back
+
+      // Rollback transaction if active
+      if (transaction && !transaction._rolledBack) {
         try {
           await transaction.rollback();
-          console.log("Transaction rolled back.");
         } catch (rollbackError) {
           console.error("Rollback Error:", rollbackError);
-          // Potentially log this error to a more persistent store
         }
       }
-      res
-        .status(500)
-        .json({ error: "Internal server error", message: error.message, body });
+
+      res.status(500).json({
+        error: error.message || "Internal server error",
+        details: error.toString(),
+      });
     } finally {
-      // await pool.close();
+      // // Close connection if it was opened
+      // if (pool && pool.connected) {
+      //   try {
+      //     await pool.close();
+      //   } catch (closeError) {
+      //     console.error("Connection Close Error:", closeError);
+      //   }
+      // }
     }
-    // Removed the trailing 'd'
   },
 };
 

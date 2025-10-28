@@ -9,11 +9,12 @@ const productControllers = {
   FROM Products
   ORDER BY Name;
 `);
-res.json(result.recordset);
-
+      res.json(result.recordset);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch products.", error });
-    } 
+      res
+        .status(500)
+        .json({ message: "Failed to fetch products this is new!.", error });
+    }
   },
 };
 

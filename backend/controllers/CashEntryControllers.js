@@ -163,7 +163,8 @@ const CashEntryController = {
       !custId ||
       !receivedAmount ||
       !userName ||
-      (!creditID && !debitID)
+      !creditID ||
+      !debitID
     ) {
       return res.status(400).json({
         error:
@@ -241,26 +242,33 @@ const CashEntryController = {
         .json({ error: "Invalid payment or expense method configuration." });
     }
 
-    let pool; // Declare pool outside try to ensure it's available in finally if needed
-    let transaction; // Declare transaction here to access in catch/finally
+    // const pool = await dbConnection();
+    // const transaction = new sql.Transaction(pool);
+    let pool;
+    let transaction;
 
     try {
       pool = await dbConnection();
+
+      // 🔹 Get next DocNumber BEFORE starting transaction
+      const docRequest = new sql.Request(pool);
+      const docResult = await docRequest.input(
+        "type",
+        sql.VarChar,
+        selectedMethodConfig.type
+      ).query(`
+      UPDATE DocNumber
+      SET doc = doc + 1
+      OUTPUT DELETED.doc
+      WHERE type = @type
+    `);
+
+      const nextDoc = docResult.recordset[0].doc;
+
       transaction = new sql.Transaction(pool);
       await transaction.begin();
 
       const request = new sql.Request(transaction);
-
-      const docResult = await request
-        .input("type", sql.VarChar, selectedMethodConfig.type)
-        .query(
-          ` UPDATE DocNumber
-            SET doc = doc + 1
-            OUTPUT DELETED.doc 
-            WHERE type = @type`
-        );
-
-      const nextDoc = docResult.recordset[0].doc;
 
       // Insert credit entry (customer or entity being credited)
       const dateOnly = new Date().toISOString().split("T")[0];
@@ -292,8 +300,6 @@ BEGIN
     RETURN;
 END;
 
-BEGIN TRANSACTION;
-
 BEGIN TRY
     INSERT INTO ledgers 
     (address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
@@ -304,15 +310,10 @@ BEGIN TRY
     (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
     VALUES 
     (@address, @latitude, @longitude, @effDate1, @type1, @doc1, @acid2, @debit, @narration1, @entryBy1, @entryDateTime1, @debitID);
-
-    COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH
-    IF @@TRANCOUNT > 0
-        ROLLBACK TRANSACTION;
-
-    RAISERROR(ERROR_MESSAGE(), 16, 1);
 END CATCH;
+
 
 
       `);

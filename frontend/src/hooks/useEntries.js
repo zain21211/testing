@@ -51,7 +51,6 @@ export const useEntries = () => {
 
   const makeCashEntry = useCallback(
     async (entry, coordinates, address) => {
-      console.log(entry);
       try {
         const {
           amounts,

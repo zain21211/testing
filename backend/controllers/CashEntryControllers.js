@@ -130,11 +130,18 @@ const expenseMethods = {
 
 // Helper functions
 const validateInputs = (reqBody) => {
-  const { paymentMethod, custId, receivedAmount, userName, creditID, debitID } =
-    reqBody;
+  const {
+    paymentMethod,
+    custId,
+    receivedAmount,
+    userName,
+    creditID,
+    debitID,
+    expenseMethod,
+  } = reqBody;
 
   if (
-    !paymentMethod ||
+    (!paymentMethod && !expenseMethod) ||
     !custId ||
     !receivedAmount ||
     !userName ||

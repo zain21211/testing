@@ -509,7 +509,7 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
         } else if (key === "Overdue" && trader["Balance"]) {
             extraInfo = formatCurrency(trader["Balance"]);
         } else if (key === "ACID" && trader["number"]) {
-            extraInfo = cleanNumbers(trader[key]);
+            extraInfo = trader[key];
         } else if (key === "UrduName" && trader["doc"]) {
             extraInfo = trader["doc"];
         }
@@ -525,7 +525,7 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
         const isNug = key === "shopper";
         const isOverdue = key === "Overdue";
         const isDateOld = rawDate && isOlderThanOneMonth(rawDate);
-        const flag = doneEntries.includes(trader.ACID)
+        const flag = doneEntries?.includes(trader.ACID)
         return (
             <Typography
                 key={key}
@@ -582,7 +582,7 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
                                 fontFamily: 'poppins, sans-serif',
                             }}
                         >
-                            {` ${formattedDate || cleanNumbers(extraInfo)}`}
+                            {` ${formattedDate || extraInfo}`}
                         </span>
                     </>
                 )}
@@ -605,8 +605,8 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
 };
 
 // ✅ Parent wrapper
-export const TraderCard = React.memo(({ trader, fields, onClick, flag = false, doneEntries }) => {
-    const entry = doneEntries.includes(trader.ACID)
+export const TraderCard = React.memo(({ trader, fields, onClick, flag = false, doneEntries = [] }) => {
+    const entry = doneEntries?.includes(trader.ACID)
 
     return (
         <Card Card

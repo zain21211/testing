@@ -45,7 +45,7 @@ const invoiceControllers = {
         .status(500)
         .json({ message: "Error fetching invoice", error: err.message });
     } finally {
-      sql.close(); // Always close the connection
+      // sql.close(); // Always close the connection
     }
   },
 
@@ -116,7 +116,7 @@ const invoiceControllers = {
         .status(500)
         .json({ message: "Error updating invoice(s)", error: err.message });
     } finally {
-      sql.close();
+      // sql.close();
     }
   },
 
@@ -148,7 +148,7 @@ const invoiceControllers = {
         .status(500)
         .json({ message: "Error updating invoice(s)", error: err.message });
     } finally {
-      sql.close();
+      // sql.close();
     }
   },
 
@@ -244,7 +244,7 @@ and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
         .status(500)
         .json({ message: "Error fetching invoice", error: err.message });
     } finally {
-      sql.close(); // Always close the connection
+      // sql.close(); // Always close the connection
     }
   },
 
@@ -366,7 +366,7 @@ WHERE P.Doc = @DocNumber
         .status(500)
         .json({ message: "Error fetching invoice", error: err.message });
     } finally {
-      sql.close(); // Always close the connection
+      // sql.close(); // Always close the connection
     }
   },
 

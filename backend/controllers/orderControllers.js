@@ -17,7 +17,7 @@ const getProducts = async () => {
     console.error("Error fetching products:", err);
     throw err;
   } finally {
-    if (pool) await pool.close();
+    // if (pool) await pool.close();
   }
 };
 

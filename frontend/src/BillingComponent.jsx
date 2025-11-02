@@ -333,7 +333,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                       } else if (field.label === "T.Q") {
                         displayValue = row.TQ || "0";
                       } else if (field.id === "Rate") {
-                        displayValue = row.Price || "0";
+                        displayValue = row.suggestedRate || row.Price || "0";
                       } else if (field.label === "D%") {
                         displayValue = row.Disc2 || "0";
                       } else if (field.id === "Amount") {

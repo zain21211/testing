@@ -119,7 +119,6 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/invoices", invoiceRoutes); // Invoice route);
 app.use("/api/create-order", orderRoutes); // Invoice route);
 app.use("/api/products", productRoutes); // Invoice route);
-app.use("/api/products", productRoutes); // Invoice route);
 app.use("/api/discount", discountRoutes); // Invoice route);
 app.use("/api/scheme", schemeRoutes); // Invoice route);
 app.use("/api/balance", balanceRoutes); // Invoice route);

@@ -178,6 +178,7 @@ export default function ProductDetailsGrid({
             <TextField
                 label="Sug.price"
                 type="number"
+                onFocus={e => e.target.focus()}
                 sx={{
                     ...bigger,
                     "& .MuiInputBase-input": {

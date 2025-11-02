@@ -357,6 +357,15 @@ const Login = () => {
               <>
                 <Button
                   component={RouterLink}
+                  to="/productslist" // Non-customers can still go to create order manually
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#ff00eaff" }}
+                >
+                  Products
+                </Button>
+                <Button
+                  component={RouterLink}
                   to="/list" // Non-customers can still go to create order manually
                   variant="contained"
                   size="large"

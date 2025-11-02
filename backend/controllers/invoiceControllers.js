@@ -296,6 +296,7 @@ p.prid AS prid,
   P.SchPc AS FOC,
   (ISNULL(P.QTY, 0) + ISNULL(P.SchPc, 0)) AS TQ,
   P.Rate AS Price,
+  P.suggestedRate AS suggestedRate,
   ISNULL(P.Discp, 0) AS Disc1,
   --ISNULL(P.Discp2, 0) AS Disc2,
   ROUND(
@@ -304,11 +305,7 @@ p.prid AS prid,
       ELSE (ISNULL(P.Discount2, 0) * 100.0) / (ISNULL(P.QTY, 0) * ISNULL(P.Rate, 0))
     END
   , 2) AS Disc2,
-  ROUND((ISNULL(P.QTY, 0) * ISNULL(P.Rate, 0)) 
-        - ISNULL(P.Discp, 0) 
-        - ISNULL(P.Discount, 0) 
-        - ISNULL(P.DiscP2, 0) 
-        - ISNULL(P.Discount2, 0), 0) AS Amount
+p.vist AS Amount
 		,Isnull((select top 1 Schon from SchQTYSlabs where Prid=pr.ID order by Schon),0) SchOn
 		,isnull((select top 1 SchPcs from SchQTYSlabs where Prid=pr.ID order by Schon),0) SchPcs
 ,isnull((select sum(case when type in ('purchase','sale return') then qty+isnull(schpc,0) when type in ('sale','purchase return') then (qty+isnull(schpc,0))*-1 end) from PSProduct where prid=p.prid and isclaim=0  and date>=(select stockdate from Products where ID=p.prid) and date<=dateadd(d,2,GETDATE()) 

@@ -228,7 +228,7 @@ const Header = () => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, '@media print': { display: 'none', } }}>
       <AppBar
         position="fixed"
         sx={{

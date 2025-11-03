@@ -362,14 +362,6 @@ const CashEntryController = {
         details: error.toString(),
       });
     } finally {
-      // // Close connection if it was opened
-      // if (pool && pool.connected) {
-      //   try {
-      //     await pool.close();
-      //   } catch (closeError) {
-      //     console.error("Connection Close Error:", closeError);
-      //   }
-      // }
     }
   },
 };

@@ -63,9 +63,10 @@ export default function OrderPage({
 
     useEffect(() => {
         console.log(productInputRef?.current)
-        if (selectedCustomer)
-            productInputRef?.current?.focus()
-
+        if (user?.userType?.toLowerCase().includes('sm')) {
+            productIDInputRef.current?.focus();
+        }
+        else productInputRef.current?.focus();
     }, [selectedCustomer])
 
     useEffect(() => {
@@ -127,8 +128,11 @@ export default function OrderPage({
         setSelectedProduct(null)
         setProductInputValue('')
         setTimeout(() => {
-            productInputRef.current?.focus();
-        }, 0); // ensures DOM has updated
+            if (user?.userType?.toLowerCase().includes('sm')) {
+                productIDInputRef.current?.focus();
+            }
+            else productInputRef.current?.focus();
+        }, 50); // ensures DOM has updated
 
 
     }

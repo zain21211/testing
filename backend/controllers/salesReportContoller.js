@@ -70,7 +70,7 @@ CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
     query += ` AND h.UserName LIKE '%' + @user + '%'`;
   }
 
-  query += ` order by h.entrydate`;
+  query += ` order by pd.date, h.entrydate`;
 
   try {
     const pool = await dbConnection();

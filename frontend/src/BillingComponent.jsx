@@ -73,6 +73,7 @@ const formatCurrency = (value) => {
 
 // invoice model
 const BillingComponent = ({ name = "INVOICE" }) => {
+  const screenshotRef = useRef(null);
   const [invoice, setInvoice] = useState({ items: [] });
   const [formData, setFormData] = useState([]);
   const [customer, setCustomer] = useState([]);
@@ -85,7 +86,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
   });
-
+  const [customerNumber, setCustomerNumber] = useState(customer?.Number || '')
   const location = useLocation();
   const cameFromOrderPage = location.state?.fromOrderPage === true;
   const targetRef = useRef();
@@ -129,7 +130,9 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   }, [cameFromOrderPage, isReady, location.pathname, customer]);
 
 
-
+  const getScreenshot = target => {
+    takeScreenShot(target)
+  }
   useEffect(() => {
     const freight = customer?.Frieght || 0;
     const extra = customer?.Extra || 0;
@@ -159,6 +162,10 @@ const BillingComponent = ({ name = "INVOICE" }) => {
     getInvoice();
   }, [id]);
 
+  useEffect(() => {
+    if (customer && customer.Number)
+      setCustomerNumber(customer.Number)
+  }, [customer])
 
   useEffect(() => {
     const now = new Date();
@@ -324,8 +331,9 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                       let displayValue = "";
                       if (!row) <Skeleton height={30} width="80%" />;
                       if (field.label === "Product") {
-                        displayValue = ` ${row.Category?.toUpperCase() || ""} - ${row.Company?.toUpperCase() || ""} - ${row.Product?.toUpperCase() || "error"
-                          }`;
+                        displayValue = `  ${row.Product?.toUpperCase() || "--"}`;
+                        // displayValue = ` ${row.Category?.toUpperCase() || ""} - ${row.Company?.toUpperCase() || ""} - ${row.Product?.toUpperCase() || "error"
+                        // }`;
                       } else if (field.label === "B.Q") {
                         displayValue = row.BQ || "0";
                       } else if (field.label === "FOC") {
@@ -358,17 +366,17 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                           }
                           InputProps={{
                             disableUnderline: true,
-                            startAdornment:
-                              field.label === "Product" ? (
-                                <div style={{ display: "flex", flexDirection: 'column', width: "25%" }}>
-                                  <div style={{ fontWeight: "bold" }} dir="ltr">
-                                    {row.Company?.toUpperCase() || ""}
-                                  </div>
-                                  {/* <div style={{ fontWeight: "bold" }} dir="ltr">
-                                    {row.Category?.toUpperCase() || ""}
-                                  </div> */}
-                                </div>
-                              ) : null,
+                            // startAdornment:
+                            //   field.label === "Product" ? (
+                            //     <div style={{ display: "flex", flexDirection: 'column', width: "25%" }}>
+                            //       <div style={{ fontWeight: "bold" }} dir="ltr">
+                            //         {row.Company?.toUpperCase() || ""}
+                            //       </div>
+                            //       {/* <div style={{ fontWeight: "bold" }} dir="ltr">
+                            //         {row.Category?.toUpperCase() || ""}
+                            //       </div> */}
+                            //     </div>
+                            //   ) : null,
 
                           }}
                           inputProps={{
@@ -414,9 +422,16 @@ const BillingComponent = ({ name = "INVOICE" }) => {
             <TextField
               label="Description"
               variant="outlined"
-              InputLabelProps={{ shrink: true }}
-              sx={{ marginY: 3 }}
               value={customer.Description}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                my: 3,
+                width: 'fit-content',           // Fit the wrapper div
+                '& .MuiInputBase-input': {      // Target the inner <input>
+                  width: 'auto',                // Let input shrink/grow
+                  minWidth: 50                  // Optional: minimum width
+                }
+              }}
               onChange={(e) =>
                 setInvoice((prev) => ({
                   ...prev,
@@ -464,44 +479,37 @@ const BillingComponent = ({ name = "INVOICE" }) => {
               </Box>
             </Box>
 
-            {/* Print Button */}
-            <Box textAlign="center" sx={{ mt: 4 }}>
-              {/* <Button
-              variant="contained"
-              startIcon={<Print />}
-              onClick={() => window.print()}
-            >
-              Print Invoice
-            </Button> */}
-              {/* <Button
-              variant="contained"
-              onClick={() => {
-                handlePost();
-              }}
-              ref={buttonRef}
-            >
-              Submit
-            </Button> */}
-            </Box>
-
           </Box>
-          {/* print Order Button */}
-          <Box sx={{ mt: 3, textAlign: "center" }}>
+          <TextField
+            label='number'
+            value={customerNumber}
+            onChange={e => setCustomerNumber(e.target.value)}
+            inputProps={{ inputMode: 'numeric' }}
+          />
+          {/* action Buttons */}
+          <Box sx={{ mt: 3, textAlign: "center", display: 'flex', gap: 2, justifyContent: 'center' }}>
+            {/* for snapshot */}
             <Button
               variant="contained"
               color="primary"
               size="large"
-              onClick={window.print}
-              // disabled={
-              //   loading || // Disable during loading/posting
-              //   initialDataLoading || // Disable during initial data fetch
-              //   orderItems.length === 0 || // Cannot post empty order
-              //   !selectedCustomer // Must have a selected customer
-              // }
-              sx={{ minWidth: "200px" }}
+              onClick={() => getScreenshot(targetRef)}
+              sx={{ minWidth: "200px", fontSize: '1.2rem' }}
             >
-              Print
+              screenshot
             </Button>
+
+            {/* for whatsapp */}
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
+              onClick={() => getScreenshot(targetRef)}
+              sx={{ minWidth: "200px", fontSize: '1.2rem' }}
+            >
+              WhatsApp
+            </Button>
+
           </Box>
         </Paper>
       </Container>

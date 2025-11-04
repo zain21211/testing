@@ -1,0 +1,47 @@
+{
+	"folders": [
+		{
+			"name": "dummy",
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "Gruvbox Dark Hard",
+		"workbench.iconTheme": "material-icon-theme",
+		"workbench.statusBar.visible": true,
+		"workbench.layoutControl.enabled": false,
+		"editor.minimap.enabled": false,
+		"breadcrumbs.enabled": false,
+		"editor.scrollbar.vertical": "hidden",
+		"editor.scrollbar.horizontal": "hidden",
+		"editor.fontFamily": "JetBrains Mono, Fira Code, Cascadia Code, monospace",
+		"editor.fontLigatures": true,
+		"editor.fontSize": 15,
+		"editor.lineHeight": 1.5,
+		"editor.cursorSmoothCaretAnimation": "on",
+		"editor.smoothScrolling": true,
+		"editor.roundedSelection": true,
+		"editor.renderWhitespace": "selection",
+		"editor.lineNumbers": "off",
+		"window.commandCenter": false,
+		"workbench.colorCustomizations": {
+			"editor.background": "#1b1f24",
+			"editor.foreground": "#e5f4f1",
+			"activityBar.background": "#111517",
+			"sideBar.background": "#151a1e",
+			"statusBar.background": "#101417",
+			"titleBar.activeBackground": "#12181c",
+			"statusBar.foreground": "#a3e4d7",
+			"statusBarItem.hoverBackground": "#1c2226",
+			"editorCursor.foreground": "#7ef4c1",
+			"editorLineNumber.foreground": "#3c4749"
+		},
+		"explorer.compactFolders": false,
+		"explorer.confirmDelete": false,
+		"explorer.confirmDragAndDrop": false,
+		"window.zoomLevel": 0.5,
+		"workbench.startupEditor": "none",
+		"workbench.sideBar.location": "right",
+		"workbench.activityBar.location": "hidden"
+	}
+}

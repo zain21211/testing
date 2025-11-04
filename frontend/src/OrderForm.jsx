@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import LocalPendingItems from "./components/orderform/LocalPendingItems.jsx";
 // import debounce from "lodash.debounce";
@@ -27,8 +27,8 @@ import {
   Paper,
   CircularProgress,
   FormControl,
-
-  Tabs, Tab,
+  Tabs,
+  Tab,
   InputLabel,
   Select,
   MenuItem,
@@ -115,15 +115,16 @@ const BigTextField = styled(TextField)({
 });
 
 const OrderForm = () => {
+  // const navigate = useNavigation();
   // --- Redux State ---
   const { selectedCustomer } = useSelector(
-    (state) => state.customerSearch.customers["orderForm"]
+    (state) => state.customerSearch.customers["orderForm"],
   );
   const dispatch = useDispatch();
   // --- Component State ---
   const [products, setProducts, productsLoaded] = useIndexedDBState(
     "products",
-    []
+    [],
   );
   const [companies, setCompanies] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -151,13 +152,13 @@ const OrderForm = () => {
   const [invoice, setInvoice] = useLocalStorageState("invoice", null);
   const [orderItems, setOrderItems] = useLocalStorageState(
     "orderFormOrderItems",
-    []
+    [],
   );
   const [orderItemsTotalQuantity, setOrderItemsTotalQuantity] =
     useLocalStorageState("orderFormTotalQuantity", 0);
   const [selectedDate, setSelectedDate] = useLocalStorageState(
     "orderFormSelectedDate",
-    new Date().toISOString().split("T")[0] // Store as YYYY-MM-DD
+    new Date().toISOString().split("T")[0], // Store as YYYY-MM-DD
   );
 
   // --- Derived State & Memoized Values ---
@@ -176,7 +177,7 @@ const OrderForm = () => {
   const { retryInvoices, loading: syncing } = useInvoiceSync(
     invoice,
     setInvoice,
-    token
+    token,
   );
   // --- Effects ---
 
@@ -240,10 +241,10 @@ const OrderForm = () => {
 
     if (productsLoaded) {
       setCompanies(
-        [...new Set(products.map((p) => p.Company).filter(Boolean))].sort()
+        [...new Set(products.map((p) => p.Company).filter(Boolean))].sort(),
       );
       setCategories(
-        [...new Set(products.map((p) => p.Category).filter(Boolean))].sort()
+        [...new Set(products.map((p) => p.Category).filter(Boolean))].sort(),
       );
       fetchInitialData();
     }
@@ -289,7 +290,7 @@ const OrderForm = () => {
   useEffect(() => {
     const newTotalQuantity = orderItems.reduce(
       (sum, item) => sum + (Number(item.quantity) || 0),
-      0
+      0,
     );
     setOrderItemsTotalQuantity(newTotalQuantity);
   }, [orderItems, setOrderItemsTotalQuantity]);
@@ -306,7 +307,19 @@ const OrderForm = () => {
     // POST INVOICE
     if (event.altKey && event.key.toLowerCase() === "b") {
       event.preventDefault();
-      handlePostOrder("INVOICE");
+      // handlePostOrder("INVOICE");
+      getInvoicePreview('INVOCIE')
+    }
+  };
+
+  const getInvoicePreview = async () => {
+    try {
+      const doc = await handlePostOrder("INVOICE");
+
+      navigate(`/invoice/${doc}`)
+
+    } catch (error) {
+      console.error(error);
     }
   };
   const handleSelectCustomer = useCallback((customer) => {
@@ -328,11 +341,11 @@ const OrderForm = () => {
     const ledgerEndDate = endDateObj.toISOString().split("T")[0];
 
     const url = `/ledger?name=${encodeURIComponent(
-      selectedCustomer.name || ""
+      selectedCustomer.name || "",
     )}&acid=${encodeURIComponent(
-      selectedCustomer.acid
+      selectedCustomer.acid,
     )}&startDate=${encodeURIComponent(
-      ledgerStartDate
+      ledgerStartDate,
     )}&endDate=${encodeURIComponent(ledgerEndDate)}`;
 
     navigate(url, { state: { orderForm: true } });
@@ -343,7 +356,6 @@ const OrderForm = () => {
     // This function can be expanded if ProductSelectionForm exposes a reset method via a ref
     // For now, it clears what it can from the parent.
   }, []);
-
 
   const handleChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -360,14 +372,14 @@ const OrderForm = () => {
       setOrderItems((prev) => [...prev, item]);
       resetProductInputs();
     },
-    [selectedCustomer, setOrderItems, resetProductInputs]
+    [selectedCustomer, setOrderItems, resetProductInputs],
   );
 
   const handleRemoveProduct = useCallback(
     (indexToRemove) => {
       setOrderItems((prev) => prev.filter((_, i) => i !== indexToRemove));
     },
-    [setOrderItems]
+    [setOrderItems],
   );
 
   const handlePostOrder = async (status) => {
@@ -410,9 +422,10 @@ const OrderForm = () => {
       orderDate: selectedDate,
       customerAcid: String(selectedCustomer.acid),
       userId: user?.UserID,
+      username: user?.username,
       totalAmount: orderItems.reduce(
         (sum, item) => sum + (Number(item.amount) || 0),
-        0
+        0,
       ),
       totalQuantity: Number(orderItemsTotalQuantity),
       status: status || "ESTIMATE",
@@ -425,7 +438,7 @@ const OrderForm = () => {
         payload,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       setProducts(response.data.updatedProducts);
@@ -438,6 +451,7 @@ const OrderForm = () => {
       setBalance(null);
       setOverDue(null);
       dispatch(clearSelection({ key: "orderForm" }));
+      return response.data.doc;
     } catch (err) {
       // Errors
       const errorMessage =
@@ -445,13 +459,13 @@ const OrderForm = () => {
       dispatch(clearSelection({ key: "orderForm" }));
       console.error(
         "Order creation failed:",
-        err.response?.data || err.message || err
+        err.response?.data || err.message || err,
       );
       setError(`${errorMessage} Please check details and try again.`);
 
       // for sync
       const confirmed = window.confirm(
-        "Are you sure you want to delete this and let it post automatically?"
+        "Are you sure you want to delete this and let it post automatically?",
       );
       if (!confirmed) return;
       setInvoice((prev) => [...prev, payload]);
@@ -470,7 +484,7 @@ const OrderForm = () => {
         `${API_BASE_URL}/create-order/pendingitems`,
         {
           params: { acid: selectedCustomer?.acid },
-        }
+        },
       );
 
       const pendingItems = response.data;
@@ -507,7 +521,7 @@ const OrderForm = () => {
 
   const totalAmount = useMemo(
     () => orderItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
-    [orderItems]
+    [orderItems],
   );
 
   return (
@@ -665,15 +679,19 @@ const OrderForm = () => {
                 sx={{
                   display: "flex",
                   fontWeight: "bold",
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-
                 <Tabs value={activeTab} onChange={handleChange}>
-                  <Tab label="focus" sx={{ fontWeight: "bold", fontSize: '1rem' }} />
-                  <Tab label="fit" sx={{ fontWeight: "bold", fontSize: '1rem' }} />
+                  <Tab
+                    label="focus"
+                    sx={{ fontWeight: "bold", fontSize: "1rem" }}
+                  />
+                  <Tab
+                    label="fit"
+                    sx={{ fontWeight: "bold", fontSize: "1rem" }}
+                  />
                 </Tabs>
                 <Typography
                   variant="h6"
@@ -693,7 +711,7 @@ const OrderForm = () => {
                 <InactiveItems
                   acid={selectedCustomer.acid}
                   handleRowClick={() => { }}
-                  company={'st%'}
+                  company={"st%"}
                 />
               )}
               {activeTab === 1 && (
@@ -789,7 +807,6 @@ const OrderForm = () => {
           formatCurrency={formatCurrency}
         />
 
-
         {/* {orderItems.length > 0 && ( */}
         <Box sx={{ my: 2 }}>
           <Box
@@ -813,11 +830,7 @@ const OrderForm = () => {
               Clear Order
             </Button>
           </Box>
-          <Box
-            sx={{ height: 500 }}
-          >
-
-
+          <Box sx={{ height: 500 }}>
             {activeTab === 0 && (
               <List
                 dense
@@ -883,7 +896,6 @@ const OrderForm = () => {
                   </ListItem>
                 ))}
               </List>
-
             )}
 
             <Box sx={{ mt: 2, textAlign: "right" }}>
@@ -895,7 +907,6 @@ const OrderForm = () => {
               </Typography>
             </Box>
           </Box>
-
         </Box>
 
         <Box

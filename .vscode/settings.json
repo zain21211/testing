@@ -1,31 +1,82 @@
 {
-  // Keep your current settings
-  "editor.fontFamily": "Consolas, 'Courier New', monospace",
-  "editor.fontSize": 16,
-  "editor.fontLigatures": false,
+  // 🪶 Font & Feel
+  "editor.fontFamily": "JetBrains Mono, Fira Code, Cascadia Code, monospace",
+  "editor.fontLigatures": true,
+  "editor.fontSize": 15,
+  "editor.lineHeight": 1.5,
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.smoothScrolling": true,
+  "editor.roundedSelection": true,
+  "editor.renderWhitespace": "selection",
 
-  // Firebase Studio–style colors
+  // 🧭 UI + Layout
+  // "workbench.iconTheme": "material-icon-theme",
+  "window.titleBarStyle": "custom",
+  "workbench.statusBar.visible": true,
+  "workbench.layoutControl.enabled": false,
+  "editor.minimap.enabled": false,
+
+  // 🎨 Warm Zed-like Sand Theme
   "workbench.colorCustomizations": {
-    "editor.background": "#121212", // Dark background
-    "editor.foreground": "#FFFFFF",
-    // "activityBar.background": "#967101", // Firebase Yellow
-    // "activityBar.foreground": "#000000",
-    // "statusBar.background": "#967101",
-    // "statusBar.foreground": "#000000",
-    // "titleBar.activeBackground": "#FFCA28",
-    "titleBar.activeForeground": "#000000",
-    "sideBar.background": "#0606067d",
-    "sideBar.foreground": "#FFFFFF",
-    // "editorCursor.foreground": "#ffbf00",
-    // "terminal.foreground": "#FFCA28",
-    // "list.activeSelectionBackground": "#FFCA28",
-    "list.activeSelectionForeground": "#000000"
+    // 🟡 Title Bar
+    "titleBar.activeBackground": "#dcc47c",
+    "titleBar.activeForeground": "#3C3A32",
+    "titleBar.inactiveBackground": "#EDE2C5",
+    "titleBar.inactiveForeground": "#5E5B50",
+    "titleBar.border": "#CBB77E",
+
+    // 🟡 Tabs
+    "tab.activeBackground": "#fff3c8",
+    "tab.activeForeground": "#3C3A32",
+    "tab.inactiveBackground": "#fbebbc",
+    "tab.inactiveForeground": "#5E5B50",
+    "tab.hoverBackground": "#fff3c8",
+    "tab.border": "#e9dbaf",
+
+    // Remove all borders / underlines
+    "tab.activeBorder": "#00000000",
+    "tab.activeBorderTop": "#00000000",
+    "tab.activeBorderBottom": "#00000000",
+    "tab.unfocusedActiveBorder": "#00000000",
+    "tab.activeModifiedBorder": "#00000000",
+    "tab.unfocusedActiveModifiedBorder": "#00000000",
+    "tab.lastPinnedBorder": "#00000000",
+
+    // ✏️ Editor look
+    "editor.foreground": "#3C3A32",
+    "editorCursor.foreground": "#7A5C00",
+    "editorLineNumber.foreground": "#C5B994",
+    "editorLineNumber.activeForeground": "#8A7C57",
+    "editor.lineHighlightBackground": "#e8d8a2",
+    // "editor.background": "#f5db95",
+
+    // 🪶 Misc
+    "statusBar.background": "#dcc47c",
+    "sideBar.background": "#e9d38e",
+    "activityBar.activeBackground": "#f4e0a4",
+    "activityBar.background": "#e9d38e",
+    "list.activeSelectionBackground": "#f3de8b",
+    "list.activeSelectionForeground": "#3C3A32",
+    "list.hoverBackground": "#fff4d1",
+    "list.hoverForeground": "#3C3A32",
+    "statusBar.foreground": "#3C3A32",
+    "breadcrumb.background": "#F2E8CA",
+    "breadcrumb.foreground": "#736B55",
+    "panel.background": "#dcc47c"
   },
 
-  // Icons like Firebase Studio
-  "workbench.iconTheme": "vscode-icons",
+  // 🔠 Syntax (optional, can be adjusted)
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": ["keyword"],
+        "settings": {
+          "fontStyle": "bold"
+        }
+      }
+    ]
+  },
 
-  // Formatting similar to Studio
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  // ⚙️ Custom CSS Injection (bold tab)
+  "vscode_custom_css.imports": ["file:///D:/dummy/.vscode/custom.css"]
 }

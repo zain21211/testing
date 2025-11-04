@@ -2,6 +2,8 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection");
 const jwt = require("jsonwebtoken");
+
+// to get the doc number
 const getNextDocNumber = async (pool, type) => {
   const result = await pool.request().input("type", sql.VarChar, type).query(`
       UPDATE DocNumber
@@ -19,6 +21,7 @@ const getPool = async () => {
   return pool;
 };
 
+// to get the updated products
 const getProducts = async () => {
   try {
     const pool = await getPool();
@@ -81,7 +84,7 @@ const orderControllers = {
     const now = new Date();
     const date = now.toISOString().split("T")[0]; // 2025-11-03
     const time = now.toTimeString().split(" ")[0]; // 16:45:51
-    const description = `SV KR ${date} ${time}`;
+    const description = `SV KR ${date} ${time} ${username}`;
 
     let pool, transaction;
     try {
@@ -205,9 +208,10 @@ const orderControllers = {
         .input("status", sql.VarChar(50), status)
         .input("dueDate", sql.DateTime, dueDate)
         .input("PBALANCE", sql.Int, 0)
+        .input("FREIGHT", sql.Int, 0)
         .input("username", sql.VarChar(50), username).query(`
   INSERT INTO PSDetail
-  (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, dueDate, pbalance)
+  (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, dueDate, pbalance, freight)
   VALUES
   (
     @nextDoc,
@@ -220,9 +224,42 @@ const orderControllers = {
     @status,
     'P',
     @DueDate,
-    @PBALANCE
+    @PBALANCE,
+    @FREIGHT
         )
 `);
+      let entryTime = new Date(orderDate);
+
+      await pool
+        .request()
+        .input("nextDoc", sql.Int, parseInt(nextDoc))
+        .input("orderDate", sql.VarChar(50), orderDate)
+        .input("entryDate", sql.DateTime, entryTime)
+        .input("customerAcid", sql.Int, parseInt(customerAcid))
+        .input("description", sql.VarChar(255), description)
+        .input("totalAmount", sql.Decimal(18, 2), totalAmount)
+        .input("status", sql.VarChar(50), status)
+        .input("dueDate", sql.DateTime, dueDate)
+        .input("PBALANCE", sql.Int, 0)
+        .input("FREIGHT", sql.Int, 0)
+        .input("username", sql.VarChar(50), username).query(`
+    INSERT INTO PSDetailHistory
+      (Doc, Date, Type, Acid, Description, Amount, GrossProfit, DueDate, PBalance, entryDAte, username)
+    VALUES
+      (
+        @nextDoc,
+        @orderDate,
+        'SALE',
+        @customerAcid,
+        @description,
+        @totalAmount,
+        ISNULL((SELECT SUM(profit) FROM psproduct WHERE doc = @nextDoc), 0),
+        @dueDate,
+        @PBALANCE,
+        @entryDate,
+        @username
+      )
+  `);
 
       // ✅ 5. Insert into ledgers + ledgersHistory
       const ledgerReq = pool.request();
@@ -262,6 +299,7 @@ const orderControllers = {
         duration,
         invoiceData: [],
         updatedProducts,
+        doc: nextDoc,
       });
     } catch (error) {
       console.error("❌ postOrder Error:", error);
@@ -301,15 +339,15 @@ const orderControllers = {
       const result = await pool.request().input("nextDoc", sql.Int, nextDoc)
         .query(`
           SELECT D.Date
-          FROM PSDetail D 
+          FROM PSDetail D
           WHERE D.doc = @nextDoc
         `);
 
       const resultTotal = await pool
         .request()
         .input("nextDoc", sql.Int, nextDoc).query(`
-          SELECT SUM(ISNULL(VIST, 0)) AS TotalBillAmount 
-          FROM PsProduct 
+          SELECT SUM(ISNULL(VIST, 0)) AS TotalBillAmount
+          FROM PsProduct
           WHERE TYPE = 'SALE' AND Doc = @nextDoc
         `);
 
@@ -342,25 +380,25 @@ const orderControllers = {
         .input("ItemCode", sql.VarChar(100), ItemCode)
         .input("SearchDate", sql.Date, SearchDate).query(`
           SELECT round(ISNULL((
-            SELECT 
-              CASE 
-                WHEN qty = 0 THEN 0 
-                ELSE amt / qty 
+            SELECT
+              CASE
+                WHEN qty = 0 THEN 0
+                ELSE amt / qty
               END AS Cost
             FROM (
-              SELECT 
+              SELECT
                 ISNULL(SUM(vist), 0) * ((100 - AVG(pd.ExtraDiscountP)) / 100) AS amt,
                 ISNULL(SUM(qty), 0) + ISNULL(SUM(SchPc), 0) AS qty,
                 AVG(pd.ExtraDiscountP) AS ExDisc
               FROM PSProduct p
               JOIN PSDetail pd ON p.doc = pd.doc AND p.type = pd.type
-              WHERE 
-                p.type = 'purchase' 
+              WHERE
+                p.type = 'purchase'
                 AND prid = (SELECT id FROM Products WHERE code = @ItemCode)
                 AND p.date = (
                   SELECT MAX(date)
                   FROM PSProduct ps
-                  WHERE 
+                  WHERE
                     ps.prid = (SELECT id FROM Products WHERE code = @ItemCode)
                     AND ps.date <= @SearchDate
                     AND ps.type = 'purchase'

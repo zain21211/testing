@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, } from "react";
 const DataTable = React.lazy(() => import("./table"));
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigation, useNavigate } from "react-router-dom";
 import TextInput from "./Textfield";
 import {
   Container,
@@ -75,6 +75,7 @@ const formatCurrency = (value) => {
 // invoice model
 const BillingComponent = ({ name = "INVOICE" }) => {
   const screenshotRef = useRef(null);
+  const navigate = useNavigate();
   const [invoice, setInvoice] = useState({ items: [] });
   const [formData, setFormData] = useState([]);
   const [customer, setCustomer] = useState([]);
@@ -217,6 +218,8 @@ const BillingComponent = ({ name = "INVOICE" }) => {
     try {
       console.log(payload)
       await axios.post(`${url}/invoices/whatsapp`, { payload });
+
+      navigate('/order')
     } catch (err) {
       console.error(err)
     }

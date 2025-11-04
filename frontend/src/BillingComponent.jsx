@@ -61,6 +61,7 @@ const productDetail = [
 ];
 
 const invoiceAPI = `${import.meta.env.VITE_API_URL}/invoices`;
+const url = `${import.meta.env.VITE_API_URL}`;
 
 const formatCurrency = (value) => {
   const num = Number(value);
@@ -91,7 +92,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   const cameFromOrderPage = location.state?.fromOrderPage === true;
   const targetRef = useRef();
   const [isReady, setIsReady] = useState(false);
-
+  const username = user?.username;
   useEffect(() => {
     const invoiceURL = location.pathname;
 
@@ -198,6 +199,28 @@ const BillingComponent = ({ name = "INVOICE" }) => {
     ["TOTAL AMOUNT:", customer.InvoiceAmount],
   ].filter(([label, value]) => label.toLowerCase().includes("total") ? value : value > 0); // Only include if value > 0
 
+  const sendWhatsapp = async (number, customer) => {
+    console.log(number, customer)
+    if (!number) return alert('no number')
+    if (!customer) return alert('no customer found')
+
+    const payload = {
+      number,
+      dateTime: new Date(),
+      doc: customer.InvoiceNumber,
+      subname: customer.subname,
+      urduname: customer.CustomerName,
+      type: customer.type,
+      acid: customer.id,
+      requestBy: username
+    }
+    try {
+      console.log(payload)
+      await axios.post(`${url}/invoices/whatsapp`, { payload });
+    } catch (err) {
+      console.error(err)
+    }
+  }
   return (
     <ThemeProvider theme={theme}>
 
@@ -504,7 +527,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
               variant="contained"
               color="success"
               size="large"
-              onClick={() => getScreenshot(targetRef)}
+              onClick={() => sendWhatsapp(customerNumber, customer)}
               sx={{ minWidth: "200px", fontSize: '1.2rem' }}
             >
               WhatsApp

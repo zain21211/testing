@@ -10,6 +10,7 @@ router.put("/loadlist", invoiceControllers.getLoadList);
 router.put("/loadList/update", invoiceControllers.postItem);
 router.put("/deliveryList/update", invoiceControllers.postItem);
 router.put("/return", invoiceControllers.docReturn);
+router.post("/whatsapp", invoiceControllers.sendWhatsapp);
 
 // Route to get a single invoice by ID
 router.get("/:id", invoiceControllers.getInvoiceByID);

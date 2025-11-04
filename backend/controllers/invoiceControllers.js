@@ -1,4 +1,7 @@
 // controllers/invoiceController.js
+
+const convertPhoneNumber = require("../utils/convertPhoneNumber");
+
 // const dbConnection = require('../database/dbConnection');
 const sql = require("mssql");
 const dbConnection = require("../database/connection"); // Import your database connection
@@ -261,6 +264,9 @@ and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
   SUM(P.discount) AS Extra,
   AC.Urduname AS CustomerName,
   Ac.OCell AS Number,
+  ac.id as id,
+  ac.subsidary as subname,
+  d.type as type,
   AC.CreditLimit,
   AC.Terms,
   AC.CreditDays,
@@ -280,7 +286,9 @@ WHERE P.Doc = @DocNumber
   AND D.Type = 'Sale'
 GROUP BY P.Doc, AC.Urduname,Ac.OCell, AC.CreditLimit, AC.Terms, AC.CreditDays, 
          D.Date, D.Freight, D.ExtraDiscount, D.Amount, D.SalesMan,D.Shopper, 
-         D.Vehicle, D.Description;
+         D.Vehicle, D.Description,  ac.id ,
+  ac.subsidary ,
+  d.type;
 
 `;
     let queryProducts = `
@@ -649,6 +657,51 @@ end
       res.status(200).json({ msg: "successful" });
     } catch (error) {
       res.status(500).json({ msg: error.message });
+    }
+  },
+
+  sendWhatsapp: async (req, res) => {
+    console.log("this is the req", req.body);
+    const { payload } = req.body;
+    try {
+      const formattedNumber = convertPhoneNumber(payload.number);
+      const date = new Date();
+
+      // extract date and time separately for SQL
+      const requestDate = date.toISOString().split("T")[0];
+      const requestTime = date.toTimeString().split(" ")[0];
+
+      const pool = await dbConnection();
+
+      await pool.request().query`
+      INSERT INTO WA (
+        Request_date,
+        request_time,
+        Request_By,
+        ACID,
+        Customer_Name,
+        UrduName,
+        whatsapp_chat,
+        type,
+        doc
+      )
+      VALUES (
+        ${requestDate},
+        ${requestTime},
+        ${payload.requestBy},
+        ${payload.acid},
+        ${payload.subname},
+        ${payload.urduname},
+        ${formattedNumber},
+        ${payload.type},
+        ${payload.doc}
+      )
+    `;
+
+      res.status(200).json({ status: "true", msg: "action succeded" });
+    } catch (err) {
+      console.error("Error inserting record:", err);
+      res.status(500).json({ status: "false", msg: `action failed: ${err}` });
     }
   },
 };

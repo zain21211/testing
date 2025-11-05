@@ -924,7 +924,7 @@ const OrderForm = () => {
               variant="contained"
               color={btn.color}
               size="large"
-              onClick={() => handlePostOrder(btn.text)}
+              onClick={() => btn.text.toLowerCase() === 'invoice' ? getInvoicePreview(btn.text) : handlePostOrder(btn.text)}
               disabled={
                 loading ||
                 initialDataLoading ||

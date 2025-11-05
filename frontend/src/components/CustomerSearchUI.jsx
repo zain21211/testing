@@ -216,7 +216,7 @@ const CustomerSearchUI = forwardRef(
                 InputProps={{
                   readOnly: true,
                   endAdornment: (
-                    <Box
+                    <Typography
                       sx={{
                         px: 2,
                         color: "text.primary",
@@ -228,7 +228,7 @@ const CustomerSearchUI = forwardRef(
                       }}
                     >
                       {selectedCustomer?.UrduName}
-                    </Box>
+                    </Typography>
                   ),
                 }}
               />

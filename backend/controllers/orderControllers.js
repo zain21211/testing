@@ -142,14 +142,14 @@ const orderControllers = {
           INSERT INTO PsProduct
           ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQTY],[Qty],[Rate],
            [SuggestedRate],[VEST],[DiscP],[Discount],[DiscP2],[Discount2],[VIST],
-           [SellingType],[SchPc],[Sch],[department],[isclaim],[SPO],[profit])
+           [SellingType],[SchPc],[Sch],[department],[isclaim],[SPO],[profit], [entryby])
           VALUES
           (@date,'SALE',@doc,'OUT',@prid,@acid,0,@aQty,@bQty,@rate,
            @suggestedPrice,@vest,@discP1,
            (ISNULL(@discP1,0)/100)*ISNULL(@rate,0)*ISNULL(@qty,0),
            @discP2,
            (ISNULL(@discP2,0)/100)*ISNULL(@rate,0)*ISNULL(@qty,0),
-           @vist,'DEFAULT',@SchPc,@sch,'A1',@isClaim,@spo,@profit)
+           @vist,'DEFAULT',@SchPc,@sch,'A1',@isClaim,@spo,@profit, @username)
         `);
       });
 

@@ -17,53 +17,53 @@
   "editor.minimap.enabled": false,
 
   // 🎨 Warm Zed-like Sand Theme
-  "workbench.colorCustomizations": {
-    // 🟡 Title Bar
-    "titleBar.activeBackground": "#dcc47c",
-    "titleBar.activeForeground": "#3C3A32",
-    "titleBar.inactiveBackground": "#EDE2C5",
-    "titleBar.inactiveForeground": "#5E5B50",
-    "titleBar.border": "#CBB77E",
+  // "workbench.colorCustomizations": {
+  //   // 🟡 Title Bar
+  //   "titleBar.activeBackground": "#dcc47c",
+  //   "titleBar.activeForeground": "#3C3A32",
+  //   "titleBar.inactiveBackground": "#EDE2C5",
+  //   "titleBar.inactiveForeground": "#5E5B50",
+  //   "titleBar.border": "#CBB77E",
 
-    // 🟡 Tabs
-    "tab.activeBackground": "#fff3c8",
-    "tab.activeForeground": "#3C3A32",
-    "tab.inactiveBackground": "#fbebbc",
-    "tab.inactiveForeground": "#5E5B50",
-    "tab.hoverBackground": "#fff3c8",
-    "tab.border": "#e9dbaf",
+  //   // 🟡 Tabs
+  //   "tab.activeBackground": "#fff3c8",
+  //   "tab.activeForeground": "#3C3A32",
+  //   "tab.inactiveBackground": "#fbebbc",
+  //   "tab.inactiveForeground": "#5E5B50",
+  //   "tab.hoverBackground": "#fff3c8",
+  //   "tab.border": "#e9dbaf",
 
-    // Remove all borders / underlines
-    "tab.activeBorder": "#00000000",
-    "tab.activeBorderTop": "#00000000",
-    "tab.activeBorderBottom": "#00000000",
-    "tab.unfocusedActiveBorder": "#00000000",
-    "tab.activeModifiedBorder": "#00000000",
-    "tab.unfocusedActiveModifiedBorder": "#00000000",
-    "tab.lastPinnedBorder": "#00000000",
+  //   // Remove all borders / underlines
+  //   "tab.activeBorder": "#00000000",
+  //   "tab.activeBorderTop": "#00000000",
+  //   "tab.activeBorderBottom": "#00000000",
+  //   "tab.unfocusedActiveBorder": "#00000000",
+  //   "tab.activeModifiedBorder": "#00000000",
+  //   "tab.unfocusedActiveModifiedBorder": "#00000000",
+  //   "tab.lastPinnedBorder": "#00000000",
 
-    // ✏️ Editor look
-    "editor.foreground": "#3C3A32",
-    "editorCursor.foreground": "#7A5C00",
-    "editorLineNumber.foreground": "#C5B994",
-    "editorLineNumber.activeForeground": "#8A7C57",
-    "editor.lineHighlightBackground": "#e8d8a2",
-    // "editor.background": "#f5db95",
+  //   // ✏️ Editor look
+  //   "editor.foreground": "#3C3A32",
+  //   "editorCursor.foreground": "#7A5C00",
+  //   "editorLineNumber.foreground": "#C5B994",
+  //   "editorLineNumber.activeForeground": "#8A7C57",
+  //   "editor.lineHighlightBackground": "#e8d8a2",
+  //   // "editor.background": "#f5db95",
 
-    // 🪶 Misc
-    "statusBar.background": "#dcc47c",
-    "sideBar.background": "#e9d38e",
-    "activityBar.activeBackground": "#f4e0a4",
-    "activityBar.background": "#e9d38e",
-    "list.activeSelectionBackground": "#f3de8b",
-    "list.activeSelectionForeground": "#3C3A32",
-    "list.hoverBackground": "#fff4d1",
-    "list.hoverForeground": "#3C3A32",
-    "statusBar.foreground": "#3C3A32",
-    "breadcrumb.background": "#F2E8CA",
-    "breadcrumb.foreground": "#736B55",
-    "panel.background": "#dcc47c"
-  },
+  //   // 🪶 Misc
+  //   "statusBar.background": "#dcc47c",
+  //   "sideBar.background": "#e9d38e",
+  //   "activityBar.activeBackground": "#f4e0a4",
+  //   "activityBar.background": "#e9d38e",
+  //   "list.activeSelectionBackground": "#f3de8b",
+  //   "list.activeSelectionForeground": "#3C3A32",
+  //   "list.hoverBackground": "#fff4d1",
+  //   "list.hoverForeground": "#3C3A32",
+  //   "statusBar.foreground": "#3C3A32",
+  //   "breadcrumb.background": "#F2E8CA",
+  //   "breadcrumb.foreground": "#736B55",
+  //   "panel.background": "#dcc47c"
+  // },
 
   // 🔠 Syntax (optional, can be adjusted)
   "editor.tokenColorCustomizations": {

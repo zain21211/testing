@@ -73,7 +73,7 @@ export const useCustomerSearch = ({
   const {
     ID,
     popperOpen,
-    phoneNumber,
+    // phoneNumber,
     customerInput,
     selectedCustomer,
     customerSuggestions,
@@ -99,6 +99,9 @@ export const useCustomerSearch = ({
   const listRef = useRef(null);
   const searchButtonRef = useRef(null);
   const prevLength = useRef(masterCustomerList.length);
+  const [phoneNumber, setPhoneNumber] = useState(
+    selectedCustomer?.phonenumber || ""
+  );
 
   const stableOnSelect = useStableCallback(onSelect);
 
@@ -116,6 +119,7 @@ export const useCustomerSearch = ({
     isAdmin ? fetchCustomers : fetchers[formType] || fetchCustomers
   );
 
+  // sync allcustomeroptions
   const allCustomerOptions = useMemo(
     () =>
       route
@@ -125,9 +129,13 @@ export const useCustomerSearch = ({
         : localCustomerList,
     [route, localCustomerList]
   );
+
+  // sync phone number
   useEffect(() => {
-    console.log("All customers updated:", localCustomerList, data);
-  }, [localCustomerList, data]);
+    if (selectedCustomer && selectedCustomer.phonenumber)
+      setPhoneNumber(selectedCustomer.phonenumber);
+  }, [selectedCustomer]);
+
   // Sync master list
   useEffect(() => {
     isCust && isCust(data.length !== 0 || localCustomerList.length !== 0);
@@ -154,15 +162,10 @@ export const useCustomerSearch = ({
     // 🚨 don't add masterCustomerList here, or you loop forever
   }, [data]);
 
-  // useEffect(() => {
-  //   if (onSelect) onSelect(selectedCustomer);
-  //   console.log(path, selectedCustomer);
-  // }, [selectedCustomer, onSelect]);
-
   useEffect(() => {
     autoSelect();
     prevLength.current = masterCustomerList.length;
-  }, [masterCustomerList, allCustomerOptions, localCustomerList]);
+  }, [masterCustomerList, allCustomerOptions, localCustomerList, autoSelect]);
 
   // 🔹 handle selecting a customer
   const handleSelect = useCallback(

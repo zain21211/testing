@@ -1,31 +1,41 @@
 import html2canvas from "html2canvas";
-import React from "react";
 
 export const takeScreenShot = async (targetRef) => {
   if (!targetRef || !targetRef.current) return;
 
   const target = targetRef.current;
 
+  // 1️⃣ Wait a little for Urdu fonts & layout to render properly
+  await new Promise((resolve) => setTimeout(resolve, 400));
+
+  // 2️⃣ Ensure the element is fully visible and not clipped
+  target.style.overflow = "visible";
+  target.style.whiteSpace = "normal";
+
+  // 3️⃣ Capture with proper scaling & font smoothing
   const fullCanvas = await html2canvas(target, {
     scale: 2,
     scrollY: -window.scrollY,
     useCORS: true,
     allowTaint: true,
+    backgroundColor: "#fff",
+    logging: false,
+    windowWidth: document.documentElement.scrollWidth,
+    windowHeight: document.documentElement.scrollHeight,
   });
 
+  // 4️⃣ Split large screenshots into multiple parts (your logic)
   const MAX_HEIGHT = 3000;
   const totalHeight = fullCanvas.height;
   const width = fullCanvas.width;
 
   if (totalHeight <= MAX_HEIGHT) {
-    // Single screenshot
     const image = fullCanvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = image;
     link.download = "screenshot-full.png";
     link.click();
   } else {
-    // Break into parts
     const partHeight = MAX_HEIGHT;
     const parts = Math.ceil(totalHeight / partHeight);
 
@@ -53,7 +63,7 @@ export const takeScreenShot = async (targetRef) => {
       link.download = `screenshot-part-${i + 1}.png`;
       link.click();
 
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Optional delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
 };

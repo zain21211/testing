@@ -51,11 +51,11 @@ const theme = createTheme({
 });
 
 const productDetail = [
-  { id: "Amount", label: "Amount", size: 3 },
-  { label: "D%", size: 1 },
   // { label: "T.Q", size: 1 },
+  // { label: "FOC", size: 1 },
+  // { label: "D%", size: 1 },
+  { id: "Amount", label: "Amount", size: 3 },
   { id: "Rate", label: "Rate", size: 1 },
-  { label: "FOC", size: 1 },
   { label: "B.Q", size: 1 },
   { label: "Product", size: 3, align: "left" },
 ];
@@ -132,9 +132,11 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   }, [cameFromOrderPage, isReady, location.pathname, customer]);
 
 
-  const getScreenshot = target => {
-    takeScreenShot(target)
-  }
+  const getScreenshot = async (target) => {
+    await new Promise(r => setTimeout(r, 300)); // wait for rendering
+    takeScreenShot(target);
+  };
+
   useEffect(() => {
     const freight = customer?.Frieght || 0;
     const extra = customer?.Extra || 0;
@@ -232,7 +234,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
         maxWidth={false}
         sx={{ overflowX: "hidden", p: 0, m: 0 }}
       >
-        <Paper elevation={3} sx={{ px: 0, m: 0, width: "100%" }}>
+        <Paper elevation={3} sx={{ p: { xs: 1, sm: 1, md: "25px 100px" }, m: 'auto', width: { xs: '100%', sm: '100%', md: "60%" } }}>
           <Box
             ref={targetRef}
             sx={{ p: 1 }}
@@ -392,38 +394,41 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                           }
                           InputProps={{
                             disableUnderline: true,
-                            // startAdornment:
-                            //   field.label === "Product" ? (
-                            //     <div style={{ display: "flex", flexDirection: 'column', width: "25%" }}>
-                            //       <div style={{ fontWeight: "bold" }} dir="ltr">
-                            //         {row.Company?.toUpperCase() || ""}
-                            //       </div>
-                            //       {/* <div style={{ fontWeight: "bold" }} dir="ltr">
-                            //         {row.Category?.toUpperCase() || ""}
-                            //       </div> */}
-                            //     </div>
-                            //   ) : null,
+                            startAdornment:
+                              field.label === "Product" ? (
+                                <div style={{ display: "flex", flexDirection: 'column', width: "75%", gap: 3 }}>
+                                  <div style={{ fontWeight: "bold", backgroundColor: 'lightgrey' }} dir="ltr">
+                                    {row.Company?.toUpperCase() || ""}
+                                  </div>
+                                  <div style={{ fontWeight: "bold", color: 'white', backgroundColor: '#242424ff' }} dir="ltr">
+                                    {row.Category?.toUpperCase() || ""}
+                                  </div>
+                                </div>
+                              ) : null,
 
                           }}
                           inputProps={{
                             sx: {
-                              // padding: field.label === "Product" ? "0px 1px" : "0px",
                               fontFamily: 'Jameel Noori Nastaleeq, serif',
                               fontWeight: "bold",
-                              pt: 1,
+                              // pt: 1,
                               textAlign:
                                 field.label === "Product" ? "right" : "center",
                               fontSize: {
-                                xs: field.label?.toLowerCase() === "product" ? "1.5rem" : "1.3rem",
+                                xs: field.label?.toLowerCase() === "product" ? "1.6rem" : "1rem",
                                 sm: field.label?.toLowerCase() === "product" ? "2.5rem" : "1.2rem",
                               },
                               whiteSpace: "normal", // Enable text wrapping
                               wordWrap: "break-word", // Break long words
+                              // m: 'auto'
                             },
                           }}
                           sx={{
                             width: "100%",
-
+                            "& .MuiInputBase-inputMultiline": {
+                              lineHeight: 1,
+                            },
+                            p: 0,
                           }}
                         />
                       );
@@ -437,6 +442,13 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                       // padding: ".25rem",
                       boxSizing: "border-box",
                       overflowWrap: "anywhere",
+                      whiteSpace: 'normal',     // allow wrapping
+                      wordBreak: 'break-word',  // handle long words
+                      overflow: 'visible',      // show all text
+                      lineHeight: 1.5,          // better spacing for Urdu
+                      minHeight: '60px',        // optional
+                      verticalAlign: 'top',     // avoid clipping
+
                     },
                     width: "100%",
                     // tableLayout: "fixed",
@@ -506,25 +518,24 @@ const BillingComponent = ({ name = "INVOICE" }) => {
             </Box>
 
           </Box>
+
           <TextField
-            label='number'
+            label="Number"
             value={customerNumber}
-            onChange={e => setCustomerNumber(e.target.value)}
+            onChange={(e) => setCustomerNumber(e.target.value)}
             inputProps={{ inputMode: 'numeric' }}
+            sx={{
+              maxWidth: 400,
+              '& .MuiInputBase-input': {
+                textAlign: 'center',
+                margin: 'auto',
+              },
+            }}
           />
+
+
           {/* action Buttons */}
           <Box sx={{ mt: 3, textAlign: "center", display: 'flex', gap: 2, justifyContent: 'center' }}>
-            {/* for snapshot */}
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              onClick={() => getScreenshot(targetRef)}
-              sx={{ minWidth: "200px", fontSize: '1.2rem' }}
-            >
-              screenshot
-            </Button>
-
             {/* for whatsapp */}
             <Button
               variant="contained"
@@ -534,6 +545,17 @@ const BillingComponent = ({ name = "INVOICE" }) => {
               sx={{ minWidth: "200px", fontSize: '1.2rem' }}
             >
               WhatsApp
+            </Button>
+
+            {/* for snapshot */}
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={() => getScreenshot(targetRef)}
+              sx={{ minWidth: "200px", fontSize: '1.2rem' }}
+            >
+              screenshot
             </Button>
 
           </Box>

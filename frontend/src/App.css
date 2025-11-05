@@ -3,8 +3,10 @@
 @tailwind components;
 @tailwind utilities;
 
-.tab.active .tab-label {
-  font-weight: bold !important;
-  color: #ff0000 !important;
-  /* color: #2b2b2b !important; */
+* {
+  /* font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif; */
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  /* direction: rtl; */
 }

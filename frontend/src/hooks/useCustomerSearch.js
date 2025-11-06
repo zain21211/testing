@@ -165,7 +165,7 @@ export const useCustomerSearch = ({
   useEffect(() => {
     autoSelect();
     prevLength.current = masterCustomerList.length;
-  }, [masterCustomerList, allCustomerOptions, localCustomerList, autoSelect]);
+  }, [masterCustomerList, allCustomerOptions, localCustomerList]);
 
   // 🔹 handle selecting a customer
   const handleSelect = useCallback(

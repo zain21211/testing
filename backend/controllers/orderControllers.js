@@ -126,7 +126,7 @@ const orderControllers = {
           .input("qty", sql.Int, qty)
           .input("aQty", sql.Int, aQty)
           .input("bQty", sql.Int, bQty)
-          .input("rate", sql.Decimal(18, 2), rate)
+          .input("rate", sql.Decimal(18, 2), suggestedPrice)
           .input("suggestedPrice", sql.Decimal(18, 2), suggestedPrice)
           .input("vest", sql.Decimal(18, 2), vest)
           .input("discP1", sql.Decimal(18, 2), discP1)

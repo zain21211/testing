@@ -432,109 +432,112 @@ const orderControllers = {
       const result = await pool
         .request()
         .input("acid", sql.Int, acid)
-        .input("company", sql.VarChar(50), company).query(`
+.input("company", sql.VarChar(50), company)
+.query(`
+  SELECT
+    ps.DATE,
+    ps.DOC,
+    ps.PRID AS productID,
+    p.Name,
+    p.category AS model,
+    p.Company,
+    ps.ACID AS customerID,
+    0 AS isClaim,
+    1 AS Sch,
+    ps.QTY2 - ps.Qty AS orderQuantity,
+    p.SaleRate,
+
+    ISNULL(pd.DiscP, 0) AS DiscP,
+    ISNULL(pd.DiscP2, 0) AS DiscP2,
+
+    ROUND(p.SaleRate * ISNULL(pd.DiscP2, 0) / 100.0 * (ps.QTY2 - ps.QTY), 2) AS Discount2,
+
+    ROUND(
+      (p.SaleRate - (p.SaleRate * ISNULL(pd.DiscP2, 0) / 100.0))
+      * ISNULL(pd.DiscP, 0) / 100.0
+      * (ps.QTY2 - ps.QTY)
+    , 2) AS Discount1,
+
+    ISNULL((
+      SELECT FLOOR(1.0 * (ps.QTY2 - ps.QTY) / NULLIF(slab.SchOn, 0)) * slab.SchPcs
+      FROM SchQTYSlabs slab
+      WHERE slab.PRID = ps.PRID
+    ), 0) AS schPc,
+
+    (ps.QTY2 - ps.QTY) +
+    ISNULL((
+      SELECT FLOOR(1.0 * (ps.QTY2 - ps.QTY) / NULLIF(slab.SchOn, 0)) * slab.SchPcs
+      FROM SchQTYSlabs slab
+      WHERE slab.PRID = ps.PRID
+    ), 0) AS TotalQty,
+
+    ROUND((
+      (
+        p.SaleRate
+        * (1 - ISNULL(pd.DiscP, 0) / 100.0)
+        * (1 - ISNULL(pd.DiscP2, 0) / 100.0)
+      )
+      * (ps.QTY2 - ps.QTY)
+    ), 2) AS Amount,
+
+    ROUND((
+      (
+        p.SaleRate
+        * (1 - ISNULL(pd.DiscP, 0) / 100.0)
+        * (1 - ISNULL(pd.DiscP2, 0) / 100.0)
+      ) - ISNULL((
+        SELECT TOP 1
+          x.amt / NULLIF(x.qty, 0)
+        FROM (
           SELECT
-            ps.DATE,
-            ps.DOC,
-            ps.PRID AS productID,
-            p.Name,
-            p.category AS model,
-            p.Company,
-            ps.ACID AS customerID,
-            0 AS isClaim,
-            1 AS Sch,
-            ps.QTY2 - ps.Qty AS orderQuantity,
-            p.SaleRate,
-
-            (SELECT TOP 1 DiscP FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company) AS DiscP,
-            (SELECT TOP 1 DiscP2 FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company) AS DiscP2,
-
-            ROUND(
-                p.SaleRate *
-                ISNULL((SELECT TOP 1 DiscP2 FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0 *
-                (ps.QTY2 - ps.QTY)
-            , 2) AS Discount2,
-
-            ROUND(
-                (
-                    p.SaleRate -
-                    (p.SaleRate * ISNULL((SELECT TOP 1 DiscP2 FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0)
-                ) *
-                ISNULL((SELECT TOP 1 DiscP FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0 *
-                (ps.QTY2 - ps.QTY)
-            , 2) AS Discount1,
-
-            ISNULL((
-                SELECT FLOOR(1.0 * (ps.QTY2 - ps.QTY) / NULLIF(slab.SchOn, 0)) * slab.SchPcs
-                FROM SchQTYSlabs slab
-                WHERE slab.PRID = ps.PRID
-            ), 0) AS schPc,
-
-            (ps.QTY2 - ps.QTY) +
-            ISNULL((
-                SELECT FLOOR(1.0 * (ps.QTY2 - ps.QTY) / NULLIF(slab.SchOn, 0)) * slab.SchPcs
-                FROM SchQTYSlabs slab
-                WHERE slab.PRID = ps.PRID
-            ), 0) AS TotalQty,
-
-            ROUND((
-                (
-                    p.SaleRate
-                    * (1 - ISNULL((SELECT TOP 1 DiscP FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0)
-                    * (1 - ISNULL((SELECT TOP 1 DiscP2 FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0)
-                )
-                * (ps.QTY2 - ps.QTY)
-            ), 2) AS Amount,
-
-            ROUND(((
-                p.SaleRate
-                * (1 - ISNULL((SELECT TOP 1 DiscP FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0)
-                * (1 - ISNULL((SELECT TOP 1 DiscP2 FROM PartyDiscount WHERE acid = ps.Acid AND company = p.Company), 0) / 100.0)
-            ) - ISNULL((
-                SELECT TOP 1
-                    x.amt / NULLIF(x.qty, 0)
-                FROM (
-                    SELECT
-                        ISNULL(SUM(pr.vist), 0) * ((100 - AVG(pd.ExtraDiscountP)) / 100.0) AS amt,
-                        ISNULL(SUM(pr.qty), 0) + ISNULL(SUM(pr.SchPc), 0) AS qty
-                    FROM PSProduct pr
-                    JOIN PSDetail pd ON pr.doc = pd.doc AND pr.type = pd.type
-                    WHERE pr.type = 'purchase'
-                      AND pr.prid = ps.prid
-                      AND pr.date = (
-                          SELECT MAX(subpr.date)
-                          FROM PSProduct subpr
-                          WHERE subpr.prid = ps.prid
-                            AND subpr.date <= ps.date
-                            AND subpr.type = 'purchase'
-                      )
-                ) AS x
-            ), 0)) *
-            (
-                (ps.QTY2 - ps.QTY) +
-                ISNULL((
-                    SELECT FLOOR(1.0 * (ps.QTY2 - ps.QTY) / NULLIF(slab.SchOn, 0)) * slab.SchPcs
-                    FROM SchQTYSlabs slab
-                    WHERE slab.PRID = ps.PRID
-                ), 0)
-            ), 2) AS Profit
-
-          FROM
-            PsProduct ps
-            JOIN Products p ON ps.prid = p.id
-            JOIN coa a ON ps.acid = a.id
-
-          WHERE
-            ps.TYPE = 'SALE'
-            AND ps.DATE = (
-              SELECT MAX(date)
-              FROM PsProduct
-              WHERE acid = @acid
-              AND qty < qty2
+            ISNULL(SUM(pr.vist), 0) * ((100 - AVG(pd2.ExtraDiscountP)) / 100.0) AS amt,
+            ISNULL(SUM(pr.qty), 0) + ISNULL(SUM(pr.SchPc), 0) AS qty
+          FROM PSProduct pr
+          JOIN PSDetail pd2 ON pr.doc = pd2.doc AND pr.type = pd2.type
+          WHERE pr.type = 'purchase'
+            AND pr.prid = ps.prid
+            AND pr.date = (
+              SELECT MAX(subpr.date)
+              FROM PSProduct subpr
+              WHERE subpr.prid = ps.prid
+                AND subpr.date <= ps.date
+                AND subpr.type = 'purchase'
             )
-            AND ps.ACID = @acid
-            AND ps.QTY < ps.QTY2
-        `);
+        ) AS x
+      ), 0)
+    ) *
+    (
+      (ps.QTY2 - ps.QTY) +
+      ISNULL((
+        SELECT FLOOR(1.0 * (ps.QTY2 - ps.QTY) / NULLIF(slab.SchOn, 0)) * slab.SchPcs
+        FROM SchQTYSlabs slab
+        WHERE slab.PRID = ps.PRID
+      ), 0)
+    ), 2) AS Profit
+
+  FROM
+    PsProduct ps
+    JOIN Products p ON ps.prid = p.id
+    JOIN coa a ON ps.acid = a.id
+    OUTER APPLY (
+      SELECT TOP 1 DiscP, DiscP2
+      FROM PartyDiscount
+      WHERE acid = ps.Acid AND company = p.Company
+      ORDER BY Id DESC  -- Change to 'EffectiveDate DESC' if that column exists
+    ) pd
+
+  WHERE
+    ps.TYPE = 'SALE'
+    AND ps.ACID = @acid
+    AND ps.QTY < ps.QTY2
+    AND ps.DATE = (
+      SELECT MAX(date)
+      FROM PsProduct
+      WHERE acid = @acid
+      AND qty < qty2
+    );
+`);
+
 
       return res.status(200).json(result.recordset);
     } catch (error) {

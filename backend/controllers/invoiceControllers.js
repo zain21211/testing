@@ -457,23 +457,27 @@ WHERE P.Doc = @DocNumber
                 TallyBy = PsProductInput.UserName,
                 PackingDateTime = PsProductInput.DateTime
 
-              FROM PsProduct
+              FROM PsProduct 
               JOIN (
                 SELECT
                   @PsID AS PsID,
                   @QTY AS QTY,
                   @UserName AS UserName,
                   @DateTime AS DateTime,
-                  (
-                    SELECT TOP 1
+                  ( 
+                  case  WHEN (SELECT sch FROM PsProduct WHERE ID = @PsID) = 0 THEN 0 ELSE
+                    (
+                  SELECT TOP 1
                       -- ROBUST FIX APPLIED HERE
                       ROUND(ISNULL(1.0 * ISNULL(@Qty, 0) / ISNULL((NULLIF(SchOn, 0) + ISNULL(SchPcs, 0)), 1), 0) * ISNULL(SchPcs, 0), 0)
                     FROM SchQTYSlabs
                     WHERE prid = @productCode AND schon <= @Qty AND date <= @DateTime
                     ORDER BY date DESC, schon DESC
+                    )
+                  end
                   ) AS SchPc
-              ) AS PsProductInput ON PsProduct.ID = PsProductInput.PsID
-              WHERE PsProduct.ID = @PsID;
+              ) AS PsProductInput ON psproduct.ID = PsProductInput.PsID
+              WHERE psproduct.ID = @PsID;
             END TRY
             BEGIN CATCH
               DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE();

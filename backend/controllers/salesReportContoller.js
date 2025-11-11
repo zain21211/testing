@@ -22,55 +22,61 @@ const getSalesReport = async (req, res) => {
   const newEndDate = new Date();
   newEndDate.setDate(newEndDate.getDate() + 7);
   // startDate.setDate(newEndDate.getDate() - 7);
-  let query = `
- SELECT 
-  h.entrydate AS date,
-  pd.doc,
-  a.UrduName,
-  a.Subsidary,
-  a.route,
-  pd.amount,
-  pd.type AS Type,
-  ISNULL(h.UserName, '') AS UserName,
-  CASE 
-    WHEN pack.nullPacked > 0 AND pack.nullPacked < pack.totalQty THEN 'pending'
-    ELSE NULL
-  END AS status
+  let query = `;WITH HistoryCTE AS (
+    SELECT 
+        doc, 
+        type, 
+        MAX(entrydate) AS entrydate,
+        MAX(UserName) AS UserName
+    FROM PSDetailHistory
+    GROUP BY doc, type
+),
+PackingCTE AS (
+    SELECT 
+        doc,
+        SUM(CASE WHEN PackingDateTime IS NULL THEN 1 ELSE 0 END) AS nullPacked,
+        COUNT(*) AS totalQty
+    FROM psproduct
+    WHERE type = 'sale'
+    GROUP BY doc
+)
+SELECT 
+    h.entrydate AS date,
+    pd.doc,
+    a.UrduName,
+    a.Subsidary,
+    a.route,
+    pd.amount,
+    pd.type AS Type,
+    ISNULL(h.UserName, '') AS UserName,
+    CASE 
+        WHEN p.nullPacked > 0 AND p.nullPacked < p.totalQty THEN 'pending'
+        ELSE NULL
+    END AS status
 FROM PSDetail pd
-JOIN coa a ON pd.acid = a.id
-OUTER APPLY (
-  SELECT TOP 1 entrydate, UserName
-  FROM PSDetailHistory
-  WHERE doc = pd.doc AND type = pd.type
-) AS h
-OUTER APPLY (
-  SELECT 
-    COUNT(CASE WHEN PackingDateTime IS NULL THEN 1 END) AS nullPacked,
-    COUNT(CASE WHEN Qty > 0 THEN 1 END) AS totalQty
-  FROM psproduct
-  WHERE doc = pd.doc AND type = 'sale'
-) AS pack
+INNER JOIN coa a 
+    ON pd.acid = a.id
+LEFT JOIN HistoryCTE h 
+    ON h.doc = pd.doc AND h.type = pd.type
+LEFT JOIN PackingCTE p 
+    ON p.doc = pd.doc
 WHERE 
-  pd.date BETWEEN @startDate AND @endDate
-  AND pd.type = 'sale'
-  AND (
-    --COALESCE(@doc, '') = '' OR CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
-CAST(pd.doc AS VARCHAR) LIKE '%' + @doc + '%'
-  )
-  AND a.route LIKE '%' + @route + '%'
-  AND (
-    (pd.status LIKE @invoiceStatus + '%')
-    OR (@invoiceStatus = 'estimate' AND pd.status IS NULL)
-
-  )
-
+    pd.type = 'sale'
+    AND pd.date BETWEEN @startDate AND @endDate
+    AND (@doc IS NULL OR CAST(pd.doc AS VARCHAR(20)) LIKE '%' + @doc + '%')
+    AND (@route IS NULL OR a.route LIKE '%' + @route + '%')
+    AND (
+        (pd.status LIKE @invoiceStatus + '%')
+        OR (@invoiceStatus = 'estimate' AND pd.status IS NULL)
+    )
+--ORDER BY pd.date DESC
 `;
 
   if (!page.includes("pack")) {
     query += ` AND h.UserName LIKE '%' + @user + '%'`;
   }
 
-  query += ` order by pd.date, h.entrydate`;
+  query += ` order by pd.date, h.entrydate;`;
 
   try {
     const pool = await dbConnection();

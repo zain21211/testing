@@ -395,7 +395,7 @@ const PackingList = () => {
             ...(isAllowed
                 ? [
                     { label: "USER", id: "UserName", minWidth: 180, align: 'center' },
-                    { label: "AMOUNT", id: "amount", minWidth: 50, align: "right" },
+                    { label: "AMOUNT", id: "amount", minWidth: 200, align: "right" },
                 ]
                 : []),
         ];

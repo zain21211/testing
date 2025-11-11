@@ -322,6 +322,7 @@ FROM PSProduct P
 JOIN Products PR ON PR.ID = P.Prid
 WHERE P.Doc = @DocNumber
   AND P.Type = 'Sale'  
+  and p.qty<>0
 `;
 
     if (page.includes("pack")) {

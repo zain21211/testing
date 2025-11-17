@@ -43,6 +43,12 @@ export default function OrderPage({
     const quantityInputRef = useRef();
 
     useEffect(() => {
+        if (user?.userType?.toLowerCase().includes('sm')) {
+            setSch(false);
+        }
+    }, [user, setSch])
+
+    useEffect(() => {
         setPrice(selectedProduct?.SaleRate)
         setSuggestedPrice(selectedProduct?.SaleRate)
 

@@ -227,8 +227,8 @@ const OrderForm = () => {
               StockQty: p.StockQty ?? 0,
             }))
             .filter((p) => p.ID != null && p.Name && p.Name.trim() !== "");
-
-          setProducts(cleanedProducts);
+          if (cleanedProducts.length !== 0)
+            setProducts(cleanedProducts);
         }
       } catch (err) {
         const errorMessage = err.response?.data?.message || err.message;
@@ -468,7 +468,8 @@ const OrderForm = () => {
         "Are you sure you want to delete this and let it post automatically?",
       );
       if (!confirmed) return;
-      setInvoice((prev) => [...prev, payload]);
+      console.log("Saving invoice for retry later.", invoice);
+      setInvoice((prev) => [...(Array.isArray(prev) ? prev : []), payload]);
       setOrderItems([]);
       setSelectedCustomer(null);
       resetProductInputs(); // Save payload for retry if offline

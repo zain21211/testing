@@ -10,6 +10,7 @@ import { useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import LocalPendingItems from "./components/orderform/LocalPendingItems.jsx";
 // import debounce from "lodash.debounce";
+import { v4 as uuidv4 } from "uuid";
 
 // --- Material-UI Imports ---
 import {
@@ -419,6 +420,7 @@ const OrderForm = () => {
         remakes: item.remakes || "",
         spo: String(spo || user?.username || "no user"),
       })),
+      transcationID: uuidv4(),
       orderDate: selectedDate,
       customerAcid: String(selectedCustomer.acid),
       userId: user?.UserID,

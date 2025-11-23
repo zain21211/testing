@@ -37,9 +37,15 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
         );
         alert("Invoice synced");
       }
+      setLoading(false);
+
     } catch (err) {
+      setLoading(false);
+
       console.error("Retry failed:", err);
     } finally {
+      console.error("finally the invoice synced");
+
       setLoading(false);
       isSyncing.current = false;
     }

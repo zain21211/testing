@@ -1,5 +1,6 @@
 import React from "react";
 import Header from "./Header.jsx";
+import Footer from "./Footer.jsx";
 import Ledger from './Ledger.jsx';
 import Login from './LoginPage.jsx';
 import { Box } from '@mui/material';
@@ -53,8 +54,10 @@ const AppLayout = () => {
             </Box>
 
             {/* Optional Footer */}
+            <Footer />
         </Box>
     );
 };
+
 
 export default AppLayout;

@@ -30,7 +30,7 @@ export const usePackingFormState = (id) => {
         invoice: id,
         prid: row.prid,
         psid: row.psid,
-        qty: qty,
+        qty: qty || 0,
         dateTime,
         user: user.username,
       };

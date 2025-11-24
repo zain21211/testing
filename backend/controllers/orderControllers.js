@@ -37,6 +37,26 @@ const getProducts = async () => {
   }
 };
 
+// to check for duplicate
+const checkDuplicate = async (transactionid) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input("transactionid", sql.VarChar, transactionid)
+      .query(`
+      SELECT 1
+      FROM ledgers
+      where transactionid=@transactionid;
+    `);
+
+    const duplicate = result.recordset > 0;
+    return duplicate;
+  } catch (err) {
+    console.error("Error fetching duplicate:", err);
+    throw err;
+  }
+};
+
 const updateStock = async (id, qty, columnName) => {
   try {
     const pool = await getPool();
@@ -79,6 +99,7 @@ const orderControllers = {
       totalAmount,
       products: linesJson,
       salesRevenueAcid,
+      transactionID,
     } = req.body;
 
     const now = new Date();
@@ -90,6 +111,9 @@ const orderControllers = {
     try {
       pool = await getPool();
       const nextDoc = await getNextDocNumber(pool, "sale");
+      const duplicate = await checkDuplicate(transactionID);
+
+      if (duplicate) return res.status(204).json({ message: "Duplicate document number found." });
 
       transaction = new sql.Transaction(pool);
       await transaction.begin();
@@ -97,7 +121,7 @@ const orderControllers = {
       const parsedLines = JSON.parse(JSON.stringify(linesJson || []));
       if (!parsedLines.length) throw new Error("No items found in order.");
 
-      // ✅ 1. Insert into PsProduct (batch insert)
+      // ✅ 1. Insert into PsProduct (batch insert)a
       const psProductInserts = parsedLines.map((item) => {
         const {
           prid,
@@ -288,7 +312,7 @@ const orderControllers = {
           @username,@userType,CONVERT(varchar(33),GETUTCDATE(),126),'SAVE');
     `);
 
-      const updatedProducts = await getProducts();
+      //const updatedProducts = await getProducts();
 
       // ✅ Commit
       await transaction.commit();
@@ -298,7 +322,7 @@ const orderControllers = {
         message: "Order posted successfully",
         duration,
         invoiceData: [],
-        updatedProducts,
+        updatedProducts: [],
         doc: nextDoc,
       });
     } catch (error) {
@@ -306,7 +330,7 @@ const orderControllers = {
       if (transaction) {
         try {
           await transaction.rollback();
-        } catch {}
+        } catch { }
       }
       res
         .status(500)
@@ -432,8 +456,8 @@ const orderControllers = {
       const result = await pool
         .request()
         .input("acid", sql.Int, acid)
-.input("company", sql.VarChar(50), company)
-.query(`
+        .input("company", sql.VarChar(50), company)
+        .query(`
   SELECT
     ps.DATE,
     ps.DOC,

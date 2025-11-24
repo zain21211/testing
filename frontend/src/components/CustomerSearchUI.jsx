@@ -22,7 +22,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { FixedSizeList } from "react-window";
 
-const ITEM_SIZE = 48;
+const ITEM_SIZE = 70;
 const allowedDateRangeOptions = [
   { label: "3-Months", value: "3-Months" },
   { label: "This Week", value: "thisWeek" },
@@ -38,7 +38,8 @@ const VirtualizedSuggestionsList = forwardRef(
   function VirtualizedSuggestionsList(props, listRef) {
     const { data, onSelect, highlightedIndex } = props;
     const itemCount = data.length;
-    const listHeight = Math.min(itemCount * ITEM_SIZE, 300);
+    const listHeight = Math.min(itemCount * ITEM_SIZE, 200);
+
 
     const Row = useCallback(
       ({ index, style }) => {
@@ -74,6 +75,7 @@ const VirtualizedSuggestionsList = forwardRef(
     return (
       <FixedSizeList
         ref={listRef}
+        width={"auto"}
         height={listHeight}
         itemCount={itemCount}
         itemSize={ITEM_SIZE}

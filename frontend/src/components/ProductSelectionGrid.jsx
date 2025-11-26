@@ -305,7 +305,12 @@ const ProductSelectionGrid = forwardRef(({
                         <Box component="li" {...props} key={option.ID}>
                             <ListItemText
                                 sx={{ borderBottom: "1px solid #eee" }}
-                                primary={option.Name}
+                                primary={
+                                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>{option.Name}</span>
+                                        <span style={{ color: "#666", fontSize: "1.8rem", fontWeight: "bold", fontFamily: 'Jameel Noori Nastaleeq' }}>{option.UrduName}</span>
+
+                                    </Box>}
                                 secondary={
                                     <>
                                         Rate:{" "}

@@ -44,6 +44,7 @@ export function useFilterAutocomplete(
 
 
         let filtered = [...products];
+        console.log("for filtering the input is", productInputValue)
 
         // Filter by Company (must start with input)
         if (companyFilter?.trim()) {
@@ -71,7 +72,7 @@ export function useFilterAutocomplete(
             const nameRegex = makeWildcardRegex(productInputValue);
             if (nameRegex) {
                 filtered = filtered
-                    .filter((p) => p.Name && nameRegex.test(p.Name.toLowerCase()))
+                    .filter((p) => (p.Name && nameRegex.test(p.Name.toLowerCase())) || (p.UrduName && nameRegex.test(p.UrduName.toLowerCase())))
                     .slice(0, 8);
             } else {
                 return []; // Invalid pattern

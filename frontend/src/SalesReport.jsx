@@ -8,6 +8,7 @@ import {
   Checkbox,
   FormControlLabel,
   Typography,
+  Autocomplete,
   CircularProgress,
   FormControl,
   InputLabel,
@@ -298,38 +299,34 @@ const SalesReport = () => {
             {/* routes and users for admin */}
             {isAllowed && (
               <>
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel id="route-label">Route</InputLabel>
-                  <Select
-                    labelId="route-label"
-                    value={route}
-                    onChange={(e) => setRoute(e.target.value)}
-                    input={
-                      <OutlinedInput
-                        label="Route"
-                        endAdornment={
-                          route && (
-                            <InputAdornment position="end" sx={{ mr: 2 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setRoute("")}
-                                edge="end"
-                              >
-                                <ClearIcon fontSize="small" />
-                              </IconButton>
-                            </InputAdornment>
-                          )
-                        }
-                      />
-                    }
-                  >
-                    {routes.map((r) => (
-                      <MenuItem key={r} value={r}>
-                        {r}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  freeSolo
+                  options={routes}
+                  value={route}
+                  onChange={(event, newValue) => {
+                    setRoute(newValue || "");
+                  }}
+                  onInputChange={(event, newValue) => {
+                    setRoute(newValue || "");
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Route"
+                      variant="outlined"
+                      fullWidth
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  sx={{ mb: 2 }}
+                />
 
                 <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel id="user-label">User</InputLabel>

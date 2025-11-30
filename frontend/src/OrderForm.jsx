@@ -205,7 +205,7 @@ const OrderForm = () => {
     }
 
     const fetchInitialData = async () => {
-      setInitialDataLoading(true);
+      //setInitialDataLoading(true);
       setError(null);
 
       try {
@@ -214,7 +214,7 @@ const OrderForm = () => {
           const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
             headers,
           });
-          const allProducts = prodResponse.data || [];
+          const allProducts = prodResponse.data || products;
 
           const cleanedProducts = allProducts
             .map((p) => ({
@@ -236,7 +236,7 @@ const OrderForm = () => {
         console.error("Error fetching initial data:", errorMessage);
         setError(`Failed to load initial data. ${errorMessage}`);
       } finally {
-        setInitialDataLoading(false);
+        // setInitialDataLoading(false);
       }
     };
 

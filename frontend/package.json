@@ -35,6 +35,7 @@
     "localforage": "^1.10.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.503.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.0.0",

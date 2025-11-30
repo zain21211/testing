@@ -20,6 +20,7 @@ import ApiLogViewer from './components/ApiLogViewer';
 import CustomerDashboard from "./components/LoadForm/CustomerDashbord.jsx";
 import DeliveryForm from "./components/delivery form/deliveryForm.jsx";
 import ProductsList from "./components/productsLIst/productsList.jsx";
+import QRCodeGenerator from './pages/QRCodeGenerator';
 
 const AppLayout = () => {
     // const theme = useTheme(); // (Still need useTheme if using styled/sx)
@@ -49,6 +50,7 @@ const AppLayout = () => {
                     <Route path="/load" element={<CustomerDashboard />} />
                     <Route path="/delivery" element={<DeliveryForm />} />
                     <Route path="/productsList" element={<ProductsList />} />
+                    <Route path="/qr-generator" element={<QRCodeGenerator />} />
 
                 </Routes>
             </Box>

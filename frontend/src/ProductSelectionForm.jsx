@@ -68,7 +68,6 @@ export default function OrderPage({
     }, [productIDInput]);
 
     useEffect(() => {
-        console.log(productInputRef?.current)
         if (user?.userType?.toLowerCase().includes('sm')) {
             productIDInputRef.current?.focus();
         }

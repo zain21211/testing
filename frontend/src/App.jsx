@@ -4,6 +4,7 @@ import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
 import OrderForm from './OrderForm';
+import QRCodeGenerator from './pages/QRCodeGenerator';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -38,6 +39,10 @@ function App() {
                   <a href="/create-order" className="underline text-blue-300">
                     Create Order
                   </a>
+                  {' | '}
+                  <a href="/qr-generator" className="underline text-green-300">
+                    QR Generator
+                  </a>
                 </p>
               </div>
               <p className="read-the-docs">
@@ -49,6 +54,9 @@ function App() {
 
         {/* Route for the Order Form */}
         <Route path="/create-order" element={<OrderForm />} />
+
+        {/* Route for the QR Code Generator */}
+        <Route path="/qr-generator" element={<QRCodeGenerator />} />
       </Routes>
     </Router>
   );

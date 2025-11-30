@@ -223,7 +223,7 @@ const ProductSelectionGrid = forwardRef(({
                             inputRef={productIDInputRef}
                             value={productIDInput}
                             onChange={(e) => setProductIDInput(e.target.value)}
-                            disabled={initialDataLoading}
+                            // disabled={initialDataLoading}
                             sx={{ ...bigger, flex: 1 }}
                             onFocus={(e) => e.target.select()}
                             inputProps={{ inputMode: "numeric" }}
@@ -396,7 +396,7 @@ const ProductSelectionGrid = forwardRef(({
                     gridColumn: { xs: "span 3", sm: "span 3", md: "span 4" },
                     order: { xs: 1, sm: 1 },
                 }}
-                disabled={initialDataLoading}
+                // disabled={initialDataLoading}
                 disablePortal={isMobile}
             />
 

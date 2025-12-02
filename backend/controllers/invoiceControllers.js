@@ -86,8 +86,8 @@ const invoiceControllers = {
               vehicle.includes("ka")
                 ? "kr"
                 : vehicle.includes("suz")
-                ? "sr"
-                : to
+                  ? "sr"
+                  : to
             );
 
             return request.query(query);
@@ -451,8 +451,14 @@ WHERE P.Doc = @DocNumber
 
                 QTY = PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0),
                 SchPc = ISNULL(PsProductInput.SchPc, 0),
-                VEST = ROUND((PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate, 0), 
-                VIST = ROUND((PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (1 - (DiscP + DiscP2) / 100.0), 0),
+                VEST = CASE
+                    WHEN (SELECT name FROM Products WHERE id = @ProductCode) LIKE '%publicity%' THEN 0
+                    ELSE ROUND((PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate, 0)
+                END,
+                VIST = CASE
+                    WHEN (SELECT name FROM Products WHERE id = @ProductCode) LIKE '%publicity%' THEN 0
+                    ELSE ROUND((PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (1 - (DiscP + DiscP2) / 100.0), 0)
+                END,
                 Discount = (PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (DiscP / 100.0),
                 Discount2 = (PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (DiscP2 / 100.0),
                 TallyBy = PsProductInput.UserName,

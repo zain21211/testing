@@ -32,7 +32,8 @@ export default function MyAutocomplete({
                     value: localInputValue
                 }
             });
-        }, 2000);
+            alert(localInputValue);
+        }, 500);
 
         return () => clearTimeout(handler); // clear previous timeout if input changes
     }, [localInputValue]);

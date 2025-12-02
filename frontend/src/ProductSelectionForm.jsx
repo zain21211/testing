@@ -144,7 +144,13 @@ export default function OrderPage({
 
     const handleAddProductClick = () => {
         console.log("Adding product:", selectedProduct);
-
+        let finalDiscount2 = Number(discount2) || 0;
+        let finalAmount = Number(calculatedAmount) || 0;
+        if (selectedProduct?.Name?.toLowerCase().includes('publicity') && orderQuantity < 10) {
+            finalDiscount2 = 100;
+            finalAmount = 0;
+            // discount2 = 100;
+        }
 
         const newItem = {
             status: selectedProduct?.Status || "active", // Use product status, default to 'active'
@@ -154,18 +160,40 @@ export default function OrderPage({
             model: selectedProduct.Category,
             orderQuantity: Number(orderQuantity), // The quantity the user entered
             schPc: Number(schPc) || 0, // Calculated scheme pieces
-            quantity: Number(quantity) || 0, // Total quantity (order + scheme)
+            quantity: Boolean(Sch) ? Number(quantity) || 0 : Number(orderQuantity) || 0, // Total quantity (order + scheme)
             rate: Number(selectedProduct?.SaleRate) ?? 0, // Product's sale rate
             suggestedPrice: Number(suggestedPrice) || 0, // User's suggested price
             vest: Number(vest) || 0, // Calculated vest
             discount1: Number(discount1) || 0, // Discount 1 percentage
-            discount2: Number(discount2) || 0, // Discount 2 percentage
-            amount: Number(calculatedAmount) || 0, // Final calculated numeric amount for the item
+            discount2: finalDiscount2, // Discount 2 percentage
+            amount: Number(finalAmount) || 0, // Final calculated numeric amount for the item
             isClaim: isClaim,
             Sch: Sch,
             profit: profit,
             remakes: productRemakes.trim(), // Add remakes
         };
+
+        // old newitem making method
+        // const newItem = {
+        //     status: selectedProduct?.Status || "active", // Use product status, default to 'active'
+        //     productID: selectedProduct.ID,
+        //     name: selectedProduct.Name,
+        //     company: selectedProduct.Company,
+        //     model: selectedProduct.Category,
+        //     orderQuantity: Number(orderQuantity), // The quantity the user entered
+        //     schPc: Number(schPc) || 0, // Calculated scheme pieces
+        //     quantity: Boolean(Sch) ? Number(quantity) || 0 : Number(orderQuantity) || 0, // Total quantity (order + scheme)
+        //     rate: Number(selectedProduct?.SaleRate) ?? 0, // Product's sale rate
+        //     suggestedPrice: Number(suggestedPrice) || 0, // User's suggested price
+        //     vest: Number(vest) || 0, // Calculated vest
+        //     discount1: Number(discount1) || 0, // Discount 1 percentage
+        //     discount2: Number(discount2) || 0, // Discount 2 percentage
+        //     amount: Number(calculatedAmount) || 0, // Final calculated numeric amount for the item
+        //     isClaim: isClaim,
+        //     Sch: Sch,
+        //     profit: profit,
+        //     remakes: productRemakes.trim(), // Add remakes
+        // };
 
         console.log("newitem", newItem)
         onAddProduct(newItem);

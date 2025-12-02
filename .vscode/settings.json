@@ -8,14 +8,12 @@
   "editor.smoothScrolling": true,
   "editor.roundedSelection": true,
   "editor.renderWhitespace": "selection",
-
   // 🧭 UI + Layout
   // "workbench.iconTheme": "material-icon-theme",
   "window.titleBarStyle": "custom",
   "workbench.statusBar.visible": true,
   "workbench.layoutControl.enabled": false,
   "editor.minimap.enabled": false,
-
   // 🎨 Warm Zed-like Sand Theme
   // "workbench.colorCustomizations": {
   //   // 🟡 Title Bar
@@ -24,7 +22,6 @@
   //   "titleBar.inactiveBackground": "#EDE2C5",
   //   "titleBar.inactiveForeground": "#5E5B50",
   //   "titleBar.border": "#CBB77E",
-
   //   // 🟡 Tabs
   //   "tab.activeBackground": "#fff3c8",
   //   "tab.activeForeground": "#3C3A32",
@@ -32,7 +29,6 @@
   //   "tab.inactiveForeground": "#5E5B50",
   //   "tab.hoverBackground": "#fff3c8",
   //   "tab.border": "#e9dbaf",
-
   //   // Remove all borders / underlines
   //   "tab.activeBorder": "#00000000",
   //   "tab.activeBorderTop": "#00000000",
@@ -41,7 +37,6 @@
   //   "tab.activeModifiedBorder": "#00000000",
   //   "tab.unfocusedActiveModifiedBorder": "#00000000",
   //   "tab.lastPinnedBorder": "#00000000",
-
   //   // ✏️ Editor look
   //   "editor.foreground": "#3C3A32",
   //   "editorCursor.foreground": "#7A5C00",
@@ -49,7 +44,6 @@
   //   "editorLineNumber.activeForeground": "#8A7C57",
   //   "editor.lineHighlightBackground": "#e8d8a2",
   //   // "editor.background": "#f5db95",
-
   //   // 🪶 Misc
   //   "statusBar.background": "#dcc47c",
   //   "sideBar.background": "#e9d38e",
@@ -64,19 +58,22 @@
   //   "breadcrumb.foreground": "#736B55",
   //   "panel.background": "#dcc47c"
   // },
-
   // 🔠 Syntax (optional, can be adjusted)
   "editor.tokenColorCustomizations": {
     "textMateRules": [
       {
-        "scope": ["keyword"],
+        "scope": [
+          "keyword"
+        ],
         "settings": {
           "fontStyle": "bold"
         }
       }
     ]
   },
-
   // ⚙️ Custom CSS Injection (bold tab)
-  "vscode_custom_css.imports": ["file:///D:/dummy/.vscode/custom.css"]
+  "vscode_custom_css.imports": [
+    "file:///D:/dummy/.vscode/custom.css"
+  ],
+  "workbench.settings.openDefaultKeybindings": false
 }

@@ -412,7 +412,7 @@ const OrderForm = () => {
         discP1: Number(item.discount1),
         discP2: Number(item.discount2),
         vist: Math.round(item.amount),
-        SchPc: Number(item.schPc) || 0,
+        SchPc: Boolean(item.Sch) ? Number(item.schPc) || 0 : 0,
         sch: Boolean(item.Sch),
         isClaim: Boolean(item.isClaim),
         prid: String(item.productID) || "0",
@@ -930,7 +930,7 @@ const OrderForm = () => {
               onClick={() => btn.text.toLowerCase() === 'invoice' ? getInvoicePreview(btn.text) : handlePostOrder(btn.text)}
               disabled={
                 loading ||
-                initialDataLoading ||
+                // initialDataLoading ||
                 orderItems.length === 0 ||
                 !selectedCustomer
               }

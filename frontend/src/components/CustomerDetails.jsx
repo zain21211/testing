@@ -8,7 +8,7 @@ const CustomerDetails = ({ customer }) => {
       alignItems="center"
       sx={{ mb: 0 }}
     >
-      <Grid item sx={{ width: "25%" }}>
+      <Grid item sx={{ width: "33%" }}>
         <Typography variant="h6" color="text.secondary">
           ESTIMATE #
         </Typography>

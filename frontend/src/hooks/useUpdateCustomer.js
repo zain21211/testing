@@ -7,7 +7,6 @@ export default function useUpdateCustomer(name) {
 
   const handleSelection = () => {
     const cust = customers.filter((c) => c.name === name)[0];
-
     if (cust) setSelectedCustomer(cust);
   };
 

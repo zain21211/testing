@@ -27,11 +27,11 @@ export const usePackingFormState = (id) => {
     setUpdatedInvoice((prev) => {
       const existingIndex = prev.findIndex((item) => item.psid === row.psid);
       const updatedItem = {
+        dateTime,
         invoice: id,
+        qty: qty || 0,
         prid: row.prid,
         psid: row.psid,
-        qty: qty || 0,
-        dateTime,
         user: user.username,
       };
 

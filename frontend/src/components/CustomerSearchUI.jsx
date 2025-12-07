@@ -74,7 +74,7 @@ const VirtualizedSuggestionsList = forwardRef(
 
     return (
       <FixedSizeList
-        ref={listRef}
+        ref={listRef}  
         width={"auto"}
         height={listHeight}
         itemCount={itemCount}

@@ -270,13 +270,11 @@ export default function OrderPage({
     });
 
     // scheme
-    const { schText, schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading } =
-        useScheme(selectedProduct, orderQuantity, true)
+    const { schText = '0+0', schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading } =
+        useScheme(selectedProduct, orderQuantity, Sch)
 
     // discount
     const { discount1, setDiscount1, discount2, setDiscount2 } = useDiscount(selectedCustomer, selectedProduct);
-
-
 
     // for totalamount per item
     const { vest, calculatedAmount, setCalculatedAmount } = useCalculateAmount(
@@ -344,7 +342,7 @@ export default function OrderPage({
             quantity={quantity}
             setQuantity={setQuantity}
             schOn={schOn}
-            schText={schText}
+            schText={schText || '0+0'}
             setSchOn={setSchOn}
             price={price}
             setPrice={setPrice}

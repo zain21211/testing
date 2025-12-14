@@ -211,9 +211,11 @@ const OrderForm = () => {
       try {
         if (navigator.onLine) {
           const headers = { Authorization: `Bearer ${token}` };
+          console.log(products)
           const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
             headers,
           });
+          console.log(prodResponse.data)
           const allProducts = prodResponse.data || products;
 
           const cleanedProducts = allProducts

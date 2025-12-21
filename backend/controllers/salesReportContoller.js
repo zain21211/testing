@@ -66,8 +66,9 @@ WHERE
     AND (@doc IS NULL OR CAST(pd.doc AS VARCHAR(20)) LIKE '%' + @doc + '%')
     AND (@route IS NULL OR a.route LIKE '%' + @route + '%')
     AND (
+(@invoiceStatus = '' ) or
         (pd.status LIKE @invoiceStatus + '%')
-        OR (@invoiceStatus = 'estimate' AND pd.status IS NULL)
+      OR (@invoiceStatus = 'estimate' and  pd.status IS NULL)
     )
 --ORDER BY pd.date DESC
 `;
@@ -138,7 +139,7 @@ WHERE doc = @id AND type = 'sale';
     res.status(200).json({ message: "Status updated successfully" });
   } catch (error) {
     console.error("Error updating status:", error);
-    res.status(500).json({ error: "Failed to update status", error });
+    res.status(500).json({ error: "Failed to update status", msg: error });
   }
 };
 

@@ -278,8 +278,8 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                         </FormControl>
 
                         {/* Discounts */}
-                        <Divider sx={{ my: 2 }}>
-                            <Typography variant="body1">Discounts</Typography>
+                        <Divider sx={{ my: 2, }}>
+                            <Typography variant="body1" sx={{ width: '100%' }}>Discounts</Typography>
                         </Divider>
 
                         <DiscountForm

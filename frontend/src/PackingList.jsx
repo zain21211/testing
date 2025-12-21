@@ -91,6 +91,7 @@ const useFilters = () => {
     });
 
     const handleFilterChange = useCallback((id, value) => {
+        console.log('id', id, 'value', value)
         setFilters((prev) =>
             prev.map((f) =>
                 f.id === id ? { ...f, name: value } : f
@@ -98,6 +99,9 @@ const useFilters = () => {
         );
     }, []);
 
+    useEffect(() => {
+        console.log('filters', filters)
+    }, [filters]);
     return { filters, endDate, setEndDate, handleFilterChange };
 };
 
@@ -426,8 +430,8 @@ const PackingList = () => {
 
     // Handle form submission
     const handleSubmit = async () => {
-        const [route, invoiceStatus, doc, customer] = filters.map(f => f?.name || null);
-
+        const [route, doc, customer, invoiceStatus] = filters.map(f => f?.name || null);
+        console.log('filters', filters.map(f => f?.name || null))
         const requestBody = {
             startDate: null,
             endDate: endDate ? new Date(endDate).toISOString().split("T")[0] : null,
@@ -438,6 +442,7 @@ const PackingList = () => {
             customer: customer || '',
         };
 
+        console.log(requestBody);
         await fetchData(requestBody);
     };
 

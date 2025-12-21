@@ -17,44 +17,44 @@ export default function ImagePreview({ images, loading }) {
 
     return (
         <Box
-            mt={2}
             display="flex"
             flexDirection="row"
             flexWrap="wrap"
             gap={1}
-            justifyContent={"center"}
-            alignItems="center"
+            px={3}
+        // justifyContent={"center"}
+        // alignItems="center"
         >
             {loading && <p>Loading images...</p>}
-            {images.customer && (
+            {images?.customer && (
                 <Box onClick={() => handleOpen(images.customer)} sx={{ cursor: "pointer" }}>
-                    <h3>Customer Photo:</h3>
+                    <h4>Customer Photo:</h4>
                     <img
                         src={images.customer}
                         alt="customer"
-                        style={{ maxWidth: "200px", borderRadius: "8px" }}
+                        style={{ maxWidth: "200px", maxHeight: "200px", borderRadius: "8px", m: 0, p: 0 }}
                     />
                 </Box>
             )}
 
-            {images.shop && (
+            {images?.shop && (
                 <Box onClick={() => handleOpen(images.shop)} sx={{ cursor: "pointer" }}>
                     <h3>Shop Photo:</h3>
                     <img
                         src={images.shop}
                         alt="shop"
-                        style={{ maxWidth: "200px", borderRadius: "8px" }}
+                        style={{ maxWidth: "200px", maxHeight: "200px", borderRadius: "8px" }}
                     />
                 </Box>
             )}
 
-            {images.agreement && (
+            {images?.agreement && (
                 <Box onClick={() => handleOpen(images.agreement)} sx={{ cursor: "pointer" }}>
                     <h3>Agreement Photo:</h3>
                     <img
                         src={images.agreement}
                         alt="agreement"
-                        style={{ maxWidth: "200px", borderRadius: "8px" }}
+                        style={{ maxWidth: "200px", maxHeight: "200px", borderRadius: "8px" }}
                     />
                 </Box>
             )}

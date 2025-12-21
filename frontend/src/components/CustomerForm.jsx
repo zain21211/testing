@@ -173,6 +173,9 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
             };
 
             // 2. Call both APIs in parallel with the same id
+            if (!images.shop) {
+                return alert("Please upload shop image")
+            }
             const res = await saveCustomer(selectedCustomer, finalFormData, images,);
 
             console.log("Customer saved:", res);
@@ -195,7 +198,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
     };
 
     return (
-        <Card sx={{ boxShadow: 2, borderRadius: 2 }}>
+        <Card sx={{ boxShadow: 2, borderRadius: 2, height: '100%' }}>
             <CardContent sx={{ p: 2 }}>
                 {/* Tabs */}
                 {/* <Tabs
@@ -214,7 +217,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                         <Box
                             sx={{
                                 display: "grid",
-                                gridTemplateColumns: "repeat(2, 1fr)",
+                                gridTemplateColumns: { xs: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" },
                                 gap: 1.5,
                             }}
                         >
@@ -240,6 +243,8 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                                     <TextField
                                         key={field}
                                         label={field}
+                                        variant="outlined"
+                                        required={isAllowed}
                                         disabled={!isAllowed}
                                         onChange={handleChange}
                                         name={cleanString(field)}
@@ -279,7 +284,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
 
                         {/* Discounts */}
                         <Divider sx={{ my: 2, }}>
-                            <Typography variant="body1" sx={{ width: '100%' }}>Discounts</Typography>
+                            <Typography variant="h6" sx={{ minWidth: 100 }}>Discounts</Typography>
                         </Divider>
 
                         <DiscountForm

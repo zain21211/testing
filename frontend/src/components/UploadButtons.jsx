@@ -52,7 +52,7 @@ export default function UploadButtons({ handleImageChange, loading }) {
                         variant="contained"
                         color={color}
                         fullWidth
-                        sx={{ fontSize: "1.2rem" }}
+                        sx={{ fontSize: { xs: '1rem', lg: '1.2rem' }, fontWeight: 'bold', wordBreak: 'break-word' }}
                         onClick={() => handleOpen(label.toLowerCase())}
                     >
                         {label}

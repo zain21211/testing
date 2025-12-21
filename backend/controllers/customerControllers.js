@@ -254,40 +254,39 @@ const customerControllers = {
       const query = `
 INSERT INTO coa
 (
-    Id, Date, Category, ACCATEGORY, Main, Subsidary, UrduName, SPO,
+    Id,Code, Control, Date, Category, ACCATEGORY, Main, Subsidary, UrduName, SPO,
     OCell, OAddress, Balance, Status, Balance_Date,
     route, creditlimit, creditdays, active, acType, RunsDate, OCELLWA,
     Longitude, Latitude, Worth, BuyingSource
 )
 VALUES
 (
-    @Id, GETDATE(), 'BALANCE SHEET', @ACCATEGORY, 'TRADE DEBTORS', @Subsidary, @UrduName, @spo,
+    @Id, @Code, 'SUPPLY', GETDATE(), 'BALANCE SHEET', @ACCATEGORY, 'TRADE DEBTORS', @Subsidary, @UrduName, @spo,
     @OCell, @OAddress, 0, 'Active', GETDATE(),
     @route, @creditlimit, @creditdays, 1, @acType, GETDATE(), @OCELLWA,
     @Longitude, @Latitude, @Worth, @BuyingSource
 );
-
-
     `;
 
       await pool
         .request()
         .input("Id", mssql.Int, acid)
+        .input("Code", mssql.VarChar, String(acid))
         .input("spo", mssql.VarChar, username)
-        .input("ACCATEGORY", mssql.VarChar, type)
+        .input("ACCATEGORY", mssql.VarChar, type || 'customer')
         .input("Subsidary", mssql.VarChar, name)
         .input("UrduName", mssql.NVarChar, urduname)
-        .input("OCell", mssql.VarChar, phonenumber)
-        .input("OAddress", mssql.VarChar, address)
-        .input("route", mssql.VarChar, route)
-        .input("creditlimit", mssql.Int, creditlimit)
-        .input("creditdays", mssql.Int, creditdays)
+        .input("OCell", mssql.VarChar, phonenumber || "")
+        .input("OAddress", mssql.VarChar, address || "")
+        .input("route", mssql.VarChar, route || "")
+        .input("creditlimit", mssql.Int, creditlimit || 0)
+        .input("creditdays", mssql.Int, creditdays || 0)
         .input("acType", mssql.Int, 5)
-        .input("Longitude", mssql.Float, longitude)
-        .input("Latitude", mssql.Float, latitude)
-        .input("Worth", mssql.Int, cleanNumbers(worth))
-        .input("Buyingsource", mssql.VarChar, buyingsource)
-        .input("OCELLWA", mssql.VarChar, whatsapp)
+        .input("Longitude", mssql.Float, longitude || 0)
+        .input("Latitude", mssql.Float, latitude || 0)
+        .input("Worth", mssql.Int, cleanNumbers(worth || 0))
+        .input("Buyingsource", mssql.VarChar, buyingsource || "")
+        .input("OCELLWA", mssql.VarChar, whatsapp || "")
         .query(query);
 
       // Assuming discounts is an array of objects like:

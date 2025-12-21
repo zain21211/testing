@@ -74,7 +74,7 @@ const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight: gtableHei
   }, []);
 
   return (
-    <Card sx={{ boxShadow: 3, borderRadius: 2, }}>
+    <Card sx={{ boxShadow: 3, borderRadius: 2, overflow: 'hidden', border: '1px solid black' }}>
       <CardContent>
         <Box
           ref={containerRef}
@@ -85,7 +85,7 @@ const CustomerList = ({ customer = [], onCustomerDeleted, tableHeight: gtableHei
           {filteredCustomers?.length === 0 ? (
             <Typography variant="body2">No customers available</Typography>
           ) : (
-            <Box sx={{ marginTop: 2 }}>
+            <Box>
               <DataTable
                 data={filteredCustomers}
                 columns={customerColumns}

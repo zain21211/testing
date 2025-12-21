@@ -310,7 +310,7 @@ const DataTable = ({
         // width: "100%",
         borderRadius: "7px",
         padding: 0,
-        fontSize: "2rem",
+        // fontSize: "1.5rem",
         // maxHeight: usage?.includes("coa") ? "80vh" : "auto",
       }}
     >

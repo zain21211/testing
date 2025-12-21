@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import imageCompression from "browser-image-compression";
+import useLocalStorageState from "use-local-storage-state";
 
 export function useCamera(
-  initial = { customer: null, shop: null, agreement: null }
+  initial = { customer: '', shop: '', agreement: '' }
 ) {
-  const [images, setImages] = useState(initial);
+  const [images, setImages] = useLocalStorageState("coaimages", initial);
+
   useEffect(() => {
-    console.log("Images state updated:", images?.customer?.length);
+    console.log("Images state updated:", images);
   }, [images]);
+
   const handleImageChange = async (event, type) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];

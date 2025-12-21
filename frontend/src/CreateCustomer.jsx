@@ -3,7 +3,8 @@ import axios from 'axios';
 import { Box } from '@mui/material';
 import { useState, useEffect, useRef, use } from 'react';
 import useWindowDimensions from './useWindowDimensions'; // Import the custom hook
-
+import { useCamera } from './hooks/useCamera';
+import ImagePreview from './components/ImagePreview';
 // REDUX STATES FUNCTIONS
 import {
     persistMasterCustomerList,
@@ -21,7 +22,7 @@ const CreateCustomer = () => {
 
     // CUSTOM HOOKS
     const { masterCustomerList } = useMasterCustomerList();
-
+    const { images, loading: imgLoading } = useCamera();
     // LOCAL STATES
     const user = JSON.parse(localStorage.getItem("user"));
     const token = useState(localStorage.getItem("authToken"));
@@ -38,16 +39,13 @@ const CreateCustomer = () => {
     useEffect(() => {
         if (containerRef.current) {
             const divHeight = containerRef.current.offsetHeight;
-            console.log("Div height:", divHeight);
             setTableHeight(divHeight);
         }
     }, [containerRef]); // or any dependency you want to trigger recalculation
 
-
     useEffect(() => {
-        console.log("Window table height changed:", tableHeight);
-    }, [tableHeight]);
-
+        console.log("this is the images", images)
+    }, [images]);
     useEffect(() => {
         handleUpdate();
     }, []);
@@ -56,7 +54,6 @@ const CreateCustomer = () => {
     const handleUpdate = async () => {
         try {
 
-            console.log("Fetching customers to update master list...");
             // FETCH API
             const response = await fetchCustomers()
 
@@ -73,22 +70,18 @@ const CreateCustomer = () => {
         <Box
             sx={{
                 width: '100%',
-                // my: 2,
-                display: { xs: 'flex', sm: 'grid' },
-                flexDirection: 'column',
-                // overflow: 'hidden',
-
-                gridTemplateColumns: {
-                    xs: '1fr',       // mobile → single column
-                    md: '1fr 2fr',   // desktop → 1/3 + 2/3
-                },
-                gap: { xs: 1, md: 3 }, // reduce mobile gaps
+                my: 2,
+                height: { xs: '500vh', lg: '80vh' },
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: { xs: 'column', lg: 'row' },
+                gap: { xs: 1, lg: 3 }, // reduce mobile gaps
             }}
         >
             {/* Left panel: CUSTOMER FORM */}
             <Box
                 ref={containerRef}
-                sx={{ position: { md: 'sticky' }, alignSelf: "start" }}>
+                sx={{ width: { md: '40%' } }}>
                 <CustomerForm
                     onCustomerCreated={handleUpdate}
                     accounts={names}
@@ -97,14 +90,21 @@ const CreateCustomer = () => {
             </Box>
 
             {/* Right panel: CUSTOMER LIST */}
-            <Box>
-                <CustomerList
-                    customer={masterCustomerList}
-                    onAccountDeleted={handleUpdate}
-                    tableHeight={tableHeight}
-                />
+            {/* <Box > */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', width: { md: '56.5%' } }}>
+                <Box sx={{ height: '55%', overflow: 'hidden', }}>
+                    <CustomerList
+                        customer={masterCustomerList}
+                        onAccountDeleted={handleUpdate}
+                        tableHeight={tableHeight}
+                    />
+                </Box>
+                <Box sx={{ height: '45%', border: '1px solid black', mt: 1, display: { xs: 'none', lg: 'block' }, background: "#c5c5c5ff" }}>
+                    <ImagePreview images={images} loading={imgLoading} />
+                </Box>
+
             </Box>
-        </Box>
+        </Box >
 
     );
 };

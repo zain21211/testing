@@ -17,8 +17,10 @@ export default function DiscountForm({
     return (
         <Box
             sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
+                // display: "grid",
+                // gridTemplateColumns: "repeat(5, 1fr)",
+                display: "flex",
+                // flexWrap: "wrap",
                 gap: 1.5,
                 alignItems: "center",
                 mb: 1.5,

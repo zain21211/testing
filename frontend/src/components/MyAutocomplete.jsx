@@ -88,7 +88,8 @@ export default function MyAutocomplete({
                     InputProps={{
                         ...params.InputProps,
                         sx: {
-                            fontSize: field.includes("name") ? "2rem" : "1.3rem",
+                            fontSize: "2rem",
+                            // fontSize: field.includes("name") ? "2rem" : "1.3rem",
                             fontFamily: field.includes("name")
                                 ? "Jameel Noori Nastaleeq, serif !important"
                                 : "",

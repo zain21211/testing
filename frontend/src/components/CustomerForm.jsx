@@ -244,7 +244,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
                                         key={field}
                                         label={field}
                                         variant="outlined"
-                                        required={isAllowed}
+                                        required={field === "Phone Number" ? false : isAllowed}
                                         disabled={!isAllowed}
                                         onChange={handleChange}
                                         name={cleanString(field)}

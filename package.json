@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "zod": "^3.22.0",
+    "mongodb": "^6.3.0",
     "mssql": "^11.0.1",
-    "mongodb": "^6.3.0"
+    "xlsx": "^0.18.5",
+    "zod": "^3.22.0"
   },
   "keywords": [
     "mcp",

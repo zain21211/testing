@@ -25,6 +25,7 @@ import { useCamera } from "../hooks/useCamera";
 import DualCameraUpload from "./DualCameraUpload";
 import { cleanNumbers, cleanString } from "../utils/cleanString";
 import { useDiscount } from "../hooks/useDiscount";
+import { useFetchTypes } from "../hooks/useFetchTypes";
 import { formatNumbers } from "../utils/cleanString";
 import useFetchCustImgs from "../hooks/useFetchCustImg";
 import useUpdateCustomer from "../hooks/useUpdateCustomer";
@@ -36,7 +37,9 @@ import { saveCustomer } from "../utils/api";
 const url = import.meta.env.VITE_API_URL;
 
 const discountOptions = ["d1", "d2"];
+
 const types = ["Customer", "Prospect", "Workshop", "CCP"];
+
 const fields = [
     "Name",
     "Urdu name",
@@ -71,6 +74,7 @@ export default function CustomerForm({ onCustomerCreated, accounts, urdu }) {
     const { list, error: disError } = useDiscount(selectedCustomer, null, true);
     const { images, setImages, handleImageChange, resetImages } = useCamera();
     const { loading: imgLoading } = useFetchCustImgs(selectedCustomer?.acid, handleImageChange, setImages);
+    const { types } = useFetchTypes();
 
     // PERMISSIONS
     const usertype = user?.userType.toLowerCase();

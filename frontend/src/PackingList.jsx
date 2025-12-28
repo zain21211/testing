@@ -112,6 +112,9 @@ const useDataFetching = () => {
     });
     const [routes, setRoutes] = useState([]);
     const [usernames, setUsernames] = useState([]);
+    const [profit, setProfit] = useLocalStorageState('packingProfit', {
+        defaultValue: '',
+    });
 
 
 
@@ -131,11 +134,16 @@ const useDataFetching = () => {
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0
                     });
+                    const formattedProfit = row.grossprofit.toLocaleString("en-US", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    });
                     return {
                         ...row,
                         rn: ++id,
                         date: formatDate(row.date) || null,
-                        amount: formattedAmount
+                        amount: formattedAmount,
+                        grossprofit: formattedProfit
                     };
                 });
 
@@ -146,6 +154,12 @@ const useDataFetching = () => {
                     cleanedRows.reduce((sum, row) => sum + (unformatNumber(row.amount) || 0), 0)
                 );
                 setAmount(formatCurrency(totalAmount));
+
+                // Calculate total profit
+                const totalProfit = Math.round(
+                    cleanedRows.reduce((sum, row) => sum + (unformatNumber(row.grossprofit) || 0), 0)
+                );
+                setProfit(formatCurrency(totalProfit));
 
                 // Extract unique usernames and routes
                 const usernames = Array.from(new Set(cleanedRows.map(row => row.UserName)));
@@ -184,6 +198,7 @@ const useDataFetching = () => {
         error,
         tableData,
         amount,
+        profit,
         routes,
         usernames,
         fetchData
@@ -288,21 +303,38 @@ const FilterSection = ({ filters, routes, statuses, onFilterChange, onSubmit, is
 };
 
 // Summary Section Component
-const SummarySection = ({ tableData, amount, isAllowed }) => {
+const SummarySection = ({ tableData, amount, isAllowed, profit }) => {
     if (tableData.length === 0) return null;
 
     return (
-        <Box display={"flex"} justifyContent={"space-between"}
-            marginTop={5} fontSize={'1rem'} fontWeight={"bold!important"}>
+        <Box
+            display={"flex"}
+            justifyContent={"space-between"}
+            marginTop={5}
+            fontSize={'1rem'}
+            fontWeight={"bold!important"}
+            gap={1}
+            alignItems={"center"}
+            textAlign={"center"}
+        >
             <Typography variant="h6" component="h2"
-                sx={{ fontSize: { xs: "1.5rem", sm: "2rem" }, fontWeight: "bold" }}>
-                TOTAL BILLS: {tableData.length}
+                sx={{ fontSize: { xs: "1.1rem", lg: "2rem" }, fontWeight: "bold", width: "33%" }}>
+                BILLS: {tableData.length}
             </Typography>
+
             {isAllowed && (
-                <Typography variant="h6" component="h2"
-                    sx={{ fontSize: { xs: "1.5rem", sm: "2rem" }, fontWeight: "bold" }}>
-                    NET AMOUNT = {amount}
-                </Typography>
+                <>
+                    <hr />
+                    <Typography variant="h6" component="h2"
+                        sx={{ fontSize: { xs: "1.1rem", lg: "2rem" }, fontWeight: "bold", width: "33%" }}>
+                        AMOUNT = {amount}
+                    </Typography>
+                    <hr />
+                    <Typography variant="h6" component="h2"
+                        sx={{ fontSize: { xs: "1.1rem", lg: "2rem" }, fontWeight: "bold", width: "33%" }}>
+                        PROFIT = {profit}
+                    </Typography>
+                </>
             )}
         </Box>
     );
@@ -370,6 +402,7 @@ const PackingList = () => {
         tableData,
         amount,
         routes,
+        profit,
         usernames,
         fetchData
     } = useDataFetching();
@@ -390,13 +423,14 @@ const PackingList = () => {
             { label: "Customer", id: "UrduName", minWidth: 250, align: "right" },
             { label: "DOC #", id: "doc", minWidth: 100, align: 'center' },
             { label: "#", id: "rn", minWidth: 60, align: 'center' },
-            { label: "DATE", id: "date", minWidth: 150, align: 'center' },
             ...(isAllowed
                 ? [
-                    { label: "USER", id: "UserName", minWidth: 180, align: 'center' },
                     { label: "AMOUNT", id: "amount", minWidth: 200, align: "right" },
+                    { label: "PROFIT", id: "grossprofit", minWidth: 50, align: "right" },
+                    { label: "USER", id: "UserName", minWidth: 180, align: 'center' },
                 ]
                 : []),
+            { label: "DATE", id: "date", minWidth: 150, align: 'center' },
         ];
     }, [isAllowed]);
 
@@ -462,6 +496,7 @@ const PackingList = () => {
                     <SummarySection
                         tableData={tableData}
                         amount={amount}
+                        profit={profit}
                         isAllowed={isAllowed}
                     />
 

@@ -1,0 +1,602 @@
+SR#,Brand Name,Category,Website,Contact Email,Founder/Key Contact,Pain Point,Current Manual Workflow,Automation Solution,Tailored Email Subject,Tailored Email Body
+1,Aura Bora,Beverages,aurabora.com,hello@aurabora.com,Team,Portal Data Entry,Manually typing SKUs into KeHE CONNECT,Auto-upload from Shopify/ERP,"Quick question about Aura Bora's KeHE data entry","Hi there,
+
+I noticed Aura Bora is distributed through KeHE—congrats on the growth!
+
+One thing I hear from beverage brands: manually typing SKUs into KeHE CONNECT is a huge time sink.
+
+I've built automation that syncs your Shopify/ERP directly to KeHE—no more manual entry. Most brands save 5-10 hours/week.
+
+Would you be open to a quick 15-min call to see if this could help Aura Bora?
+
+Best,
+[Your Name]
+AI Automation Specialist"
+2,BeBOLD,Energy Bars,beboldbars.com,info@beboldbars.com,Stacy Madison (Founder),Inventory Syncing,Checking stock levels across 3 platforms,Real-time stock sync bot,"Inventory sync headache at BeBOLD?","Hi Stacy,
+
+Managing inventory across multiple platforms is one of the biggest pain points I hear from food brands.
+
+I've built a real-time stock sync solution that keeps Shopify, KeHE, and your ERP perfectly aligned—automatically.
+
+Most brands see 90% fewer stockouts and save 8+ hours/week on manual checks.
+
+Would you be interested in a quick call to explore this for BeBOLD?
+
+Best,
+[Your Name]"
+3,Rollin' N Bowlin',Frozen Food,rollinnbowlin.com,info@rollinnbowlin.com,Sophia Karbowski (Co-Founder),Spoilage Tracking,Manually tracking Best By dates in Excel,Automated Short-Date alerts,"Reducing spoilage at Rollin' N Bowlin'","Hi Sophia,
+
+Tracking expiration dates for frozen products is critical but tedious.
+
+I've built an automated alert system that monitors your inventory and sends proactive alerts before products expire—saving you from costly spoilage and chargebacks.
+
+Most frozen food brands see 30-50% reduction in short-date losses.
+
+Would you be open to a 15-min call to see if this could help Rollin' N Bowlin'?
+
+Best,
+[Your Name]"
+4,Bee's Wrap,Household,beeswrap.com,wholesale@beeswrap.com,Sarah Kaeck (Founder/CEO),EDI Document Errors,Fixing rejected EDI orders manually,EDI Error-Checking script,"EDI errors costing Bee's Wrap time?","Hi Sarah,
+
+I know EDI rejections from KeHE are frustrating—each one requires manual fixing.
+
+I've built an EDI error-checking script that validates orders BEFORE submission, catching issues before they become problems.
+
+Most brands see 95% reduction in EDI rejections and save hours of back-and-forth.
+
+Interested in a quick demo for Bee's Wrap?
+
+Best,
+[Your Name]"
+5,Elementa,Supplements,elementasilver.com,sales@elementasilver.com,Team,Price Discrepancies,Manually updating prices for every retailer,Price sync automation,"Price sync solution for Elementa","Hi there,
+
+Managing different prices across retailers is a common pain point for supplement brands.
+
+I've built a price sync automation that updates all your retailer pricing from one central dashboard—no more manual updates.
+
+Most brands save 5+ hours/week and eliminate pricing errors.
+
+Would you be interested in seeing how this could work for Elementa?
+
+Best,
+[Your Name]"
+6,O2,Hydration,drinko2.com,wholesale@drinko2.com,Team,Chargeback Tracking,Reviewing KeHE deductions line-by-line,Automated deduction auditor,"Stop losing money to KeHE chargebacks at O2","Hi there,
+
+KeHE chargebacks and deductions are silently eating into your margins—and manually reviewing them is exhausting.
+
+I've built an automated deduction auditor that flags questionable chargebacks and helps you dispute them systematically.
+
+Most brands recover 20-40% of disputed deductions and save 10+ hours/month.
+
+Want to see how this could help O2?
+
+Best,
+[Your Name]"
+7,Vegobears,Candy,vegobears.com,infoUSA@candypeople.com,Team,Order Processing,Reading PDF orders and typing into Excel,OCR (PDF-to-Data) Automation,"Automate PDF order entry at Vegobears","Hi there,
+
+Manually typing orders from PDFs into Excel is tedious and error-prone.
+
+I've built an OCR automation that reads PDF orders and extracts data automatically—no more manual entry.
+
+Most candy brands see 70% faster order processing and 90% fewer errors.
+
+Would you be interested in a quick call to discuss this for Vegobears?
+
+Best,
+[Your Name]"
+8,De La Calle,Beverages,delacalle.mx,hello@delacalle.mx,Team,FSMA 204 Compliance,Manual lot tracking on paper/sheets,Digital Traceability Log,"FSMA 204 compliance made easy for De La Calle","Hi there,
+
+With FSMA 204 requirements coming, beverage brands need digital traceability.
+
+I've built a Digital Traceability Log that automates lot tracking and generates compliance reports instantly.
+
+This removes the paper trail headache and ensures you're audit-ready.
+
+Would you be interested in learning more for De La Calle?
+
+Best,
+[Your Name]"
+9,Fix & Fogg,Pantry,fixandfogg.com,info@fixandfogg.co.nz,Team,Cross-Border Data,Syncing International and US SKU data,Automated Data Formatter,"Sync NZ and US data for Fix & Fogg","Hi there,
+
+Managing SKU data across New Zealand and US markets creates constant sync headaches.
+
+I've built an Automated Data Formatter that harmonizes your international and US product data automatically.
+
+No more manual reformatting or data mismatches between markets.
+
+Interested in seeing how this could simplify things for Fix & Fogg?
+
+Best,
+[Your Name]"
+10,Happy Tomato,Pantry,happy-tomato.com,ChipChat@happy-tomato.com,Chip (Founder),RangeMe Onboarding,Manually uploading images/specs,Bulk Media Uploader,"Speed up RangeMe uploads for Happy Tomato","Hi Chip,
+
+Uploading product images and specs to RangeMe is tedious and time-consuming.
+
+I've built a Bulk Media Uploader that formats and uploads all your product media in one batch.
+
+Most brands cut their onboarding time by 80%.
+
+Would this be helpful for Happy Tomato?
+
+Best,
+[Your Name]"
+11,Narra,Coffee/Tea,drinknarra.com,contact@narrastore.com,Miggy & Victoria Reyes (Founders),Out-of-Stock Alerts,Checking retailer sites daily for stock,Web Scraping Stock Monitor,"Never miss an out-of-stock at Narra","Hi Miggy and Victoria,
+
+Checking stock levels at every retailer daily is exhausting.
+
+I've built a web scraping monitor that checks your retail listings automatically and alerts you when stock runs low.
+
+You'll catch stockouts before they hurt your sales.
+
+Would you be interested in seeing this for Narra?
+
+Best,
+[Your Name]"
+12,Fave,Juice,favemixes.com,Contact Form,Team,Data Silos,Copy-pasting data between Shopify/KeHE,API-to-API Bridge,"Connect Fave's Shopify and KeHE data","Hi there,
+
+Copy-pasting data between Shopify and KeHE is tedious and error-prone.
+
+I've built an API bridge that syncs your data automatically—orders, inventory, and product info flow seamlessly.
+
+Most brands save 10+ hours/week and eliminate data entry errors.
+
+Interested in exploring this for Fave?
+
+Best,
+[Your Name]"
+13,Maja Food,Pantry,majafood.com,contact@majafood.com,Team,Bank Reconciliation,Matching KeHE checks to open invoices,Automated Payment Matcher,"Automate bank reconciliation at Maja","Hi there,
+
+Matching KeHE payments to open invoices is time-consuming accounting work.
+
+I've built an Automated Payment Matcher that reconciles your KeHE checks instantly.
+
+Most brands save 5+ hours/month on reconciliation.
+
+Would this be helpful for Maja?
+
+Best,
+[Your Name]"
+14,Liquid Youth,Wellness,myliquidyouth.com,info@myliquidyouth.com,Team,Visual Reporting,Exporting CSVs to make charts in Excel,Live Google Data Studio Dash,"Live dashboards for Liquid Youth","Hi there,
+
+Exporting CSVs and building charts manually is slow and outdated.
+
+I've built live Google Data Studio dashboards that update automatically—see your sales, inventory, and performance in real-time.
+
+No more manual reporting.
+
+Interested in seeing a demo for Liquid Youth?
+
+Best,
+[Your Name]"
+15,Moonglade,Craft Soda,moongladeworld.com,connect@moongladeworld.com,Jason Schwartze (Founder),Warehouse Picking,Writing out pick-lists from portal orders,Automated Pick-List Generator,"Automate pick-lists at Moonglade","Hi Jason,
+
+Writing pick-lists manually from portal orders is tedious.
+
+I've built an Automated Pick-List Generator that creates formatted pick-lists instantly from your orders.
+
+Most brands see 50% faster warehouse operations.
+
+Would this help Moonglade?
+
+Best,
+[Your Name]"
+16,Cloud Coffee,Coffee,sipcloudcafe.com,info@sipcloudcafe.com,Team,Multi-Channel Sync,Managing web vs wholesale inventory,Centralized Inventory Hub,"Sync Cloud Coffee's inventory channels","Hi there,
+
+Managing inventory across DTC and wholesale channels creates constant headaches.
+
+I've built a Centralized Inventory Hub that syncs all your channels in real-time.
+
+No more overselling or stockouts.
+
+Interested in seeing this for Cloud Coffee?
+
+Best,
+[Your Name]"
+17,Nice Cans,Beverages,justnicecans.com,sales@justnicecans.com,Team,Food Safety Logs,Keeping manual temperature/batch logs,IoT/Sensor Data Automation,"Automate food safety logs at Nice Cans","Hi there,
+
+Manual temperature and batch logging is tedious and risky.
+
+I've built IoT sensor automation that captures data automatically and generates compliance logs.
+
+Always audit-ready without the manual work.
+
+Would this be helpful for Nice Cans?
+
+Best,
+[Your Name]"
+18,enABLE Bakehouse,Bakery,enable-enterprises.com,Contact Form,Team,Customer Service,Answering Where is my order via email,Automated Order Status Bot,"Reduce customer service load at enABLE","Hi there,
+
+Answering 'Where is my order?' emails is repetitive.
+
+I've built an Automated Order Status Bot that answers tracking questions instantly—via email or website.
+
+Most brands reduce customer service tickets by 60%.
+
+Interested in seeing this for enABLE Bakehouse?
+
+Best,
+[Your Name]"
+19,Republic Spirit,Mixers,spiritblends.com,Contact Form,Team,Trade Show ROI,Calculating Show Order profit manually,Show Order Sales Analyzer,"Track trade show ROI at Republic Spirit","Hi there,
+
+Calculating profit from trade show orders manually is tedious.
+
+I've built a Show Order Sales Analyzer that tracks your trade show ROI automatically.
+
+Know exactly which shows are worth your investment.
+
+Would this be helpful for Republic Spirit?
+
+Best,
+[Your Name]"
+20,Wood Stove Kitchen,Pantry,woodstovekitchen.com,info@woodstovekitchen.com,Steve (Key Contact),Multi-Distributor,Managing UNFI and KeHE data separately,Dual-Distributor Sync Tool,"Sync UNFI and KeHE data at Wood Stove Kitchen","Hi Steve,
+
+Managing data for both UNFI and KeHE is double the work.
+
+I've built a Dual-Distributor Sync Tool that harmonizes your data across both distributors.
+
+One update syncs everywhere.
+
+Interested in seeing this for Wood Stove Kitchen?
+
+Best,
+[Your Name]"
+21,Sol Squeeze,Mixers,solsqz.com,amy.davis@solsqz.com,Amy Davis (Founder),Label Generation,Typing addresses into UPS/FedEx,Auto-Shipping Label Creator,"Automate shipping labels at Sol Squeeze","Hi Amy,
+
+Manually typing shipping addresses is slow and error-prone.
+
+I've built an Auto-Shipping Label Creator that generates labels directly from your order data.
+
+Most brands see 70% faster fulfillment.
+
+Would this help Sol Squeeze?
+
+Best,
+[Your Name]"
+22,Yeshi Foods,Condiments,yeshifoods.com,admin@yeshidressing.com,Team,Compliance Reporting,Preparing quarterly safety reports manually,Automated Compliance Engine,"Automate compliance at Yeshi Foods","Hi there,
+
+Preparing quarterly compliance reports manually is tedious.
+
+I've built an Automated Compliance Engine that generates reports from your existing data.
+
+Always audit-ready without the manual work.
+
+Interested in seeing this for Yeshi Foods?
+
+Best,
+[Your Name]"
+23,Wildwood Grilling,Household,wildwoodgrilling.com,sales@wildwoodgrilling.com,Team,EDI 850 Processing,Manually acknowledging POs in portal,Automated PO Acknowledger,"Automate PO acknowledgments at Wildwood","Hi there,
+
+Manually acknowledging KeHE POs in the portal is repetitive.
+
+I've built an Automated PO Acknowledger that processes POs instantly.
+
+Most brands save 5+ hours/week.
+
+Would this help Wildwood Grilling?
+
+Best,
+[Your Name]"
+24,Backhome Foods,Pantry,backhomefoods.com,Contact Form,Team,Daily Portal Login,Logging in 3x daily to check for orders,New Order Slack/Email Alerts,"Get order alerts for Backhome Foods","Hi there,
+
+Logging into KeHE 3x daily just to check for orders is tedious.
+
+I've built a New Order Alert system that sends Slack/email notifications the moment an order comes in.
+
+Never miss an order—never waste time checking.
+
+Interested in this for Backhome Foods?
+
+Best,
+[Your Name]"
+25,Sky Barn,Pantry,skybarn.com,Contact Form,Team,Metadata Management,Uploading product photos/descriptions,Bulk Product Info Uploader,"Speed up product uploads at Sky Barn","Hi there,
+
+Uploading product images and descriptions one-by-one is slow.
+
+I've built a Bulk Product Info Uploader that handles it all at once.
+
+Most brands save 80% of their upload time.
+
+Would this help Sky Barn?
+
+Best,
+[Your Name]"
+26,Spicy Coffee,Coffee,drinkspicycoffee.com,Contact Form,Team,DSD Route Planning,Manually planning local store deliveries,Route Optimization Script,"Optimize DSD routes at Spicy Coffee","Hi there,
+
+Planning local delivery routes manually wastes time and fuel.
+
+I've built a Route Optimization Script that plans the most efficient routes automatically.
+
+Most brands save 20-30% on delivery costs.
+
+Interested in this for Spicy Coffee?
+
+Best,
+[Your Name]"
+27,Pulse Power,Snacks,pulsepowersnacks.com,Contact Form,Team,Demand Forecasting,Guessing when to send stock to DC,AI-based Reorder Calculator,"Predict stock needs at Pulse Power","Hi there,
+
+Guessing when to replenish DC inventory leads to stockouts or overstocking.
+
+I've built an AI-based Reorder Calculator that predicts when you need to send more stock.
+
+Never overstock or stockout again.
+
+Would this help Pulse Power?
+
+Best,
+[Your Name]"
+28,ORZAX,Supplements,orzax.com,support@orzax.com,Team,COA Management,Sending COA files to KeHE manually,Automated COA File Manager,"Automate COA filing at ORZAX","Hi there,
+
+Sending Certificate of Analysis files manually is tedious.
+
+I've built an Automated COA File Manager that organizes and sends COAs automatically.
+
+Always compliant without the manual work.
+
+Would this help ORZAX?
+
+Best,
+[Your Name]"
+29,Chelsea Approved,Bakery,chelseaapproved.com,contact@chelseaapproved.com,Adam (Key Contact),Weekly Sales Recaps,Manually totaling sales for the week,Automated Weekly Performance Report,"Auto-generate sales reports at Chelsea Approved","Hi Adam,
+
+Manually totaling weekly sales is tedious work.
+
+I've built an Automated Weekly Report that generates performance summaries automatically.
+
+Ready every Monday morning without lifting a finger.
+
+Interested in this for Chelsea Approved?
+
+Best,
+[Your Name]"
+30,WhirlyBird,Granola,whirlybirdgranola.com,Contact Form,Team,Retailer Inquiries,Manually emailing product specs to stores,Digital Brand Folder Automator,"Speed up retailer responses at WhirlyBird","Hi there,
+
+Manually emailing product specs to every retailer inquiry is slow.
+
+I've built a Digital Brand Folder Automator that sends professional sell sheets instantly.
+
+Respond to retailers 10x faster.
+
+Would this help WhirlyBird?
+
+Best,
+[Your Name]"
+31,Figlia,Beverages,drinkfiglia.com,allears@drinkfiglia.com,Team,Content Sync,Updating web photos on KeHE portal,Auto-image Resizer/Uploader,"Sync Figlia's images to KeHE","Hi there,
+
+Manually resizing and uploading images to KeHE portal is tedious.
+
+I've built an Auto-image Resizer/Uploader that handles it automatically.
+
+One upload syncs everywhere.
+
+Interested in this for Figlia?
+
+Best,
+[Your Name]"
+32,Ketchup Please,Condiments,kpketchup.com,evan@kpketchup.com,Evan Lampsa (Co-Founder),Stock Validation,Checking inventory before accepting POs,Auto-PO Validator,"Validate POs automatically at Ketchup Please","Hi Evan,
+
+Manually checking inventory before accepting POs is risky.
+
+I've built an Auto-PO Validator that checks stock and flags issues before you commit.
+
+Never accept an order you can't fulfill.
+
+Would this help Ketchup Please?
+
+Best,
+[Your Name]"
+33,Suckerz,Candy,Contact via PopUp Grocer,hi@popupgrocer.com,Team,Shelf-Life Risks,Checking warehouse age via phone calls,Automated Warehouse Age Report,"Track shelf-life at Suckerz","Hi there,
+
+Calling warehouses to check product age is slow and unreliable.
+
+I've built an Automated Warehouse Age Report that tracks shelf-life digitally.
+
+Know exactly what needs to move fast.
+
+Would this help Suckerz?
+
+Best,
+[Your Name]"
+34,Harken Foods,Snacks,harkensweets.com,hello@harkensweets.com,Team,New Item Launch,Filling out 10+ onboarding spreadsheets,Onboarding Form Auto-Filler,"Speed up new item launches at Harken","Hi there,
+
+Filling out 10+ onboarding spreadsheets for new items is exhausting.
+
+I've built an Onboarding Form Auto-Filler that populates all forms from your master data.
+
+Launch new items 10x faster.
+
+Interested in this for Harken Foods?
+
+Best,
+[Your Name]"
+35,Blobs,Candy,eatblobs.com,hello@eatblobs.com,Team,Short-Pay Disputes,Manually filing dispute claims with KeHE,One-Click Dispute Automator,"Recover short-pays at Blobs","Hi there,
+
+Manually filing KeHE dispute claims is tedious and often skipped.
+
+I've built a One-Click Dispute Automator that files disputes automatically.
+
+Most brands recover 20-40% of disputed amounts.
+
+Would this help Blobs?
+
+Best,
+[Your Name]"
+36,Eat Gold,Wellness,eatgoldorganics.com,Contact Form,Team,Ingredient Compliance,Reviewing label laws manually,Automated Label Review Script,"Automate label compliance at Eat Gold","Hi there,
+
+Manually reviewing ingredient compliance is risky.
+
+I've built an Automated Label Review Script that checks your labels against regulations.
+
+Catch issues before they become problems.
+
+Interested in this for Eat Gold?
+
+Best,
+[Your Name]"
+37,Sugar Bliss,Bakery,sugarblisscakes.com,info@sugarblisscakes.com,Team,Accounting Sync,Entering KeHE orders into QuickBooks,QuickBooks-KeHE Integrator,"Sync QuickBooks at Sugar Bliss","Hi there,
+
+Manually entering KeHE orders into QuickBooks is tedious.
+
+I've built a QuickBooks-KeHE Integrator that syncs your orders automatically.
+
+Accounting done in seconds not hours.
+
+Would this help Sugar Bliss?
+
+Best,
+[Your Name]"
+38,IBA Energy,Beverages,drinkiba.com,jodie@drinkiba.com,Jodie (Key Contact),Retail Presence,Checking In-Stock status at grocers,Virtual Shelf Auditor,"Monitor retail presence at IBA Energy","Hi Jodie,
+
+Manually checking stock at retail stores is impossible to scale.
+
+I've built a Virtual Shelf Auditor that monitors your retail listings online.
+
+Know your shelf presence at every retailer.
+
+Interested in this for IBA Energy?
+
+Best,
+[Your Name]"
+39,Amarsar,Pantry,Unknown,Contact via Website,Team,Translation Tasks,Translating data for different markets,Automated Translation Pipeline,"Automate translations at Amarsar","Hi there,
+
+Manually translating product data for different markets is slow.
+
+I've built an Automated Translation Pipeline that handles multi-language content.
+
+Expand to new markets faster.
+
+Would this help Amarsar?
+
+Best,
+[Your Name]"
+40,Matchako,Tea,matchako.com,Contact via Phone (631-219-1588),Mark (Key Contact),First-Time EDI,Connecting to KeHE for the first time,EDI Setup/Onboarding Service,"EDI setup help for Matchako","Hi Mark,
+
+Setting up EDI with KeHE for the first time is confusing.
+
+I offer EDI Setup and Onboarding services that get you connected quickly.
+
+Avoid costly mistakes and delays.
+
+Would this help Matchako?
+
+Best,
+[Your Name]"
+41,Spicekick,Spices,spicekick.com,michelle@spicekick.com,Michelle Dudash (Founder/Chef),Invoice Generation,Creating PDF invoices from portal data,Auto-Invoice PDF Creator,"Automate invoices at Spicekick","Hi Michelle,
+
+Manually creating invoices from portal data is tedious.
+
+I've built an Auto-Invoice PDF Creator that generates professional invoices automatically.
+
+Most brands save 3+ hours/week.
+
+Would this help Spicekick?
+
+Best,
+[Your Name]"
+42,Spicewell,Spices,spicewell.com,team@spicewell.com,Team,Seasonality Trends,Predicting holiday stock surges,Seasonal Trend Forecaster,"Predict seasonal demand at Spicewell","Hi there,
+
+Guessing holiday stock needs leads to missed sales or overstocking.
+
+I've built a Seasonal Trend Forecaster that predicts demand based on historical patterns.
+
+Never miss a holiday rush again.
+
+Interested in this for Spicewell?
+
+Best,
+[Your Name]"
+43,NicObi Foods,Pantry,nicobifoods.com,Contact via Website,Team,Production Planning,Calculating raw goods needed for orders,Production-to-Order Calculator,"Plan production at NicObi Foods","Hi there,
+
+Manually calculating raw material needs is tedious and error-prone.
+
+I've built a Production-to-Order Calculator that plans your production automatically.
+
+Never under-produce or over-order ingredients.
+
+Would this help NicObi Foods?
+
+Best,
+[Your Name]"
+44,Maya Pura,Pantry,freshchileco.com,service@freshchileco.com,Team,GDSN Data Sync,Manually syncing Global Data Sync Network,Automated GDSN Sync Monitor,"GDSN sync for Maya Pura","Hi there,
+
+Manually syncing GDSN data is tedious but critical.
+
+I've built an Automated GDSN Sync Monitor that keeps your data in sync.
+
+Always accurate across all retail partners.
+
+Interested in this for Maya Pura?
+
+Best,
+[Your Name]"
+45,Sattva Vida,Snacks,sattvavida.com,hello@sattvavida.com,Team,Unit Margin Analysis,Calculating net profit after all fees,Automated Net Margin Tracker,"Track true margins at Sattva Vida","Hi there,
+
+Calculating your true profit after all fees is complex.
+
+I've built an Automated Net Margin Tracker that shows your real unit economics.
+
+Know exactly what you're making on every sale.
+
+Would this help Sattva Vida?
+
+Best,
+[Your Name]"
+46,Trujoy Yogurt,Dairy,trujoyyogurt.com,charlie@trujoyyogurt.com,Charlie (Key Contact),Cold-Chain Audit,Monitoring truck temp logs manually,Cold-Chain Log Aggregator,"Monitor cold-chain at Trujoy","Hi Charlie,
+
+Manually monitoring truck temperature logs is risky.
+
+I've built a Cold-Chain Log Aggregator that tracks temps automatically.
+
+Always audit-ready with digital records.
+
+Would this help Trujoy Yogurt?
+
+Best,
+[Your Name]"
+47,Berhan Grains,Grains,berhanteff.com,info@berhan.co,Team,Shipping Status,Manually marking Shipped in KeHE,Auto-ASN (Advanced Ship Notice),"Automate shipping updates at Berhan","Hi there,
+
+Manually updating shipping status in KeHE is tedious.
+
+I've built an Auto-ASN system that updates ship notices automatically.
+
+Save time and avoid compliance penalties.
+
+Interested in this for Berhan Grains?
+
+Best,
+[Your Name]"
+48,Oomph! Sweets,Candy,oomphsweets.com,info@oomphsweets.com,Team,Data Exporting,Downloading CSVs from KeHE daily,Automated CSV Downloader/Bot,"Automate data downloads at Oomph!","Hi there,
+
+Manually downloading CSVs from KeHE every day is tedious.
+
+I've built an Automated CSV Downloader that pulls your data automatically.
+
+Fresh data every morning without lifting a finger.
+
+Would this help Oomph! Sweets?
+
+Best,
+[Your Name]"
+49,Veneto Café,Coffee,venetocafe.com,contact@venetocafe.com,Team,Price Benchmarking,Checking competitors prices on web,Automated Competitor Price Bot,"Track competitor prices at Veneto","Hi there,
+
+Manually checking competitor prices is time-consuming.
+
+I've built an Automated Competitor Price Bot that monitors pricing for you.
+
+Always know where you stand in the market.
+
+Interested in this for Veneto Café?
+
+Best,
+[Your Name]"
+50,Scotch Boyz,Sauces,scotchboyz.com,support@scotchboyzjamaica.com,Team,Freight Booking,Calling brokers for KeHE shipments,Automated Freight Quote Bot,"Automate freight quotes at Scotch Boyz","Hi there,
+
+Calling freight brokers for quotes is slow.
+
+I've built an Automated Freight Quote Bot that gets quotes instantly.
+
+Compare rates and book faster.
+
+Would this help Scotch Boyz?
+
+Best,
+[Your Name]"

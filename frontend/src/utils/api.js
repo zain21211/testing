@@ -93,6 +93,12 @@ export const fetchInactiveItems = async ({
   return data;
 };
 
+// Fetch types
+export const fetchTypes = async () => {
+  const { data } = await client.get("/customer/types");
+  return data;
+};
+
 // Fetch cost of a product
 export const fetchCost = async (code) => {
   const { data } = await client.get("/create-order/cost", {

@@ -47,6 +47,7 @@ SELECT
     a.Subsidary,
     a.route,
     pd.amount,
+    pd.grossprofit,
     pd.type AS Type,
     ISNULL(h.UserName, '') AS UserName,
     CASE 

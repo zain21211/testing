@@ -1,0 +1,51 @@
+﻿SR#	Brand Name	Category	Primary Pain Point (Opportunity)	Current Manual Workflow	Automation Solution
+1	Aura Bora	Beverages	Portal Data Entry	Manually typing SKUs into KeHE CONNECT	Auto-upload from Shopify/ERP
+2	BeBOLD	Energy Bars	Inventory Syncing	Checking stock levels across 3 platforms	Real-time stock sync bot
+3	Rollin' N Bowlin'	Frozen Food	Spoilage Tracking	Manually tracking "Best By" dates in Excel	Automated "Short-Date" alerts
+4	Bee's Wrap	Household	EDI Document Errors	Fixing "rejected" EDI orders manually	EDI Error-Checking script
+5	Elementa	Supplements	Price Discrepancies	Manually updating prices for every retailer	Price sync automation
+6	O2	Hydration	Chargeback Tracking	Reviewing KeHE deductions line-by-line	Automated deduction auditor
+7	Vegobears	Candy	Order Processing	Reading PDF orders and typing into Excel	OCR (PDF-to-Data) Automation
+8	De La Calle	Beverages	FSMA 204 Compliance	Manual lot tracking on paper/sheets	Digital Traceability Log
+9	Fix & Fogg	Pantry	Cross-Border Data	Syncing International and US SKU data	Automated Data Formatter
+10	Happy Tomato	Pantry	RangeMe Onboarding	Manually uploading images/specs	Bulk Media Uploader
+11	Narra	Coffee/Tea	Out-of-Stock Alerts	Checking retailer sites daily for stock	Web Scraping Stock Monitor
+12	Fave	Juice	Data Silos	Copy-pasting data between Shopify/KeHE	API-to-API Bridge
+13	Maja	Pantry	Bank Reconciliation	Matching KeHE checks to open invoices	Automated Payment Matcher
+14	Liquid Youth	Wellness	Visual Reporting	Exporting CSVs to make charts in Excel	Live Google Data Studio Dash
+15	Moonglade	Craft Soda	Warehouse Picking	Writing out pick-lists from portal orders	Automated Pick-List Generator
+16	Cloud Coffee	Coffee	Multi-Channel Sync	Managing web vs wholesale inventory	Centralized Inventory Hub
+17	Nice Cans	Beverages	Food Safety Logs	Keeping manual temperature/batch logs	IoT/Sensor Data Automation
+18	enABLE Bakehouse	Bakery	Customer Service	Answering "Where is my order?" via email	Automated Order Status Bot
+19	Republic Spirit	Mixers	Trade Show ROI	Calculating "Show Order" profit manually	Show Order Sales Analyzer
+20	Wood Stove Kitchen	Pantry	Multi-Distributor	Managing UNFI and KeHE data separately	Dual-Distributor Sync Tool
+21	Sol Squeeze	Mixers	Label Generation	Typing addresses into UPS/FedEx	Auto-Shipping Label Creator
+22	Yeshi Foods	Condiments	Compliance Reporting	Preparing quarterly safety reports manually	Automated Compliance Engine
+23	Wildwood Grilling	Household	EDI 850 Processing	Manually acknowledging POs in portal	Automated PO Acknowledger
+24	Backhome Foods	Pantry	Daily Portal Login	Logging in 3x daily to check for orders	"""New Order"" Slack/Email Alerts"
+25	Sky Barn	Pantry	Metadata Management	Uploading product photos/descriptions	Bulk Product Info Uploader
+26	Spicy Coffee	Coffee	DSD Route Planning	Manually planning local store deliveries	Route Optimization Script
+27	Pulse Power	Snacks	Demand Forecasting	Guessing when to send stock to DC #16	AI-based Reorder Calculator
+28	ORZAX	Supplements	Cert. of Analysis (COA)	Sending COA files to KeHE manually	Automated COA File Manager
+29	Chelsea Approved	Bakery	Weekly Sales Recaps	Manually totaling sales for the week	Automated Weekly Performance Report
+30	WhirlyBird	Granola	Retailer Inquiries	Manually emailing product specs to stores	Digital "Brand Folder" Automator
+31	Figlia	Beverages	Content Sync	Updating web photos on KeHE portal	Auto-image Resizer/Uploader
+32	Ketchup Please	Condiments	Stock Validation	Checking inventory before accepting POs	Auto-PO Validator
+33	Suckerz	Candy	Shelf-Life Risks	Checking warehouse age via phone calls	Automated Warehouse Age Report
+34	Harken Foods	Snacks	New Item Launch	Filling out 10+ onboarding spreadsheets	Onboarding Form Auto-Filler
+35	Blobs	Candy	Short-Pay Disputes	Manually filing dispute claims with KeHE	One-Click Dispute Automator
+36	Eat Gold	Wellness	Ingredient Compliance	Reviewing label laws manually	Automated Label Review Script
+37	Sugar Bliss	Bakery	Accounting Sync	Entering KeHE orders into QuickBooks	QuickBooks-KeHE Integrator
+38	IBA Energy	Beverages	Retail Presence	Checking "In-Stock" status at grocers	Virtual Shelf Auditor (Web Scrape)
+39	Amasar	Pantry	Translation Tasks	Translating data for different markets	Automated Translation Pipeline
+40	Matchako	Tea	First-Time EDI	Connecting to KeHE for the first time	EDI Setup/Onboarding Service
+41	Spicekick	Spices	Invoice Generation	Creating PDF invoices from portal data	Auto-Invoice PDF Creator
+42	Spicewell	Spices	Seasonality Trends	Predicting holiday stock surges	Seasonal Trend Forecaster
+43	NicObi Foods	Pantry	Production Planning	Calculating raw goods needed for orders	Production-to-Order Calculator
+44	Maya Pura	Pantry	GDSN Data Sync	Manually syncing Global Data Sync Network	Automated GDSN Sync Monitor
+45	Sattva Vida	Snacks	Unit Margin Analysis	Calculating net profit after all fees	Automated Net Margin Tracker
+46	Trujoy Yogurt	Dairy	Cold-Chain Audit	Monitoring truck temp logs manually	Cold-Chain Log Aggregator
+47	Berhan Grains	Grains	Shipping Status	Manually marking "Shipped" in KeHE	Auto-ASN (Advanced Ship Notice)
+48	Oomph! Sweets	Candy	Data Exporting	Downloading CSVs from KeHE daily	Automated CSV Downloader/Bot
+49	Veneto Café	Coffee	Price Benchmarking	Checking competitors' prices on web	Automated Competitor Price Bot
+50	Scotch Boyz	Sauces	Freight Booking	Calling brokers for KeHE shipments	Automated Freight Quote Bot

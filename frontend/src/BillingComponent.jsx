@@ -455,6 +455,12 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                   }}
                 />
               </Suspense>
+              <Typography
+                variant="caption"
+                sx={{ mt: 1, display: "block", textAlign: "right", fontSize: '2rem', fontFamily: 'Jameel Noori Nastaleeq, serif' }}
+              >
+                {products ? products.length : 0} : <b style={{ marginLeft: '1rem' }}> ٹوٹل آئٹمز</b>
+              </Typography>
             </Grid>
             {/* Notes Section */}
             <TextField

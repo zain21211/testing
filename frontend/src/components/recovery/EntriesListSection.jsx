@@ -75,12 +75,15 @@ export const EntriesListSection = ({ entries = [], onSyncOneEntry, onRemove }) =
                                 },
                             }}
                         >
-                            <Button onClick={() => onRemove(entry.creditID)}
-                                sx={{
-                                    color: 'red'
-                                }}>
-                                <ClearIcon />
-                            </Button>
+                            {entry.status !== true &&
+                                <Button onClick={() => onRemove(entry.creditID)}
+                                    sx={{
+                                        color: 'red'
+                                    }}>
+
+                                    <ClearIcon />
+                                </Button>
+                            }
 
                             <Typography
                                 variant="caption"

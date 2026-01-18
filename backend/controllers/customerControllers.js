@@ -600,6 +600,19 @@ END
         .json({ error: "Failed to upload images", msg: error.message });
     }
   },
+
+  getTypes: async (req, res) => {
+    try {
+      const pool = await dbConnection();
+      const result = await pool.request().query(`
+        SELECT * FROM partydiscount
+      `);
+      res.json(result.recordset);
+    } catch (error) {
+      console.error("❌ getTypes error:", error);
+      res.status(500).json({ error: "Failed to get types", msg: error.message });
+    }
+  },
 };
 
 module.exports = customerControllers;

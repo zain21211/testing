@@ -18,20 +18,6 @@
 ```
 Subject: Speed up new item launches at Harken Sweets
 
-Hi Katie,
-
-I came across your LinkedIn and Harken Sweets' incredible story!
-
-One thing I hear from snack brand founders: filling out 10+ onboarding 
-spreadsheets for new items is exhausting.
-
-I've built an Onboarding Form Auto-Filler that populates all forms 
-from your master product data. Most brands launch new items 10x faster.
-
-Would you be open to a quick 15-min call to explore this for Harken Sweets?
-
-Best,
-[Your Name]
 ```
 
 ---
@@ -280,17 +266,45 @@ Best,
 | **Founder** | Amy Davis |
 | **Email** | amy.davis@solsqz.com |
 | ✅ **DIRECT FOUNDER EMAIL** |
+Subject: Automating KeHE/UNFI onboarding for Sol Squeeze
+Email:
+
+Hi Amy,
+Sol Squeeze's growth has been impressive—congrats on the expansion!
+Quick question: with your distributor relationships (KeHE, UNFI, etc.), are you still manually entering product data into each system for new items?
+I've built automation that syncs your master product data directly to distributor portals—no more manual entry. Most brands save 5-10 hours per week on data entry alone.
+Would you be open to a quick chat about how this could help Sol Squeeze scale faster?
+Best,
+Zainulabdin
 
 ### 14. Ketchup Please
 | **Co-Founder** | Evan Lampsa |
 | **Email** | evan@kpketchup.com |
 | ✅ **DIRECT FOUNDER EMAIL** |
+Subject: Question about your retailer onboarding process
+Email:
 
+Hi Evan,
+Ketchup Please is such a clever concept—love the innovation in condiments.
+As you're scaling into new retailers, are you finding yourself filling out the same product info across 10+ different onboarding spreadsheets?
+I've built a tool that auto-fills all those forms from your master product data. What normally takes 10-15 hours per retailer gets done in under an hour.
+Worth a quick 15-minute demo? I can show you how it would work for your next retailer launch.
+Best,
+Zainulabdin
 ### 15. Trujoy Yogurt
 | **Key Contact** | Charlie |
 | **Email** | charlie@trujoyyogurt.com |
 | ✅ **DIRECT PERSON EMAIL** |
+Subject: Automating product data entry for Trujoy
+Email:
 
+Hi Charlie,
+Trujoy's approach to organic yogurt is really impressive—love the focus on clean ingredients.
+Quick question: are you still manually entering product specs into retailer and distributor systems for new SKUs?
+I've built automation that syncs your master product data directly to distributor portals and retailer onboarding forms. Most brands cut their setup time from 10-15 hours to under an hour per SKU.
+Would you be open to a 15-minute conversation about how this could help Trujoy?
+Best,
+Zainulabdin
 ---
 
 ## 📧 OUTREACH PRIORITY ORDER

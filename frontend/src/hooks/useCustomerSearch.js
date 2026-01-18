@@ -53,8 +53,8 @@ export const useCustomerSearch = ({
     formType === "credit"
       ? "creditCustList"
       : formType === "debit"
-      ? "debitCustList"
-      : "CustList";
+        ? "debitCustList"
+        : "CustList";
 
   const dispatch = useDispatch();
   // const location = useLocation();
@@ -92,7 +92,7 @@ export const useCustomerSearch = ({
     dispatch(fetchMasterCustomerList());
   }, [dispatch]);
 
-  useEffect(() => {}, [localCustomerList]);
+  useEffect(() => { }, [localCustomerList]);
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const customerInputRef = useRef(null);
@@ -124,8 +124,8 @@ export const useCustomerSearch = ({
     () =>
       route
         ? localCustomerList.filter(
-            (c) => c.route?.toLowerCase() === route.toLowerCase()
-          )
+          (c) => c.route?.toLowerCase() === route.toLowerCase()
+        )
         : localCustomerList,
     [route, localCustomerList]
   );
@@ -145,6 +145,7 @@ export const useCustomerSearch = ({
 
     if (
       navigator.onLine &&
+      data.length > 0 &&
       !isEqual(data, localCustomerList) &&
       status !== 500 &&
       status !== undefined &&

@@ -112,13 +112,13 @@ const SalesReport = () => {
   const today = useMemo(() => new Date(), []);
   const minDate = useMemo(() => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 1); // Example: 7 days before today
+    d.setDate(today.getDate() - 3); // Example: 7 days before today
     return d.toISOString().split("T")[0];
   }, [today]);
 
   const maxDate = useMemo(() => {
     const d = new Date(today);
-    d.setDate(today.getDate() + 1); // 7 days after today
+    d.setDate(today.getDate() + 3); // 7 days after today
     return d.toISOString().split("T")[0];
   }, [today]);
 
@@ -202,7 +202,9 @@ const SalesReport = () => {
       setError("End date cannot be before start date.");
       return;
     }
-
+    const d = new Date(today);
+    d.setDate(today.getDate() - 7); // Example: 7 days before today
+    const defaultDate = d.toISOString().split("T")[0];
     const requestBody = {
       startDate: new Date(startDate).toISOString().split("T")[0] || null,
       endDate: new Date(endDate).toISOString().split("T")[0] || null,

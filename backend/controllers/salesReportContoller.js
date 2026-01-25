@@ -87,7 +87,7 @@ WHERE
       .input(
         "startDate",
         sql.DateTime,
-        new Date(isInvoice ? newStartDate : startDate)
+        new Date((isInvoice || !startDate) ? newStartDate : startDate)
       )
       .input("endDate", sql.DateTime, new Date(newEndDate))
       .input("route", sql.VarChar, route)

@@ -72,11 +72,19 @@ const PackingForm = ({ name = "ESTIMATE" }) => {
     }, [products]);
 
     useEffect(() => {
+        const nug = customer.nug;
+        if (nug) {
+            updateNug(nug);
+        }
+    }, [customer]);
+
+    useEffect(() => {
         if (!id) return;
         return () => {
             handleUpdate(); // unlock on mount
         };
     }, [id]);
+
     const handleUpdate = async () => {
 
         if (!nug) {

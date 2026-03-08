@@ -22,6 +22,7 @@ import DeliveryForm from "./components/delivery form/deliveryForm.jsx";
 import ProductsList from "./components/productsLIst/productsList.jsx";
 import QRCodeGenerator from './pages/QRCodeGenerator';
 import MechanicSignupMain from './forCustomerRewars/machenicSignup/components/main';
+import SalesHistory from "./SaleHistory.jsx";
 
 const AppLayout = () => {
     // const theme = useTheme(); // (Still need useTheme if using styled/sx)
@@ -38,6 +39,7 @@ const AppLayout = () => {
                     <Route path="/ledger" element={<Ledger />} />
                     <Route path="/order" element={<OrderForm />} />
                     <Route path="/sales" element={<SalesReport />} />
+                    <Route path="/saleshistory" element={<SalesHistory />} />
                     <Route path="/coa" element={<CreateCustomer />} />
                     <Route path="/pending" element={<PackingList />} />
                     <Route path="/pack/:id" element={<PackingForm />} />

@@ -66,7 +66,7 @@ const formatCurrency = (value) => {
 // URL
 const url = import.meta.env.VITE_API_URL;
 
-const SalesReport = () => {
+const SalesHistory = () => {
   const [customerName, setCustomerName] = useLocalStorageState('customerName', {
     defaultValue: '',
   });
@@ -121,10 +121,6 @@ const SalesReport = () => {
     d.setDate(today.getDate() + 3); // 7 days after today
     return d.toISOString().split("T")[0];
   }, [today]);
-
-useEffect(()=> {
-  handleSubmit();
-}, [])
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -195,7 +191,7 @@ useEffect(()=> {
   // Inside your ApiRequestPage component:
 
   const handleSubmit = async (event) => {
-    // event.preventDefault();
+    event.preventDefault();
     if (!startDate || !endDate) {
       setError("Please select both start and end dates.");
       return;
@@ -210,9 +206,9 @@ useEffect(()=> {
     d.setDate(today.getDate() - 7); // Example: 7 days before today
     const defaultDate = d.toISOString().split("T")[0];
     const requestBody = {
-      startDate: new Date(endDate).toISOString().split("T")[0] || null,
+      startDate: new Date(startDate).toISOString().split("T")[0] || null,
       endDate: new Date(endDate).toISOString().split("T")[0] || null,
-      // route: route || '',
+      route: route || '',
       customer: '',   // renamed from `user` to `customer`
       description: '',
       invoiceStatus: isInvoice && isEstimate ? "" : isInvoice ? "Invoice" : isEstimate ? "Estimate" : '',
@@ -230,7 +226,160 @@ useEffect(()=> {
 
   return (
     <Box sx={{ px: { xs: 1, sm: 5 }, maxWidth: '1600px', margin: 'auto' }}>
-    <Typography variant='h4' textAlign={'center'} fontWeight={'bold'}>Daily Sales Report</Typography>
+
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* <TextField
+            label="Customer Name "
+            variant="outlined"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            fullWidth
+            required
+          /> */}
+
+          {/* for Date */}
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)' } }}>
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="DD/MM/YYYY"
+              minDate={isAllowed ? null : minDate}
+              maxDate={isAllowed ? null : maxDate}
+              customInput={
+                <TextField
+                  fullWidth
+                  label="Start Date"
+                  variant="outlined"
+                  InputLabelProps={{ shrink: true }}
+                />
+              }
+            />
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="DD/MM/YYYY"
+              minDate={isAllowed ? null : startDate}
+              maxDate={isAllowed ? null : maxDate}
+              customInput={
+                <TextField
+                  fullWidth
+                  label="End Date"
+                  variant="outlined"
+                  InputLabelProps={{ shrink: true }}
+                />
+              }
+            />
+          </Box>
+
+          {/* for ROUTE */}
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(3, 1fr)' }, alignItems: "center" }}>
+            <Box>
+              <FormControlLabel
+                control={<Checkbox checked={isInvoice} onChange={(e) => setIsInvoice(e.target.checked)} />}
+                label="Invoice"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={isEstimate} onChange={(e) => setIsEstimate(e.target.checked)} />}
+                label="Estimate"
+              />
+            </Box>
+            {/* route for user */}
+            {!isAllowed && (
+              <TextField
+                label="Route"
+                variant="outlined"
+                value={route}
+                onChange={(e) => setRoute(e.target.value)}
+                fullWidth
+                required={!isAllowed}
+              />
+            )}
+
+            {/* routes and users for admin */}
+            {isAllowed && (
+              <>
+                <Autocomplete
+                  freeSolo
+                  options={routes}
+                  value={route}
+                  onChange={(event, newValue) => {
+                    setRoute(newValue || "");
+                  }}
+                  onInputChange={(event, newValue) => {
+                    setRoute(newValue || "");
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Route"
+                      variant="outlined"
+                      fullWidth
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  sx={{ mb: 2 }}
+                />
+
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="user-label">User</InputLabel>
+                  <Select
+                    labelId="user-label"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    input={
+                      <OutlinedInput
+                        label="User"
+                        endAdornment={
+                          name && (
+                            <InputAdornment position="end" sx={{ mr: 2 }} >
+                              <IconButton
+                                size="small"
+                                onClick={() => setName("")}
+                                edge="end"
+                              >
+                                <ClearIcon fontSize="small" />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }
+                      />
+                    }
+                  >
+                    {usernames.map((u) => (
+                      <MenuItem key={u} value={u}>
+                        {u}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </>
+
+            )}
+
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="dark"
+              disabled={loading}
+              sx={{ alignSelf: 'center', backgroundColor: 'rgba(24, 24, 24, 0.85)', color: 'white', height: { xs: "70%", sx: "85%" }, fontSize: "1.2rem" }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'GENERATE'}
+            </Button>
+          </Box>
+
+        </Box>
+      </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -253,10 +402,7 @@ useEffect(()=> {
             )}
           </Box>
           <Box
-            sx={{ 
-              fontSize: "2rem",
-              marginBottom: '2rem'
-             }}
+            sx={{ fontSize: "2rem" }}
 
           >
             <DataTable
@@ -290,4 +436,4 @@ useEffect(()=> {
   );
 };
 
-export default SalesReport;
+export default SalesHistory;

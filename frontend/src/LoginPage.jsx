@@ -302,6 +302,7 @@ const Login = () => {
               </Button>
             )}
             {(paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
+              <>
               <Button
                 component={RouterLink}
                 to="/paymentvoucher"
@@ -311,6 +312,16 @@ const Login = () => {
               >
                 Payment Voucher
               </Button>
+              <Button
+                  component={RouterLink}
+                  to="/saleshistory"
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#009688" }}
+                >
+                  Sales History
+              </Button>
+                </>
             )}
             {((userType !== 'payment' && !userType.includes('pack')) &&
               <>

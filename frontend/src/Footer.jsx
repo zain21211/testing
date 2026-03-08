@@ -18,7 +18,7 @@ function Footer() {
             <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 'bold', textTransform: 'uppercase', fontFamily: 'poppins, serif' }}>
 
 
-                Powered by varion
+                Powered by TROUSERSS
             </Typography>
         </Box>
     );

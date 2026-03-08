@@ -391,111 +391,160 @@ WHERE P.Doc = @DocNumber
     try {
       const pool = await dbConnection();
 
-      // --- Process zero quantity items ---
-      for (const item of emptyItems) {
-        // This part is likely fine, no changes needed here.
-        const { psid, dateTime, user } = item;
-        if (!dateTime) continue;
-        const date = new Date(dateTime.replace(" ", "T"));
-        date.setHours(date.getHours() + 5);
+      // =============================================
+      // BATCH 1: Zero-quantity items (single query)
+      // =============================================
+      if (emptyItems.length > 0) {
+        const emptyPayload = emptyItems
+          .filter((item) => item.dateTime)
+          .map((item) => {
+            const date = new Date(item.dateTime.replace(" ", "T"));
+            date.setHours(date.getHours() + 5);
+            return {
+              psid: item.psid,
+              user: item.user,
+              dt: date.toISOString(),
+            };
+          });
 
-        await pool
-          .request()
-          .input("PsID", sql.Int, psid)
-          .input("UserName", sql.NVarChar, user)
-          .input("DateTime", sql.DateTime, date).query(`
-            UPDATE PsProduct SET QTY = 0, SchPc = 0, VEST = 0, VIST = 0, PROFIT = 0, Discount = 0, Discount2 = 0, TallyBy = @UserName, PackingDateTime = @DateTime WHERE ID = @PsID
-          `);
+        if (emptyPayload.length > 0) {
+          await pool
+            .request()
+            .input("ItemsJson", sql.NVarChar(sql.MAX), JSON.stringify(emptyPayload))
+            .query(`
+              UPDATE pp SET
+                QTY = 0, SchPc = 0, VEST = 0, VIST = 0, PROFIT = 0,
+                Discount = 0, Discount2 = 0,
+                TallyBy = j.userName,
+                PackingDateTime = j.dt
+              FROM PsProduct pp
+              JOIN OPENJSON(@ItemsJson) WITH (
+                psid INT          '$.psid',
+                userName NVARCHAR(100) '$.user',
+                dt DATETIME       '$.dt'
+              ) j ON pp.ID = j.psid
+            `);
+        }
       }
 
-      // --- Process changed quantity items ---
-      for (const item of changedItems) {
-        const { prid, psid, qty, dateTime, user } = item;
-        username = user;
-        if (!dateTime) {
-          console.warn(`Missing dateTime for item with psid: ${psid}`);
-          continue;
-        }
+      // =============================================
+      // BATCH 2: Changed-quantity items (single query)
+      // =============================================
+      if (changedItems.length > 0) {
+        const changedPayload = changedItems
+          .filter((item) => {
+            if (!item.dateTime) {
+              console.warn(`Missing dateTime for item with psid: ${item.psid}`);
+              return false;
+            }
+            return true;
+          })
+          .map((item) => {
+            username = item.user; // capture last user for PSDetail update
+            const date = new Date(item.dateTime.replace(" ", "T"));
+            date.setHours(date.getHours() + 5);
+            return {
+              psid: item.psid,
+              prid: item.prid,
+              qty: item.qty,
+              user: item.user,
+              dt: date.toISOString(),
+            };
+          });
 
-        const date = new Date(dateTime.replace(" ", "T"));
-        date.setHours(date.getHours() + 5);
+        if (changedPayload.length > 0) {
+          await pool
+            .request()
+            .input("ItemsJson", sql.NVarChar(sql.MAX), JSON.stringify(changedPayload))
+            .query(`
+              ;WITH InputItems AS (
+                SELECT
+                  j.psid,
+                  j.prid,
+                  j.qty,
+                  j.userName,
+                  j.dt,
+                  -- Calculate scheme pieces per item
+                  CASE
+                    WHEN pp_sch.sch = 0 THEN 0
+                    ELSE ISNULL(slab.SchPc, 0)
+                  END AS SchPc
+                FROM OPENJSON(@ItemsJson) WITH (
+                  psid INT              '$.psid',
+                  prid INT              '$.prid',
+                  qty  FLOAT            '$.qty',
+                  userName NVARCHAR(100) '$.user',
+                  dt   DATETIME         '$.dt'
+                ) j
+                -- Get sch flag from existing PsProduct row
+                OUTER APPLY (
+                  SELECT TOP 1 ISNULL(sch, 0) AS sch
+                  FROM PsProduct WHERE ID = j.psid
+                ) pp_sch
+                -- Get scheme slab calculation
+                OUTER APPLY (
+                  SELECT TOP 1
+                    ROUND(
+                      ISNULL(
+                        1.0 * ISNULL(j.qty, 0)
+                        / ISNULL(NULLIF(SchOn, 0) + ISNULL(SchPcs, 0), 1),
+                        0
+                      ) * ISNULL(SchPcs, 0),
+                      0
+                    ) AS SchPc
+                  FROM SchQTYSlabs
+                  WHERE prid = j.prid
+                    AND schon <= j.qty
+                    AND date <= j.dt
+                  ORDER BY date DESC, schon DESC
+                ) slab
+              )
 
-        // This is the query that needs the robust fix.
-        await pool
-          .request()
-          .input("PsID", sql.Int, psid)
-          .input("QTY", sql.Float, qty)
-          .input("UserName", sql.NVarChar, user)
-          .input("DateTime", sql.DateTime, date)
-          .input("ProductCode", sql.Int, prid).query(`
-            BEGIN TRY
-              UPDATE PsProduct
-              SET
-                PrintStatus = CASE WHEN PrintStatus IS NULL THEN 'NotPrint' ELSE PrintStatus END,
+              UPDATE pp SET
+                PrintStatus = CASE WHEN pp.PrintStatus IS NULL THEN 'NotPrint' ELSE pp.PrintStatus END,
 
                 profit = CASE
-                    WHEN PsProductInput.QTY = 0 THEN 0
-                    ELSE ROUND(
-                        (
-                            -- Calculate the effective rate after discounts
-                            (((Rate * (PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0))) / NULLIF(PsProductInput.QTY, 0)) * (1 - (DiscP2 / 100.0))) * (1 - (DiscP / 100.0))
-                            -
-                            -- Subtract the cost of goods sold per unit
-                            CASE
-                                WHEN PsProduct.QTY = 0 THEN 0
-                                ELSE ((PsProduct.VIST / (NULLIF(PsProduct.QTY, 0) + ISNULL(PsProductInput.SchPc, 0))) - (ISNULL(PsProduct.profit, 0) / (NULLIF(PsProduct.QTY, 0) + ISNULL(PsProductInput.SchPc, 0)) ))
-                            END
-                        ) * PsProductInput.QTY
-                    , 0)
-                END,
-
-                QTY = PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0),
-                SchPc = ISNULL(PsProductInput.SchPc, 0),
-                VEST = CASE
-                    WHEN (SELECT name FROM Products WHERE id = @ProductCode) LIKE '%publicity%' THEN 0
-                    ELSE ROUND((PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate, 0)
-                END,
-                VIST = CASE
-                    WHEN (SELECT name FROM Products WHERE id = @ProductCode) LIKE '%publicity%' THEN 0
-                    ELSE ROUND((PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (1 - (DiscP + DiscP2) / 100.0), 0)
-                END,
-                Discount = (PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (DiscP / 100.0),
-                Discount2 = (PsProductInput.QTY - ISNULL(PsProductInput.SchPc, 0)) * Rate * (DiscP2 / 100.0),
-                TallyBy = PsProductInput.UserName,
-                PackingDateTime = PsProductInput.DateTime
-
-              FROM PsProduct 
-              JOIN (
-                SELECT
-                  @PsID AS PsID,
-                  @QTY AS QTY,
-                  @UserName AS UserName,
-                  @DateTime AS DateTime,
-                  ( 
-                  case  WHEN (SELECT sch FROM PsProduct WHERE ID = @PsID) = 0 THEN 0 ELSE
+                  WHEN inp.qty = 0 THEN 0
+                  ELSE ROUND(
                     (
-                  SELECT TOP 1
-                      -- ROBUST FIX APPLIED HERE
-                      ROUND(ISNULL(1.0 * ISNULL(@Qty, 0) / ISNULL((NULLIF(SchOn, 0) + ISNULL(SchPcs, 0)), 1), 0) * ISNULL(SchPcs, 0), 0)
-                    FROM SchQTYSlabs
-                    WHERE prid = @productCode AND schon <= @Qty AND date <= @DateTime
-                    ORDER BY date DESC, schon DESC
-                    )
-                  end
-                  ) AS SchPc
-              ) AS PsProductInput ON psproduct.ID = PsProductInput.PsID
-              WHERE psproduct.ID = @PsID;
-            END TRY
-            BEGIN CATCH
-              DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE();
-              DECLARE @ErrSeverity INT = ERROR_SEVERITY();
-              DECLARE @ErrState INT = ERROR_STATE();
-              RAISERROR (@ErrMsg, @ErrSeverity, @ErrState);
-            END CATCH;
-        `);
+                      (((pp.Rate * (inp.qty - ISNULL(inp.SchPc, 0))) / NULLIF(inp.qty, 0)) * (1 - (pp.DiscP2 / 100.0))) * (1 - (pp.DiscP / 100.0))
+                      -
+                      CASE
+                        WHEN pp.QTY = 0 THEN 0
+                        ELSE ((pp.VIST / (NULLIF(pp.QTY, 0) + ISNULL(inp.SchPc, 0))) - (ISNULL(pp.profit, 0) / (NULLIF(pp.QTY, 0) + ISNULL(inp.SchPc, 0))))
+                      END
+                    ) * inp.qty
+                  , 0)
+                END,
+
+                QTY = inp.qty - ISNULL(inp.SchPc, 0),
+                SchPc = ISNULL(inp.SchPc, 0),
+
+                VEST = CASE
+                  WHEN pr.name LIKE '%publicity%' THEN 0
+                  ELSE ROUND((inp.qty - ISNULL(inp.SchPc, 0)) * pp.Rate, 0)
+                END,
+
+                VIST = CASE
+                  WHEN pr.name LIKE '%publicity%' THEN 0
+                  ELSE ROUND((inp.qty - ISNULL(inp.SchPc, 0)) * pp.Rate * (1 - (pp.DiscP + pp.DiscP2) / 100.0), 0)
+                END,
+
+                Discount  = (inp.qty - ISNULL(inp.SchPc, 0)) * pp.Rate * (pp.DiscP  / 100.0),
+                Discount2 = (inp.qty - ISNULL(inp.SchPc, 0)) * pp.Rate * (pp.DiscP2 / 100.0),
+                TallyBy = inp.userName,
+                PackingDateTime = inp.dt
+
+              FROM PsProduct pp
+              JOIN InputItems inp ON pp.ID = inp.psid
+              LEFT JOIN Products pr ON pr.ID = inp.prid
+            `);
+        }
       }
 
-      // --- Update PSDetail and Ledgers (No changes needed here) ---
+      // =============================================
+      // Update PSDetail — single CTE scan of PsProduct
+      // =============================================
       const date = new Date(time.replace(" ", "T"));
       date.setHours(date.getHours() + 5);
       await pool
@@ -504,59 +553,57 @@ WHERE P.Doc = @DocNumber
         .input("NUG", sql.Int, parseInt(nug))
         .input("DateTime", sql.VarChar, time || "null")
         .input("PackedBy", sql.NVarChar, username || "null").query(`
-       UPDATE PSDetail SET 
-       amount = rOUND(
-       (
-       SELECT SUM(VIST)
-        FROM PsProduct 
-        WHERE type = 'sale' 
-        AND doc = @DOC
-        ),
-         0) - ISNULL(Freight, 0),
-        GrossProfit =ROUND (
-        (
-        SELECT SUM(Profit)
-         FROM PsProduct 
-         WHERE type = 'sale' 
-         AND doc = @DOC
-        ), 
-        0), 
-Status = CASE 
-    WHEN NOT EXISTS (
-        SELECT 1
-        FROM PsProduct 
-        WHERE type = 'sale'
-          AND doc = @DOC
-          AND PackingDateTime IS NULL
-          AND qty <> 0
-    )
-    THEN 'INVOICE'
-    ELSE null
-END
+        ;WITH Agg AS (
+          SELECT 
+            SUM(VIST) AS TotalVIST,
+            SUM(Profit) AS TotalProfit,
+            SUM(CASE WHEN PackingDateTime IS NULL AND qty <> 0 THEN 1 ELSE 0 END) AS PendingCount,
+            MIN(acid) AS FirstAcid
+          FROM PsProduct 
+          WHERE type = 'sale' AND doc = @DOC
+        )
+        UPDATE d SET 
+          amount = ROUND(ISNULL(a.TotalVIST, 0), 0) - ISNULL(d.Freight, 0),
+          GrossProfit = ROUND(ISNULL(a.TotalProfit, 0), 0),
+          Status = CASE WHEN a.PendingCount = 0 THEN 'INVOICE' ELSE NULL END,
+          Shopper = @NUG,
+          description = CASE 
+            WHEN a.PendingCount = 0 
+            THEN N' Packed by: ' + @PackedBy + ', ' + @DateTime 
+            ELSE N' Pending Packed by: ' + @PackedBy + ', ' + @DateTime 
+          END,
+          PackedBy = @PackedBy
+        FROM PSDetail d
+        CROSS JOIN Agg a
+        WHERE d.type = 'sale' AND d.doc = @DOC
+      `);
 
-, Shopper =  @NUG, 
-description = case when (
-select count(*) 
-from PsProduct
- where type='sale' 
- and doc=@DOC 
- and PackingDateTime is null
- and qty<>0
- ) = 0
-then 
-N' Packed by: ' + @PackedBy + ', ' +@DateTime 
-else 
-  N' Pending Packed by: '  + @PackedBy + ', ' +@DateTime 
-end
-, PackedBy = @PackedBy WHERE type = 'sale' AND doc = @DOC
-`);
-
+      // =============================================
+      // Update Ledgers — uses PSDetail values (already updated)
+      // =============================================
       await pool
         .request()
         .input("DOC", sql.Int, invoice)
         .input("ACID", sql.Int, acid).query(`
-        UPDATE Ledgers SET Debit = (SELECT amount FROM PSDetail WHERE type = 'sale' AND doc = @DOC), NARRATION = (SELECT description FROM PSDetail WHERE type = 'sale' AND doc = @DOC) WHERE type = 'sale' AND doc = @DOC AND acid = (SELECT TOP 1 acid FROM PsProduct WHERE type = 'sale' AND doc = @DOC);
-        UPDATE Ledgers SET Credit = (SELECT amount FROM PSDetail WHERE type = 'sale' AND doc = @DOC), NARRATION = (SELECT description FROM PSDetail WHERE type = 'sale' AND doc = @DOC) WHERE type = 'sale' AND doc = @DOC AND acid = 4;
+        ;WITH InvData AS (
+          SELECT amount, description 
+          FROM PSDetail 
+          WHERE type = 'sale' AND doc = @DOC
+        ),
+        InvAcid AS (
+          SELECT TOP 1 acid 
+          FROM PsProduct 
+          WHERE type = 'sale' AND doc = @DOC
+        )
+        UPDATE l SET 
+          Debit = CASE WHEN l.acid = ia.acid THEN id.amount ELSE l.Debit END,
+          Credit = CASE WHEN l.acid = 4 THEN id.amount ELSE l.Credit END,
+          NARRATION = id.description
+        FROM Ledgers l
+        CROSS JOIN InvData id
+        CROSS JOIN InvAcid ia
+        WHERE l.type = 'sale' AND l.doc = @DOC 
+          AND (l.acid = ia.acid OR l.acid = 4)
       `);
 
       res.status(200).json({

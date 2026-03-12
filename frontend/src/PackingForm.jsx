@@ -12,7 +12,8 @@ import PackingNotes from "./components/PackingNotes";
 import ProductTable from "./components/ProductTable";
 import UpdateButton from "./components/UpdateButton";
 
-const persons = ['zain']
+const persons = ['zain', 'hasan', 'ahsan', 'saim', 'subhan', 'fakhar', 'hamza', 'gohar']
+
 const url = import.meta.env.VITE_API_URL;
 
 const theme = createTheme({

@@ -377,7 +377,7 @@ WHERE P.Doc = @DocNumber
   },
 
   updateInvoice: async (req, res) => {
-    const { invoice, updatedInvoice, nug, tallyBy, time, acid } = req.body;
+    const { invoice, updatedInvoice, nug, tallyBy = '', time, acid } = req.body;
 
     let username;
 
@@ -552,7 +552,7 @@ WHERE P.Doc = @DocNumber
         .input("DOC", sql.Int, invoice)
         .input("NUG", sql.Int, parseInt(nug))
         .input("DateTime", sql.VarChar, time || "null")
-        .input("PackedBy", sql.NVarChar, username || "null").query(`
+        .input("PackedBy", sql.NVarChar, tallyBy || username || "null").query(`
         ;WITH Agg AS (
           SELECT 
             SUM(VIST) AS TotalVIST,

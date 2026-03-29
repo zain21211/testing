@@ -51,11 +51,11 @@ const theme = createTheme({
 });
 
 const productDetail = [
-  { label: "T.Q", size: 1 },
-  { label: "FOC", size: 1 },
+  { id: "Amount", label: "Amt", size: 3 },
   { label: "D%", size: .5 },
-  { id: "Amount", label: "Amount", size: 3 },
   { id: "Rate", label: "Rate", size: 1 },
+  // { label: "T.Q", size: 1 },
+  { label: "FOC", size: 1 },
   { label: "B.Q", size: 1 },
   { label: "Product", size: 3, align: "left" },
 ];
@@ -348,13 +348,13 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                     align: "center",
                     width:
                       field.label === "Product"
-                        ? "25%"
+                        ? "30%"
                         : field.label === "FOC"
-                          ? "5%"
-                          : field.label === "Amount"
-                            ? "11%"
+                          ? "7%"
+                          : field.id === "Amount"
+                            ? "15%"
                             : field.label === "Rate"
-                              ? "10%"
+                              ? "12%"
                               : "8%", // Reduced Amount column width to 8%
                     // minWidth: field.label === "Product" ? 250 : 80, // Adjusted minimum width for Product column
                     render: (value, row) => {
@@ -411,8 +411,9 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                           }}
                           inputProps={{
                             sx: {
-                              fontFamily: 'Jameel Noori Nastaleeq, serif',
+                              fontFamily: field.label === "Product" ? 'Jameel Noori Nastaleeq, serif' : 'poppins, sans-serif',
                               fontWeight: "bold",
+                              backgroundColor: field.label === "Rate" || field.label === "B.Q" ? 'lightGrey' : 'transparent',
                               // pt: 1,
                               textAlign:
                                 field.label === "Product" ? "right" : "center",
@@ -457,35 +458,40 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                   }}
                 />
               </Suspense>
+
+
+            </Grid>
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "row-reverse", gap: 27, alignItems: "flex-start", alignContent: "center" }}>
               <Typography
                 variant="caption"
-                sx={{ mt: 1, display: "block", textAlign: "right", fontSize: '2rem', fontFamily: 'Jameel Noori Nastaleeq, serif' }}
+                sx={{ display: "inline-block", textAlign: "right", fontSize: '2.5rem', fontFamily: 'Jameel Noori Nastaleeq, serif' }}
               >
-                {products ? products.length : 0} : <b style={{ marginLeft: '1rem' }}> ٹوٹل آئٹمز</b>
+                {products ? products.length : 0} :  ٹوٹل آئٹمز
               </Typography>
-            </Grid>
-            {/* Notes Section */}
-            <TextField
-              label="Description"
-              variant="outlined"
-              value={customer.Description}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                my: 3,
-                width: 'fit-content',           // Fit the wrapper div
-                '& .MuiInputBase-input': {      // Target the inner <input>
-                  width: 'auto',                // Let input shrink/grow
-                  minWidth: 50                  // Optional: minimum width
-                }
-              }}
-              onChange={(e) =>
-                setInvoice((prev) => ({
-                  ...prev,
-                  notes: e.target.value,
-                }))
-              }
-            />
+              {rows.map(([label, value], index, arr) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "flex",
+                    // justifyContent: "space-around",
+                    mb: 1,
+                    alignItems: "center",
+                    fontFamily: 'Jameel Noori Nastaleeq, serif',
+                    borderBottom:
+                      index < rows.length ? "1px solid #ddd" : "none",
+                  }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: "bold", mr: 2, fontSize: '1.5rem' }}>
+                    {formatCurrency(value)}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: "bold", fontFamily: 'Jameel Noori Nastaleeq, serif', fontSize: '2.5rem' }}>
+                    :ٹوٹل بل
 
+                  </Typography>
+
+                </Box>
+              ))}
+            </Box>
             {/* Totals and Notes */}
             <Box
               sx={{
@@ -495,7 +501,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                 pr: { xs: 1, xl: "65px" }, // shorthand for paddingRight
               }}
             >
-              <Box
+              {/* <Box
                 sx={{
                   // border: "2px solid #ddd",
                   // borderRadius: 2,
@@ -522,8 +528,31 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                     </Typography>
                   </Box>
                 ))}
-              </Box>
+              </Box> */}
             </Box>
+            {/* Notes Section */}
+            <TextField
+              label="Description"
+              variant="outlined"
+              value={customer.Description}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                my: 3,
+                width: 'fit-content',           // Fit the wrapper div
+                '& .MuiInputBase-input': {      // Target the inner <input>
+                  width: 'auto',                // Let input shrink/grow
+                  minWidth: 50                  // Optional: minimum width
+                }
+              }}
+              onChange={(e) =>
+                setInvoice((prev) => ({
+                  ...prev,
+                  notes: e.target.value,
+                }))
+              }
+            />
+
+
 
           </Box>
 
@@ -569,7 +598,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
           </Box>
         </Paper>
       </Container>
-    </ThemeProvider>
+    </ThemeProvider >
   );
 };
 

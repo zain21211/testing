@@ -172,6 +172,7 @@ const DataTable = ({
           align={column.align || "left"}
           sx={{
             border: "2px solid #000",
+            backgroundColor: column.label === "Rate" || column.label === "B.Q" ? 'lightGrey' : 'transparent',
             height: 'auto',
             // lineHeight: "1.4",         // better spacing
             verticalAlign: "top",

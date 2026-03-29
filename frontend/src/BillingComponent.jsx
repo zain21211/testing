@@ -51,9 +51,9 @@ const theme = createTheme({
 });
 
 const productDetail = [
-  // { label: "T.Q", size: 1 },
-  // { label: "FOC", size: 1 },
-  // { label: "D%", size: 1 },
+  { label: "T.Q", size: 1 },
+  { label: "FOC", size: 1 },
+  { label: "D%", size: .5 },
   { id: "Amount", label: "Amount", size: 3 },
   { id: "Rate", label: "Rate", size: 1 },
   { label: "B.Q", size: 1 },
@@ -350,10 +350,12 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                       field.label === "Product"
                         ? "25%"
                         : field.label === "FOC"
-                          ? "2%"
+                          ? "5%"
                           : field.label === "Amount"
-                            ? "10%"
-                            : "8%", // Reduced Amount column width to 8%
+                            ? "11%"
+                            : field.label === "Rate"
+                              ? "10%"
+                              : "8%", // Reduced Amount column width to 8%
                     // minWidth: field.label === "Product" ? 250 : 80, // Adjusted minimum width for Product column
                     render: (value, row) => {
                       let displayValue = "";

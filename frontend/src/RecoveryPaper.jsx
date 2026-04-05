@@ -27,6 +27,33 @@ import FormActionsSection from './components/recovery/FormActionsSection';
 
 // currency formatting now centralized in utils/formatCurrency and used within child components
 
+const sendWhatsapp = (entry, number) => {
+  console.log(entry, number)
+
+  if (!entry || !number) return alert('entry or number is missing')
+
+
+
+  const message = `
+*Customer:* ${entry?.name || 'N/A'}
+*Amount:* RS.${(entry?.amounts?.cash || 0) +
+    (entry?.amounts?.jazzcash || 0) +
+    (entry?.amounts?.easypaisa || 0) +
+    (entry?.amounts?.crownWallet || 0) +
+    (entry?.amounts?.meezanBank || 0) +
+    (entry?.amounts?.online || 0)}/-
+*Ref:* Received By ${entry?.userName || 'Ahmad International'}
+*Date:* ${new Date().toLocaleString()}
+*FROM: AHMAD INTERNATIONAL-FSD*
+`;
+
+  const formattedNumber = number.replace(/\D/g, ""); // remove spaces/dashes
+
+  const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`;
+
+  window.open(url, "_blank");
+};
+
 const RecoveryPaper = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -239,12 +266,16 @@ const RecoveryPaper = () => {
       timestamp: new Date().toISOString(),
       status: false,
     };
+    console.log(selectedCustomer)
 
     await addEntry(newEntry, coordinates, address);
+
+    sendWhatsapp(newEntry, selectedCustomer?.phonenumber);
 
     resetPaymentInputs();
     setDescription('');
     dispatch(clearSelection({ key: 'recovery' }));
+
     searchInputRef.current?.focus();
   }, [
     selectedCustomer,

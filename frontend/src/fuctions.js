@@ -1,6 +1,6 @@
 import html2canvas from "html2canvas";
 
-export const takeScreenShot = async (targetRef) => {
+export const takeScreenShot = async (targetRef, invNum) => {
   if (!targetRef || !targetRef.current) return;
 
   const target = targetRef.current;
@@ -54,13 +54,15 @@ export const takeScreenShot = async (targetRef) => {
         0,
         0,
         width,
-        partHeight
+        partHeight,
       );
 
       const image = canvasPart.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = image;
-      link.download = `screenshot-part-${i + 1}.png`;
+      link.download = invNum
+        ? `INV#${invNum}-${i + 1}.png`
+        : ` screenshot-part-${i + 1}.png`;
       link.click();
 
       await new Promise((resolve) => setTimeout(resolve, 500));

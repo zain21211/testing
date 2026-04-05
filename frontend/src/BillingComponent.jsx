@@ -202,30 +202,55 @@ const BillingComponent = ({ name = "INVOICE" }) => {
     ["TOTAL AMOUNT:", customer.InvoiceAmount],
   ].filter(([label, value]) => label.toLowerCase().includes("total") ? value : value > 0); // Only include if value > 0
 
-  const sendWhatsapp = async (number, customer) => {
+  const sendWhatsapp = (number, customer, targetRef) => {
     console.log(number, customer)
+
+
     if (!number) return alert('no number')
     if (!customer) return alert('no customer found')
 
-    const payload = {
-      number,
-      dateTime: new Date(),
-      doc: customer.InvoiceNumber,
-      subname: customer.subname,
-      urduname: customer.CustomerName,
-      type: customer.type,
-      acid: customer.id,
-      requestBy: username
-    }
-    try {
-      console.log(payload)
-      await axios.post(`${url}/invoices/whatsapp`, { payload });
+    let invNum = customer.InvoiceNumber ? String(customer.InvoiceNumber).trim() : null;
 
-      navigate('/order')
-    } catch (err) {
-      console.error(err)
-    }
-  }
+    getScreenshot(targetRef, invNum)
+
+    const message = `
+Invoice: ${customer.InvoiceNumber}
+Customer: ${customer.CustomerName}
+Sub Name: ${customer.subname}
+Type: ${customer.type}
+Date: ${new Date().toLocaleString()}
+`;
+
+    const formattedNumber = number.replace(/\D/g, ""); // remove spaces/dashes
+
+    const url = `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`;
+
+    window.open(url, "_blank");
+  };
+  // const sendWhatsapp = async (number, customer) => {
+  //   console.log(number, customer)
+  //   if (!number) return alert('no number')
+  //   if (!customer) return alert('no customer found')
+
+  //   const payload = {
+  //     number,
+  //     dateTime: new Date(),
+  //     doc: customer.InvoiceNumber,
+  //     subname: customer.subname,
+  //     urduname: customer.CustomerName,
+  //     type: customer.type,
+  //     acid: customer.id,
+  //     requestBy: username
+  //   }
+  //   try {
+  //     console.log(payload)
+  //     await axios.post(`${url}/invoices/whatsapp`, { payload });
+
+  //     navigate('/order')
+  //   } catch (err) {
+  //     console.error(err)
+  //   }
+  // }
   return (
     <ThemeProvider theme={theme}>
 
@@ -578,7 +603,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
               variant="contained"
               color="success"
               size="large"
-              onClick={() => sendWhatsapp(customerNumber, customer)}
+              onClick={() => sendWhatsapp(customerNumber, customer, targetRef)}
               sx={{ minWidth: "200px", fontSize: '1.2rem' }}
             >
               WhatsApp

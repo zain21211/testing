@@ -461,10 +461,10 @@ const BillingComponent = ({ name = "INVOICE" }) => {
 
 
             </Grid>
-            <Box sx={{ mt: 2, display: "flex", flexDirection: "row-reverse", gap: 27, alignItems: "flex-start", alignContent: "center" }}>
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "row-reverse", gap: 25, alignItems: "flex-start", alignContent: "center" }}>
               <Typography
                 variant="caption"
-                sx={{ display: "inline-block", textAlign: "right", fontSize: '2.5rem', fontFamily: 'Jameel Noori Nastaleeq, serif' }}
+                sx={{ display: "inline-block", textAlign: "right", fontSize: '2rem', fontFamily: 'Jameel Noori Nastaleeq, serif' }}
               >
                 {products ? products.length : 0} :  ٹوٹل آئٹمز
               </Typography>
@@ -481,10 +481,10 @@ const BillingComponent = ({ name = "INVOICE" }) => {
                       index < rows.length ? "1px solid #ddd" : "none",
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: "bold", mr: 2, fontSize: '1.5rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: "bold", mr: 2, fontSize: '1.25rem' }}>
                     {formatCurrency(value)}
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: "bold", fontFamily: 'Jameel Noori Nastaleeq, serif', fontSize: '2.5rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: "bold", fontFamily: 'Jameel Noori Nastaleeq, serif', fontSize: '2rem' }}>
                     :ٹوٹل بل
 
                   </Typography>

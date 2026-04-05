@@ -94,6 +94,7 @@ const BillingComponent = ({ name = "INVOICE" }) => {
   const targetRef = useRef();
   const [isReady, setIsReady] = useState(false);
   const username = user?.username;
+  console.log("customer", customer)
   useEffect(() => {
     const invoiceURL = location.pathname;
 

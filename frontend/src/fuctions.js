@@ -33,7 +33,7 @@ export const takeScreenShot = async (targetRef, invNum) => {
     const image = fullCanvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = image;
-    link.download = "screenshot-full.png";
+    link.download = invNum ? `INV#${invNum}.png` : ` screenshot.png`;
     link.click();
   } else {
     const partHeight = MAX_HEIGHT;

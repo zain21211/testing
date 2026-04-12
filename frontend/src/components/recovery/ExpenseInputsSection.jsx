@@ -93,7 +93,7 @@ const ExpenseInputsSection = ({
                             onFocus={(e) => e.target.select()}
                             sx={{
                                 color: 'white',
-                                backgroundColor: 'white',
+                                backgroundColor: (value === '' || value === '0') ? '#f0f0f0' : 'white',
                                 fontWeight: 'bold',
                                 borderRadius: 1,
                                 borderColor: 'white',

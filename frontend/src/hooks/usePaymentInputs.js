@@ -23,9 +23,27 @@ export const usePaymentInputs = () => {
     "recoveryPaperCrownWalletAmount",
     ""
   );
+  const [tcAmount, setTcAmount] = useLocalStorageState(
+    "recoveryPaperTcAmount",
+    ""
+  );
+  const [harrAmount, setHarrAmount] = useLocalStorageState(
+    "recoveryPaperHarrAmount",
+    ""
+  );
+  const [crownFitAmount, setCrownFitAmount] = useLocalStorageState(
+    "recoveryPaperCrownFitAmount",
+    ""
+  );
+
   const [meezanBankAmount, setMeezanBankAmount] = useLocalStorageState(
     "recoveryPaperMeezanBankAmount",
     ""
+  );
+
+  const [paymentImage, setPaymentImage] = useLocalStorageState(
+    "recoveryPaperPaymentImage",
+    null
   );
   const [remainingBalance, setRemainingBalance] = useState("");
 
@@ -57,7 +75,22 @@ export const usePaymentInputs = () => {
     setCrownWalletAmount("");
     setOnlineAmount("");
     setMeezanBankAmount("");
-  }, []);
+    setTcAmount("");
+    setHarrAmount("");
+    setCrownFitAmount("");
+    setPaymentImage(null);
+  }, [
+    setCashAmount,
+    setJazzcashAmount,
+    setEasypaisaAmount,
+    setCrownWalletAmount,
+    setOnlineAmount,
+    setMeezanBankAmount,
+    setTcAmount,
+    setHarrAmount,
+    setCrownFitAmount,
+    setPaymentImage,
+  ]);
 
   return {
     cashAmount,
@@ -65,8 +98,16 @@ export const usePaymentInputs = () => {
     onlineAmount,
     easypaisaAmount,
     crownWalletAmount,
+    tcAmount,
+    harrAmount,
+    crownFitAmount,
     meezanBankAmount,
+    paymentImage,
     remainingBalance,
+    setPaymentImage,
+    handleTcAmountChange: createAmountChangeHandler(setTcAmount),
+    handleHarrAmountChange: createAmountChangeHandler(setHarrAmount),
+    handleCrownFitAmountChange: createAmountChangeHandler(setCrownFitAmount),
     handleCashAmountChange: createAmountChangeHandler(setCashAmount),
     handleJazzcashAmountChange: createAmountChangeHandler(setJazzcashAmount),
     handleOnlineAmountChange: createAmountChangeHandler(setOnlineAmount),

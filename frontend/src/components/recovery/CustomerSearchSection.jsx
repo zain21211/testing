@@ -18,6 +18,8 @@ export const CustomerSearchSection = ({
     route,
     description,
     setDescription,
+    showMore,
+    setShowMore,
 }) => {
     return (
         <Box>
@@ -110,8 +112,25 @@ export const CustomerSearchSection = ({
                         label="Description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        sx={{ gridColumn: { xs: 'span 4', sm: 'span 4' } }}
+                        sx={{ 
+                            gridColumn: { xs: 'span 4', sm: 'span 4' },
+                            backgroundColor: (description === '' || description === '0') ? '#f0f0f0' : 'white',
+                        }}
                     />
+
+                    <Button
+                        onClick={() => setShowMore(!showMore)}
+                        variant="contained"
+                        color="primary"
+                        sx={{
+                            gridColumn: { xs: 'span 2', sm: 'span 2' },
+                            height: '56px',
+                            fontSize: '1.5rem',
+                            fontWeight: 'bold',
+                        }}
+                    >
+                        {showMore ? "LESS" : "MORE"}
+                    </Button>
 
                     {balance !== null && balance !== '' && selectedCustomer && (
                         <Box

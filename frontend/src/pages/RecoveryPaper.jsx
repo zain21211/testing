@@ -75,8 +75,16 @@ const RecoveryPaper = () => {
     onlineAmount,
     easypaisaAmount,
     crownWalletAmount,
+    tcAmount,
+    harrAmount,
+    crownFitAmount,
     meezanBankAmount,
+    paymentImage,
     remainingBalance: paymentRemainingBalance,
+    setPaymentImage,
+    handleTcAmountChange,
+    handleHarrAmountChange,
+    handleCrownFitAmountChange,
     handleCashAmountChange,
     handleJazzcashAmountChange,
     handleOnlineAmountChange,
@@ -117,6 +125,9 @@ const RecoveryPaper = () => {
       onlineAmount,
       easypaisaAmount,
       crownWalletAmount,
+      tcAmount,
+      harrAmount,
+      crownFitAmount,
       meezanBankAmount,
     });
     setRemainingBalance(newRemainingBalance);
@@ -127,6 +138,9 @@ const RecoveryPaper = () => {
     onlineAmount,
     easypaisaAmount,
     crownWalletAmount,
+    tcAmount,
+    harrAmount,
+    crownFitAmount,
     meezanBankAmount,
     calculateRemainingBalance,
     setRemainingBalance,
@@ -206,6 +220,9 @@ const RecoveryPaper = () => {
     const parsedCrownWallet = parseFloat(crownWalletAmount) || 0;
     const parsedMeezanBank = parseFloat(meezanBankAmount) || 0;
     const parsedOnline = parseFloat(onlineAmount) || 0;
+    const parsedTc = parseFloat(tcAmount) || 0;
+    const parsedHarr = parseFloat(harrAmount) || 0;
+    const parsedCrownFit = parseFloat(crownFitAmount) || 0;
 
     const currentEntryTotal =
       parsedCash +
@@ -213,7 +230,10 @@ const RecoveryPaper = () => {
       parsedEasypaisa +
       parsedCrownWallet +
       parsedOnline +
-      parsedMeezanBank;
+      parsedMeezanBank +
+      parsedTc +
+      parsedHarr +
+      parsedCrownFit;
 
     if (currentEntryTotal <= 0) {
       alert('Please enter a valid positive amount for at least one payment method.');
@@ -233,7 +253,11 @@ const RecoveryPaper = () => {
         crownWallet: parsedCrownWallet,
         meezanBank: parsedMeezanBank,
         online: parsedOnline,
+        tc: parsedTc,
+        harr: parsedHarr,
+        crownfit: parsedCrownFit,
       },
+      paymentImage,
       userName: user?.username || 'Unknown User',
       entryTotal: currentEntryTotal,
       timestamp: new Date().toISOString(),
@@ -254,6 +278,10 @@ const RecoveryPaper = () => {
     crownWalletAmount,
     meezanBankAmount,
     onlineAmount,
+    tcAmount,
+    harrAmount,
+    crownFitAmount,
+    paymentImage,
     description,
     user,
     addEntry,
@@ -321,6 +349,9 @@ const RecoveryPaper = () => {
     const parsedCrownWallet = parseFloat(crownWalletAmount) || 0;
     const parsedMeezanBank = parseFloat(meezanBankAmount) || 0;
     const parsedOnline = parseFloat(onlineAmount) || 0;
+    const parsedTc = parseFloat(tcAmount) || 0;
+    const parsedHarr = parseFloat(harrAmount) || 0;
+    const parsedCrownFit = parseFloat(crownFitAmount) || 0;
 
     const currentEntryTotal =
       parsedCash +
@@ -328,13 +359,20 @@ const RecoveryPaper = () => {
       parsedEasypaisa +
       parsedOnline +
       parsedCrownWallet +
-      parsedMeezanBank;
+      parsedMeezanBank +
+      parsedTc +
+      parsedHarr +
+      parsedCrownFit;
+
+    const isImageRequired = (parsedTc > 0 || parsedCrownFit > 0 || parsedMeezanBank > 0);
+    const hasImageIfRequired = isImageRequired ? !!paymentImage : true;
 
     return (
       !selectedCustomer ||
       isLoading ||
       // loadingFinancials ||
-      currentEntryTotal <= 0
+      currentEntryTotal <= 0 ||
+      !hasImageIfRequired
     );
   }, [
     selectedCustomer,
@@ -346,6 +384,10 @@ const RecoveryPaper = () => {
     crownWalletAmount,
     meezanBankAmount,
     onlineAmount,
+    tcAmount,
+    harrAmount,
+    crownFitAmount,
+    paymentImage,
   ]);
 
   return (
@@ -418,12 +460,20 @@ const RecoveryPaper = () => {
           easypaisaAmount={easypaisaAmount}
           crownWalletAmount={crownWalletAmount}
           meezanBankAmount={meezanBankAmount}
+          tcAmount={tcAmount}
+          harrAmount={harrAmount}
+          crownFitAmount={crownFitAmount}
+          paymentImage={paymentImage}
           onCashAmountChange={handleCashAmountChange}
           onJazzcashAmountChange={handleJazzcashAmountChange}
           onOnlineAmountChange={handleOnlineAmountChange}
           onEasypaisaAmountChange={handleEasypaisaAmountChange}
           onCrownWalletAmountChange={handleCrownWalletAmountChange}
           onMeezanBankAmountChange={handleMeezanBankAmountChange}
+          onTcAmountChange={handleTcAmountChange}
+          onHarrAmountChange={handleHarrAmountChange}
+          onCrownFitAmountChange={handleCrownFitAmountChange}
+          onPaymentImageChange={setPaymentImage}
           cashInputRef={cashInputRef}
         />
 

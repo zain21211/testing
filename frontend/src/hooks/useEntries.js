@@ -15,6 +15,8 @@ export const useEntries = () => {
   const [totalEasypaisa, setTotalEasypaisa] = useState(0);
   const [totalCrownWallet, setTotalCrownWallet] = useState(0);
   const [totalMeezanBank, setTotalMeezanBank] = useState(0);
+  const [totalTc, setTotalTc] = useState(0);
+  const [totalHarr, setTotalHarr] = useState(0);
   const url = import.meta.env.VITE_API_URL;
 
   const handleRemoveEntry = (id) => {
@@ -31,6 +33,8 @@ export const useEntries = () => {
     let easypaisaTotal = 0;
     let crownWalletTotal = 0;
     let meezanBankTotal = 0;
+    let tcTotal = 0;
+    let harrTotal = 0;
 
     entries.forEach((entry) => {
       overallTotal += entry.entryTotal || 0;
@@ -39,6 +43,8 @@ export const useEntries = () => {
       easypaisaTotal += entry.amounts?.easypaisa || 0;
       crownWalletTotal += entry.amounts?.crownWallet || 0;
       meezanBankTotal += entry.amounts?.meezanBank || 0;
+      tcTotal += entry.amounts?.tc || 0;
+      harrTotal += entry.amounts?.harr || 0;
     });
 
     setTotalAmount(overallTotal);
@@ -47,6 +53,8 @@ export const useEntries = () => {
     setTotalEasypaisa(easypaisaTotal);
     setTotalCrownWallet(crownWalletTotal);
     setTotalMeezanBank(meezanBankTotal);
+    setTotalTc(tcTotal);
+    setTotalHarr(harrTotal);
   }, [entries]);
 
   const makeCashEntry = useCallback(
@@ -58,6 +66,7 @@ export const useEntries = () => {
           userName,
           description,
           timestamp,
+          paymentImage,
           creditID,
           debitID,
         } = entry;
@@ -73,8 +82,10 @@ export const useEntries = () => {
           const payload = {
             creditID: `${creditID}_${method}`,
             debitID: `${debitID}_${method}`,
-            paymentMethod: method.toLowerCase().includes("crown")
+            paymentMethod: method.toLowerCase() === "crownwallet"
               ? "crownone"
+              : method.toLowerCase() === "crownfit"
+              ? "crownfit"
               : method.toLowerCase().includes("meezan")
               ? "mbl"
               : method,
@@ -83,6 +94,7 @@ export const useEntries = () => {
             userName,
             desc: description,
             time: timestamp,
+            paymentImage: (method === "tc" || method === "crownfit" || method.toLowerCase().includes("meezan")) ? paymentImage : null,
             location: {
               latitude: coordinates.latitude,
               longitude: coordinates.longitude,
@@ -168,6 +180,8 @@ export const useEntries = () => {
     totalEasypaisa,
     totalCrownWallet,
     totalMeezanBank,
+    totalTc,
+    totalHarr,
     addEntry,
     handleSyncOneEntry,
     resetEntries,

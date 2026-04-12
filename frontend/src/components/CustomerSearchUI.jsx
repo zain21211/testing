@@ -163,6 +163,9 @@ const CustomerSearchUI = forwardRef(
                 onFocus={(e) => e.target.select()}
                 disabled={disabled}
                 inputProps={{ inputMode: "numeric" }}
+                sx={{
+                  backgroundColor: (usage === 'recovery' && (!acidInput || acidInput === '0')) ? '#f0f0f0' : 'white'
+                }}
               />
 
               {/* Customer Name Input */}
@@ -178,6 +181,9 @@ const CustomerSearchUI = forwardRef(
                 disabled={disabled}
                 error={showInputError}
                 helperText={showInputError ? error : null}
+                sx={{
+                  backgroundColor: (usage === 'recovery' && !customerInput) ? '#f0f0f0' : 'white'
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">

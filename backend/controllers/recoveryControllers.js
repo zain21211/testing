@@ -7,6 +7,10 @@ const paymentModes = {
   easypaisa: { type: 'BRV', debitAcid: 1982, narrationPrefix: 'Pending: EasyPaisa Recd. by' },
   mbl: { type: 'BRV', debitAcid: 326, narrationPrefix: 'Pending: OnLine Recd. by' },
   crownone: { type: 'BRV', debitAcid: 1946, narrationPrefix: 'Pending: Lifan Wallet Amount Recd. by' },
+  tc: { type: 'BRV', debitAcid: 956, narrationPrefix: 'Pending: Trust Corporation Account Amount Recd. by' },
+  harr: { type: 'BRV', debitAcid: 454, narrationPrefix: 'Pending: HARR Account Amount Recd. by' },
+  nl: { type: 'BRV', debitAcid: 243, narrationPrefix: 'Pending: NL Account Amount Recd. by' },
+  crownfit: { type: 'BRV', debitAcid: 909, narrationPrefix: 'Pending: Crown Fit Account Amount Recd. by' },
 };
 
 const CashEntryController = {

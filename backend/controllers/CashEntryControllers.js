@@ -1,5 +1,6 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection");
+const imageDb = require("../database/imagedb");
 const getPakistanISODateString = require("../utils/PakTime");
 
 // Payment and expense configurations
@@ -33,6 +34,26 @@ const paymentModes = {
     type: "BRV",
     debitAcid: 787,
     narrationPrefix: "Pending -  Direct Online Amount Recd. by",
+  },
+  tc: {
+    type: "BRV",
+    debitAcid: 956,
+    narrationPrefix: "Pending - Trust Corporation Account Amount Recd. by",
+  },
+  harr: {
+    type: "BRV",
+    debitAcid: 454,
+    narrationPrefix: "Pending - HARR Account Amount Recd. by",
+  },
+  nl: {
+    type: "BRV",
+    debitAcid: 243,
+    narrationPrefix: "Pending - NL Account Amount Recd. by",
+  },
+  crownfit: {
+    type: "BRV",
+    debitAcid: 909,
+    narrationPrefix: "Pending - Crown Fit Account Amount Recd. by",
   },
 };
 
@@ -272,6 +293,37 @@ const insertLedgerEntries = async (
     `);
 };
 
+// helper: convert base64 -> Buffer (works for "image" type)
+const toBuffer = (data) => {
+  if (!data) return null;
+  const base64 = data.split(";base64,").pop();
+  return Buffer.from(base64, "base64");
+};
+
+const insertNameReceiptImage = async (doc, acid, image, time) => {
+  if (!image) return;
+  try {
+    const pool = await imageDb();
+    const query = `
+      INSERT INTO name_reciepts (doc, acid, image, type, status, datetime)
+      VALUES (@doc, @acid, @img, @type, @status, @datetime)
+    `;
+    await pool
+      .request()
+      .input("doc", sql.Int, doc)
+      .input("acid", sql.Int, acid)
+      .input("img", sql.VarBinary, toBuffer(image))
+      .input("type", sql.VarChar, "recovery")
+      .input("status", sql.VarChar, "")
+      .input("datetime", sql.DateTime, new Date(time))
+      .query(query);
+    console.log(`✅ Image saved to name_reciepts for doc ${doc}`);
+  } catch (err) {
+    console.error("❌ Error saving image to name_reciepts:", err);
+    // We don't throw here to avoid failing the main transaction if only image fails
+  }
+};
+
 // Main controller
 const CashEntryController = {
   insertEntry: async (req, res) => {
@@ -343,6 +395,21 @@ const CashEntryController = {
 
       // Commit transaction
       await transaction.commit();
+
+      // Store receipt image if applicable (TC, Crown Fit, Meezan Bank)
+      const imageRequiredMethods = ["tc", "crownfit", "mbl"];
+      const isImageMethod = imageRequiredMethods.includes(paymentMethod.toLowerCase()) || 
+                           paymentMethod.toLowerCase().includes("meezan");
+
+      if (isImageMethod) {
+        const { paymentImage } = req.body;
+        if (paymentImage) {
+          await insertNameReceiptImage(nextDoc, custId, paymentImage, time);
+          console.log(`📸 Receipt image processed for ${paymentMethod} (doc: ${nextDoc})`);
+        } else {
+          console.warn(`⚠️ Method ${paymentMethod} usually requires an image, but paymentImage was missing or null.`);
+        }
+      }
 
       res.json({ success: true, doc: nextDoc });
     } catch (error) {

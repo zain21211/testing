@@ -98,31 +98,23 @@ const requestLogger = (req, res, next) => {
   };
 
   // Log request when response finishes
-  res.on("finish", async () => {
+  let logged = false;
+  const logOnce = async (event) => {
+    if (logged) return;
+    logged = true;
     try {
       const responseTime = Date.now() - startTime;
-
-      // Log the API request
       await loggingService.logApiRequest(req, res, responseTime, user);
-
-      // Log user activity for certain endpoints
-      await logUserActivityForEndpoint(req, res);
+      if (event === "finish") {
+        await logUserActivityForEndpoint(req, res);
+      }
     } catch (error) {
-      console.error("❌ Error in request logger:", error);
+      console.error(`❌ Error in request logger (${event}):`, error);
     }
-  });
+  };
 
-  // Handle response close/error events
-  res.on("close", async () => {
-    try {
-      const responseTime = Date.now() - startTime;
-
-      // Log the API request even if connection was closed
-      await loggingService.logApiRequest(req, res, responseTime, user);
-    } catch (error) {
-      console.error("❌ Error in request logger (close):", error);
-    }
-  });
+  res.on("finish", () => logOnce("finish"));
+  res.on("close", () => logOnce("close"));
 
   next();
 };

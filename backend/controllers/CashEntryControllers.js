@@ -398,8 +398,8 @@ const CashEntryController = {
 
       // Store receipt image if applicable (TC, Crown Fit, Meezan Bank)
       const imageRequiredMethods = ["tc", "crownfit", "mbl"];
-      const isImageMethod = imageRequiredMethods.includes(paymentMethod.toLowerCase()) || 
-                           paymentMethod.toLowerCase().includes("meezan");
+      const isImageMethod = paymentMethod && (imageRequiredMethods?.includes(paymentMethod?.toLowerCase()) || 
+                           paymentMethod?.toLowerCase()?.includes("meezan"));
 
       if (isImageMethod) {
         const { paymentImage } = req.body;

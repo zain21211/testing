@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { TextField, Box, Button, Typography, IconButton, Dialog, DialogContent } from '@mui/material';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { AddAPhoto, Delete, Close } from '@mui/icons-material';
+import { AddAPhoto, Delete, Close, PhotoCamera, Collections, Check } from '@mui/icons-material';
+import Cropper from 'react-cropper';
+import 'cropperjs/dist/cropper.css';
 
 const handleKeyDown = (event, disabled, fn) => {
     if (event.key === 'Enter' && !disabled && fn) {
@@ -9,34 +11,33 @@ const handleKeyDown = (event, disabled, fn) => {
     }
 };
 
-
 const LabelWithImage = ({ src, label }) => (
     <Box display="flex" alignItems="center" gap={1}>
         {src && (
             <img
                 src={src}
                 alt={label}
-                width={label === 'CASH' ? 60 : 30}
-                height={label === 'CASH' ? 35 : 30}
+                width={label === 'CASH' ? 40 : 24}
+                height={label === 'CASH' ? 24 : 24}
                 style={{ objectFit: 'contain' }}
             />
         )}
-        <span>{label}</span>
+        <span style={{ fontSize: '0.85rem' }}>{label}</span>
     </Box>
 );
 
 const textBoxStyle = {
-    fontSize: '1.2rem',
+    fontSize: '1rem',
     '& .MuiInputBase-input': {
         textAlign: 'right',
-        fontSize: '1.5rem',
-        paddingY: '12px',
+        fontSize: '1.2rem',
+        paddingY: '8px',
     },
     '& .MuiInputLabel-root': {
-        fontSize: '1rem',
+        fontSize: '0.9rem',
     },
     '& .MuiOutlinedInput-root': {
-        height: '60px',
+        height: '45px',
     },
 };
 
@@ -50,7 +51,7 @@ export const PaymentInputsSection = ({
     harrAmount,
     crownFitAmount,
     meezanBankAmount,
-    paymentImage,
+    paymentImages,
     onCashAmountChange,
     onJazzcashAmountChange,
     onOnlineAmountChange,
@@ -66,7 +67,13 @@ export const PaymentInputsSection = ({
     showMore,
 }) => {
     const [previewOpen, setPreviewOpen] = useState(false);
-    const fileInputRef = useRef(null);
+    const [previewImageSrc, setPreviewImageSrc] = useState(null);
+    const [uploadMethodKey, setUploadMethodKey] = useState(null);
+    
+    // Cropper States
+    const [cropSrc, setCropSrc] = useState(null);
+    const [cropMethodKey, setCropMethodKey] = useState(null);
+    const cropperRef = useRef(null);
 
     const paymentMethods = [
         {
@@ -91,6 +98,20 @@ export const PaymentInputsSection = ({
             value: easypaisaAmount,
             onChange: onEasypaisaAmountChange,
         },
+                {
+            key: "crownWallet",
+            label: "CROWN WALLET",
+            icon: "/icons/crownwallet.png",
+            value: crownWalletAmount,
+            onChange: onCrownWalletAmountChange,
+        },
+        {
+            key: "harr",
+            label: "HARR",
+            icon: null,
+            value: harrAmount,
+            onChange: onHarrAmountChange,
+        },
         {
             key: "tc",
             label: "TC",
@@ -106,25 +127,11 @@ export const PaymentInputsSection = ({
             onChange: onCrownFitAmountChange,
         },
         {
-            key: "meezan",
+            key: "meezanBank",
             label: "MEEZAN BANK",
             icon: "/icons/meezanbank.png",
             value: meezanBankAmount,
             onChange: onMeezanBankAmountChange,
-        },
-        {
-            key: "crownwallet",
-            label: "CROWN WALLET",
-            icon: "/icons/crownwallet.png",
-            value: crownWalletAmount,
-            onChange: onCrownWalletAmountChange,
-        },
-        {
-            key: "harr",
-            label: "HARR",
-            icon: null,
-            value: harrAmount,
-            onChange: onHarrAmountChange,
         },
         {
             key: "online",
@@ -145,8 +152,7 @@ export const PaymentInputsSection = ({
             let width = img.width;
             let height = img.height;
 
-            // Max dimension 1000px for balance between quality and size
-            const MAX_SIZE = 1000;
+            const MAX_SIZE = 800;
             if (width > height) {
                 if (width > MAX_SIZE) {
                     height *= MAX_SIZE / width;
@@ -164,157 +170,149 @@ export const PaymentInputsSection = ({
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Compress to JPEG with 0.6 quality to aim for < 100KB
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            let quality = 0.7;
+            let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+            while (compressedDataUrl.length > 135000 && quality > 0.2) {
+                quality -= 0.1;
+                compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+
             callback(compressedDataUrl);
         };
     };
 
-    const handleFileChange = (event) => {
+    const handleFileChange = (event, methodKey) => {
         const file = event.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                compressImage(reader.result, (compressedResult) => {
-                    if (typeof onPaymentImageChange === 'function') {
-                        onPaymentImageChange(compressedResult);
-                        setPreviewOpen(true);
-                    }
-                });
+                setCropSrc(reader.result);
+                setCropMethodKey(methodKey);
+                setUploadMethodKey(null);
             };
             reader.readAsDataURL(file);
         }
+        event.target.value = '';
     };
 
-    const triggerFileInput = () => {
-        fileInputRef.current?.click();
+    const handleCropSave = () => {
+        if (typeof cropperRef.current?.cropper !== "undefined") {
+            const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas();
+            const croppedDataUrl = croppedCanvas.toDataURL('image/jpeg');
+            
+            compressImage(croppedDataUrl, (compressedResult) => {
+                if (typeof onPaymentImageChange === 'function') {
+                    onPaymentImageChange(cropMethodKey, compressedResult);
+                    setPreviewImageSrc(compressedResult);
+                    setPreviewOpen(true);
+                }
+                setCropSrc(null);
+                setCropMethodKey(null);
+            });
+        }
     };
-
-    const isImageRequired = (parseFloat(tcAmount) > 0 || parseFloat(crownFitAmount) > 0 || parseFloat(meezanBankAmount) > 0 || parseFloat(harrAmount) > 0);
-    const isImageSectionVisible = showMore;
 
     return (
         <Box sx={{ mb: 2 }}>
-            <Box
-                sx={{
-                    textAlign: "center",
-                    display: "grid",
-                    gridTemplateColumns: {
-                        xs: "repeat(3, 1fr)",
-                        sm: "repeat(6, 1fr)",
-                    },
-                    gap: 1.5,
-                    alignItems: "center",
-                }}
-            >
-                {shownMethods.map((method) => (
-                    <TextField
-                        key={method.key}
-                        label={
-                            method.icon ? (
-                                <LabelWithImage src={method.icon} label={method.label} />
-                            ) : (
-                                method.label
-                            )
-                        }
-                        variant="outlined"
-                        fullWidth
-                        onFocus={(e) => e.target.select()}
-                        value={formatCurrency(method.value)}
-                        onChange={method.onChange}
-                        inputRef={method.inputRef}
-                        onKeyDown={(event) => handleKeyDown(event, false, onAddEntry)}
-                        inputProps={{ inputMode: "decimal" }}
-                        sx={{
-                            ...textBoxStyle,
-                            backgroundColor: (method.value === '' || method.value === '0') ? '#f0f0f0' : 'white',
-                        }}
-                    />
-                ))}
-            </Box>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                {shownMethods.map((method) => {
+                    const isRequired = method.key !== 'cash';
+                    const methodImage = paymentImages?.[method.key] || null;
+                    const hasValue = method.value && method.value !== '0' && method.value !== '';
+                    
+                    let buttonColor = 'primary';
+                    if (isRequired && hasValue && !methodImage) buttonColor = 'warning';
+                    if (methodImage) buttonColor = 'success';
 
-            {isImageSectionVisible && (
-                <Box
-                    sx={{
-                        mt: 2,
-                        p: 2,
-                        border: '2px dashed',
-                        borderColor: isImageRequired ? (paymentImage ? 'success.main' : 'warning.main') : 'info.main',
-                        borderRadius: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 1,
-                        bgcolor: isImageRequired ? (paymentImage ? '#f6fff6' : '#fffaf0') : '#f0f7ff',
-                        cursor: 'pointer',
-                        transition: '0.3s',
-                        '&:hover': {
-                            bgcolor: isImageRequired ? (paymentImage ? '#eeffee' : '#fff5e6') : '#e6f2ff',
-                        }
-                    }}
-                    onClick={triggerFileInput}
-                >
-                    <input
-                        type="file"
-                        hidden
-                        ref={fileInputRef}
-                        accept="image/*"
-                        onChange={handleFileChange}
-                    />
-
-                    {paymentImage ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', justifyContent: 'center' }}>
-                            <img
-                                src={paymentImage}
-                                alt="Receipt"
-                                style={{
-                                    width: 80,
-                                    height: 80,
-                                    objectFit: 'cover',
-                                    borderRadius: 8,
-                                    cursor: 'zoom-in',
-                                    border: '2px solid #4caf50'
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPreviewOpen(true);
+                    return (
+                        <Box key={method.key} sx={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: '1fr auto 80px' }, 
+                            gap: { xs: 1, sm: 2 }, 
+                            alignItems: 'center',
+                            p: 1,
+                            borderRadius: 1,
+                            backgroundColor: hasValue ? '#fafafa' : 'transparent',
+                            border: hasValue && isRequired && !methodImage ? '1px dashed #ed6c02' : 'none'
+                        }}>
+                            {/* 1. Payment Input */}
+                            <TextField
+                                label={
+                                    method.icon ? (
+                                        <LabelWithImage src={method.icon} label={method.label} />
+                                    ) : (
+                                        method.label
+                                    )
+                                }
+                                variant="outlined"
+                                fullWidth
+                                onFocus={(e) => e.target.select()}
+                                value={formatCurrency(method.value)}
+                                onChange={method.onChange}
+                                inputRef={method.inputRef}
+                                onKeyDown={(event) => handleKeyDown(event, false, onAddEntry)}
+                                inputProps={{ inputMode: "decimal" }}
+                                sx={{
+                                    ...textBoxStyle,
+                                    backgroundColor: (!hasValue) ? '#f0f0f0' : 'white',
                                 }}
                             />
-                            <Box onClick={triggerFileInput} sx={{ flex: 1, cursor: 'pointer' }}>
-                                <Typography variant="subtitle1" color="success.main" fontWeight="bold">
-                                    Receipt Image Uploaded ✅
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    Click here to change image (or image to preview)
-                                </Typography>
-                            </Box>
-                            <IconButton
-                                color="error"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (typeof onPaymentImageChange === 'function') {
-                                        onPaymentImageChange(null);
-                                    }
-                                }}
-                                size="small"
-                                sx={{ ml: 2 }}
+
+                            {/* 2. Upload Button */}
+                            <Button 
+                                variant="contained" 
+                                color={buttonColor}
+                                onClick={() => setUploadMethodKey(method.key)}
+                                sx={{ height: '60px', width: { xs: '100%', sm: 'auto' }, minWidth: { xs: 'unset', sm: '180px' }, px: { xs: 1, sm: 2 } }}
                             >
-                                <Delete />
-                            </IconButton>
+                                <Typography variant="button" sx={{ fontSize: { xs: '0.85rem', sm: '0.875rem' }, lineHeight: 1.2, textAlign: 'center', fontWeight: 'bold' }}>
+                                    {methodImage ? "Change" : (isRequired ? "Upload *" : "Upload")}
+                                </Typography>
+                            </Button>
+
+                            {/* 3. Image Preview */}
+                            <Box sx={{ 
+                                width: { xs: '100%', sm: 80 }, 
+                                height: 60, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                bgcolor: '#f5f5f5'
+                            }}>
+                                {methodImage ? (
+                                    <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                                        <img 
+                                            src={methodImage} 
+                                            alt={`${method.label} Preview`} 
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }}
+                                            onClick={() => {
+                                                setPreviewImageSrc(methodImage);
+                                                setPreviewOpen(true);
+                                            }}
+                                        />
+                                        <IconButton
+                                            size="small"
+                                            sx={{ position: 'absolute', top: -5, right: -5, bgcolor: 'rgba(255,255,255,0.8)', padding: '2px', '&:hover': { bgcolor: 'rgba(255,100,100,0.9)', color: 'white' } }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onPaymentImageChange(method.key, null);
+                                            }}
+                                        >
+                                            <Close fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                ) : (
+                                    <Typography variant="caption" color="textSecondary">No Image</Typography>
+                                )}
+                            </Box>
                         </Box>
-                    ) : (
-                        <>
-                            <AddAPhoto sx={{ fontSize: 40, color: isImageRequired ? 'warning.main' : 'info.main' }} />
-                            <Typography variant="body1" fontWeight="bold" color={isImageRequired ? 'warning.dark' : 'info.dark'}>
-                                Receipt Image {isImageRequired ? "Required *" : "Optional"}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                Please upload a screenshot/pic for {isImageRequired ? "TC, Crown Fit, Meezan Bank, or Harr" : "Crown Wallet"}
-                            </Typography>
-                        </>
-                    )}
-                </Box>
-            )}
+                    );
+                })}
+            </Box>
 
             <Dialog
                 open={previewOpen}
@@ -327,16 +325,85 @@ export const PaymentInputsSection = ({
                         onClick={() => setPreviewOpen(false)}
                         sx={{ position: 'absolute', right: 8, top: 8, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }, zIndex: 1 }}
                     >
-                        <Close />
+                        <Check />
                     </IconButton>
-                    {paymentImage && (
+                    {previewImageSrc && (
                         <img
-                            src={paymentImage}
+                            src={previewImageSrc}
                             alt="Full Preview"
                             style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
                         />
                     )}
                 </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!uploadMethodKey} onClose={() => setUploadMethodKey(null)} maxWidth="xs" fullWidth>
+                <DialogContent>
+                    <Typography variant="h6" align="center" gutterBottom>
+                        Select Image Source
+                    </Typography>
+                    <Box display="flex" justifyContent="space-evenly" mt={4} mb={2}>
+                        <Button
+                            variant="contained"
+                            component="label"
+                            color="primary"
+                            sx={{ display: 'flex', flexDirection: 'column', width: 120, height: 100, gap: 1 }}
+                        >
+                            <PhotoCamera fontSize="large" />
+                            Camera
+                            <input
+                                type="file"
+                                hidden
+                                accept="image/*"
+                                capture="environment"
+                                onChange={(e) => handleFileChange(e, uploadMethodKey)}
+                            />
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            component="label"
+                            color="secondary"
+                            sx={{ display: 'flex', flexDirection: 'column', width: 120, height: 100, gap: 1 }}
+                        >
+                            <Collections fontSize="large" />
+                            Gallery
+                            <input
+                                type="file"
+                                hidden
+                                accept="image/*"
+                                onChange={(e) => handleFileChange(e, uploadMethodKey)}
+                            />
+                        </Button>
+                    </Box>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cropper Dialog */}
+            <Dialog open={!!cropSrc} onClose={() => { setCropSrc(null); setCropMethodKey(null); }} maxWidth="sm" fullWidth>
+                <DialogContent sx={{ p: 0, bgcolor: 'black', height: '60vh', display: 'flex', flexDirection: 'column' }}>
+                    {cropSrc && (
+                        <Cropper
+                            src={cropSrc}
+                            style={{ flexGrow: 1, width: '100%', maxHeight: '60vh' }}
+                            initialAspectRatio={null}
+                            guides={true}
+                            ref={cropperRef}
+                            viewMode={1}
+                            background={false}
+                            responsive={true}
+                            autoCropArea={1}
+                            checkOrientation={false}
+                        />
+                    )}
+                </DialogContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, bgcolor: '#f5f5f5' }}>
+                    <Button variant="outlined" color="error" onClick={() => { setCropSrc(null); setCropMethodKey(null); }}>
+                        Cancel
+                    </Button>
+                    <Button variant="contained" color="primary" onClick={handleCropSave}>
+                        Crop & Save
+                    </Button>
+                </Box>
             </Dialog>
         </Box>
     );

@@ -20,7 +20,6 @@ export const useEntries = () => {
   const url = import.meta.env.VITE_API_URL;
 
   const handleRemoveEntry = (id) => {
-    console.log("this si the idd", id);
     setEntries((prevEntries) =>
       prevEntries.filter((entry) => entry.creditID !== id)
     );
@@ -66,19 +65,21 @@ export const useEntries = () => {
           userName,
           description,
           timestamp,
-          paymentImage,
+          paymentImages,
           creditID,
           debitID,
+          subEntryStatus = {},
         } = entry;
+
         const entriesToPost = Object.entries(amounts).filter(
-          ([_, amount]) => amount > 0
+          ([method, amount]) => amount > 0 && subEntryStatus[method] !== true
         );
 
-        if (entriesToPost.length === 0) return true;
+        if (entriesToPost.length === 0) {
+           return { allSuccess: true, newSubEntryStatus: subEntryStatus, errors: [] };
+        }
 
-        let allSubEntriesSuccessful = true;
-
-        for (const [method, amount] of entriesToPost) {
+        const postPromises = entriesToPost.map(async ([method, amount]) => {
           const payload = {
             creditID: `${creditID}_${method}`,
             debitID: `${debitID}_${method}`,
@@ -94,7 +95,7 @@ export const useEntries = () => {
             userName,
             desc: description,
             time: timestamp,
-            paymentImage: (method === "tc" || method === "crownfit" || method.toLowerCase().includes("meezan")) ? paymentImage : null,
+            paymentImage: paymentImages?.[method] || null,
             location: {
               latitude: coordinates.latitude,
               longitude: coordinates.longitude,
@@ -103,18 +104,39 @@ export const useEntries = () => {
           };
 
           try {
-            const response = await axios.post(`${url}/cash-entry`, payload);
+            const response = await axios.post(`${url}/cash-entry`, payload, { timeout: 45000 });
             if (response.status !== 200 && response.status !== 201) {
-              allSubEntriesSuccessful = false;
+                return { method, success: false, error: response.data?.error || `Server Error (${response.status})` };
             }
+            return { method, success: true };
           } catch (error) {
-            allSubEntriesSuccessful = false;
+            if (error.response && error.response.status === 400 && error.response.data && error.response.data.error === "Duplicate transaction IDs") {
+              return { method, success: true };
+            }
+            if (error.code === 'ECONNABORTED' || (error.message || '').toLowerCase().includes('network')) {
+               return { method, success: false, error: 'Network Connection Failed' };
+            }
+            return { method, success: false, error: error.message || 'Database Layout/Unknown Error' };
           }
-        }
+        });
 
-        return allSubEntriesSuccessful;
+        const results = await Promise.all(postPromises);
+        
+        let updatedSubEntryStatus = { ...subEntryStatus };
+        let currentErrors = [];
+        results.forEach(res => {
+            updatedSubEntryStatus[res.method] = res.success;
+            if (!res.success && res.error) {
+                currentErrors.push(`${res.method.toUpperCase()}: ${res.error}`);
+            }
+        });
+
+        const allRequiredMethods = Object.entries(amounts).filter(([_, amount]) => amount > 0).map(([m]) => m);
+        const allSuccess = allRequiredMethods.every(m => updatedSubEntryStatus[m] === true);
+
+        return { allSuccess, newSubEntryStatus: updatedSubEntryStatus, errors: currentErrors };
       } catch (error) {
-        return false;
+        return { allSuccess: false, newSubEntryStatus: entry.subEntryStatus || {}, errors: [error.message] };
       }
     },
     [url]
@@ -122,17 +144,17 @@ export const useEntries = () => {
 
   const handleSyncOneEntry = useCallback(
     async (entryToSync, coordinates, address) => {
-      const success = await makeCashEntry(entryToSync, coordinates, address);
-      if (success) {
-        setEntries((prevEntries) =>
-          prevEntries.map((e) =>
-            e.timestamp === entryToSync.timestamp && e.id === entryToSync.id
-              ? { ...e, status: true }
-              : e
-          )
-        );
-      }
-      return success;
+      const { allSuccess, newSubEntryStatus, errors } = await makeCashEntry(entryToSync, coordinates, address);
+      
+      setEntries((prevEntries) =>
+        prevEntries.map((e) =>
+          e.timestamp === entryToSync.timestamp && e.id === entryToSync.id
+            ? { ...e, status: allSuccess, subEntryStatus: newSubEntryStatus, retryCount: allSuccess ? e.retryCount : (e.retryCount || 0) + 1 }
+            : e
+        )
+      );
+      
+      return { success: allSuccess, errors };
     },
     [makeCashEntry, setEntries]
   );
@@ -140,29 +162,37 @@ export const useEntries = () => {
   const addEntry = useCallback(
     async (newEntry, coordinates, address) => {
       setIsLoading(true);
-      let entrySuccessfullyPostedOnline = false;
-      // const creditID = crypto.randomUUID();
-      // const debitID = crypto.randomUUID();
+      
       const creditID = uuidv4();
       const debitID = uuidv4();
       newEntry.creditID = creditID;
       newEntry.debitID = debitID;
-      // console.log(newEntry);
+      newEntry.subEntryStatus = {};
+      newEntry.retryCount = 0;
+      
+      let outErrors = [];
       try {
-        entrySuccessfullyPostedOnline = await makeCashEntry(
+        const { allSuccess, newSubEntryStatus, errors } = await makeCashEntry(
           newEntry,
           coordinates,
           address
         );
-        newEntry.status = entrySuccessfullyPostedOnline;
+        newEntry.status = allSuccess;
+        newEntry.subEntryStatus = newSubEntryStatus;
+        if (!allSuccess) {
+            newEntry.retryCount = 1;
+        }
+        outErrors = errors || [];
       } catch (err) {
         newEntry.status = false;
+        newEntry.retryCount = 1;
+        outErrors = [err.message];
       }
 
       setEntries((prevEntries) => [...prevEntries, newEntry]);
       setIsLoading(false);
 
-      return entrySuccessfullyPostedOnline;
+      return { success: newEntry.status, errors: outErrors };
     },
     [makeCashEntry, setEntries]
   );

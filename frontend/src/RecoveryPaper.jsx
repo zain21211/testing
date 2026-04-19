@@ -7,7 +7,7 @@ import { useLocalStorageState } from './hooks/LocalStorage';
 import { useRealOnlineStatus } from './hooks/IsOnlineHook';
 import { takeScreenShot } from './fuctions';
 import useGeolocation from './hooks/geolocation';
-import { Container, Box, Stack, Typography, TextField } from '@mui/material';
+import { Container, Box, Stack, Typography, TextField, Snackbar, Alert } from '@mui/material';
 
 
 // Custom hooks
@@ -69,6 +69,7 @@ const RecoveryPaper = () => {
   const [showMore, setShowMore] = useState(false);
   const [description, setDescription] = useState('');
   const [capturing, setCapturing] = useState(false);
+  const [errorToast, setErrorToast] = useState({ open: false, message: '' });
   const targetRef = useRef(null);
   const cashInputRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -107,7 +108,7 @@ const RecoveryPaper = () => {
     crownWalletAmount,
     meezanBankAmount,
     crownFitAmount,
-    paymentImage,
+    paymentImages, // changed from paymentImage
     remainingBalance: paymentRemainingBalance,
     handleCashAmountChange,
     handleJazzcashAmountChange,
@@ -120,7 +121,7 @@ const RecoveryPaper = () => {
     handleCrownFitAmountChange,
     calculateRemainingBalance,
     resetPaymentInputs,
-    setPaymentImage,
+    handlePaymentImageChange, // changed from setPaymentImage
   } = usePaymentInputs();
 
   const {
@@ -178,31 +179,24 @@ const RecoveryPaper = () => {
   useEffect(() => {
     if (!isOnline) return;
 
-    const unsyncedEntries = entries.filter((entry) => !entry.status);
-    if (unsyncedEntries.length === 0) return;
-
     const syncAll = async () => {
-      let madeChanges = false;
-      const updatedEntries = await Promise.all(
-        entries.map(async (entry) => {
-          if (!entry.status) {
-            const success = await handleSyncOneEntry(entry, coordinates, address);
-            if (success) {
-              madeChanges = true;
-              return { ...entry, status: true };
-            }
-          }
-          return entry;
-        })
-      );
+      if (!navigator.onLine) return;
+      const unsyncedEntries = entries.filter((entry) => !entry.status && (entry.retryCount || 0) < 10);
+      if (unsyncedEntries.length === 0) return;
 
-      if (madeChanges) {
-        // Note: In a real implementation, we would need a way to update entries in the hook
-        // This is a limitation of the current hook structure
+      for (const entry of unsyncedEntries) {
+         if (entry.status) continue;
+         const { success, errors } = await handleSyncOneEntry(entry, coordinates, address);
+         if (!success && errors && errors.length > 0) {
+             setErrorToast({ open: true, message: `Retry failed: ${errors.join(' | ')}` });
+         }
       }
     };
 
     syncAll();
+    const intervalId = setInterval(syncAll, 15000);
+
+    return () => clearInterval(intervalId);
   }, [isOnline, entries, handleSyncOneEntry, coordinates, address]);
 
   useEffect(() => {
@@ -286,7 +280,7 @@ const RecoveryPaper = () => {
         harr: parsedHarr,
         crownfit: parsedCrownFit,
       },
-      paymentImage,
+      paymentImages, // changed
       userName: user?.username || 'Unknown User',
       entryTotal: currentEntryTotal,
       timestamp: new Date().toISOString(),
@@ -294,9 +288,12 @@ const RecoveryPaper = () => {
     };
     console.log(selectedCustomer)
 
-    await addEntry(newEntry, coordinates, address);
+    const { success, errors } = await addEntry(newEntry, coordinates, address);
+    if (!success && errors && errors.length > 0) {
+        setErrorToast({ open: true, message: `Failed to upload: ${errors.join(' | ')}` });
+    }
 
-    sendWhatsapp(newEntry, selectedCustomer?.phonenumber);
+    // sendWhatsapp(newEntry, selectedCustomer?.phonenumber);
 
     resetPaymentInputs();
     setDescription('');
@@ -315,7 +312,7 @@ const RecoveryPaper = () => {
     harrAmount,
     crownFitAmount,
     description,
-    paymentImage,
+    paymentImages, // changed
     user,
     addEntry,
     coordinates,
@@ -397,15 +394,32 @@ const RecoveryPaper = () => {
       parsedHarr +
       parsedCrownFit;
 
-    const isImageRequired = (parsedTc > 0 || parsedCrownFit > 0 || parsedMeezanBank > 0 || parsedHarr > 0);
-    const hasImageIfRequired = isImageRequired ? !!paymentImage : true;
+    const paymentMethodsArr = [
+      { amount: parsedCash, method: 'cash' },
+      { amount: parsedJazzcash, method: 'jazzcash' },
+      { amount: parsedEasypaisa, method: 'easypaisa' },
+      { amount: parsedCrownWallet, method: 'crownWallet' },
+      { amount: parsedMeezanBank, method: 'meezanBank' },
+      { amount: parsedOnline, method: 'online' },
+      { amount: parsedTc, method: 'tc' },
+      { amount: parsedHarr, method: 'harr' },
+      { amount: parsedCrownFit, method: 'crownfit' },
+    ];
+
+    const missingRequiredImage = paymentMethodsArr.some(
+      ({ amount, method }) => method !== 'cash' && amount > 0 && !paymentImages?.[method]
+    );
+
+    const hasImageWithoutAmount = paymentMethodsArr.some(
+      ({ amount, method }) => amount <= 0 && !!paymentImages?.[method]
+    );
 
     return (
       !selectedCustomer ||
       isLoading ||
-      // loadingFinancials ||
       currentEntryTotal <= 0 ||
-      !hasImageIfRequired
+      missingRequiredImage ||
+      hasImageWithoutAmount
     );
   }, [
     selectedCustomer,
@@ -420,7 +434,7 @@ const RecoveryPaper = () => {
     tcAmount,
     harrAmount,
     crownFitAmount,
-    paymentImage,
+    paymentImages, // changed
   ]);
 
   return (
@@ -501,7 +515,7 @@ const RecoveryPaper = () => {
           harrAmount={harrAmount}
           crownFitAmount={crownFitAmount}
           meezanBankAmount={meezanBankAmount}
-          paymentImage={paymentImage}
+          paymentImages={paymentImages} // changed
           onCashAmountChange={handleCashAmountChange}
           onJazzcashAmountChange={handleJazzcashAmountChange}
           onOnlineAmountChange={handleOnlineAmountChange}
@@ -511,7 +525,7 @@ const RecoveryPaper = () => {
           onTcAmountChange={handleTcAmountChange}
           onHarrAmountChange={handleHarrAmountChange}
           onCrownFitAmountChange={handleCrownFitAmountChange}
-          onPaymentImageChange={setPaymentImage}
+          onPaymentImageChange={handlePaymentImageChange} // changed
           showMore={showMore}
           cashInputRef={cashInputRef}
         />
@@ -560,6 +574,16 @@ const RecoveryPaper = () => {
           />
         )}
       </div>
+      <Snackbar 
+        open={errorToast.open} 
+        autoHideDuration={15000} 
+        onClose={() => setErrorToast(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setErrorToast(prev => ({ ...prev, open: false }))} severity="error" sx={{ width: '100%', fontWeight: 'bold' }}>
+          {errorToast.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

@@ -300,7 +300,7 @@ const toBuffer = (data) => {
   return Buffer.from(base64, "base64");
 };
 
-const insertNameReceiptImage = async (doc, acid, image, time) => {
+const insertNameReceiptImage = async (doc, acid, image, time, ptype) => {
   if (!image) return;
   try {
     const pool = await imageDb();
@@ -308,14 +308,19 @@ const insertNameReceiptImage = async (doc, acid, image, time) => {
       INSERT INTO name_reciepts (doc, acid, image, type, status, datetime)
       VALUES (@doc, @acid, @img, @type, @status, @datetime)
     `;
+    
+    // Add 5 hours manually to offset the timezone difference
+    const imgDate = new Date(time);
+    imgDate.setHours(imgDate.getHours() + 5);
+
     await pool
       .request()
       .input("doc", sql.Int, doc)
       .input("acid", sql.Int, acid)
       .input("img", sql.VarBinary, toBuffer(image))
-      .input("type", sql.VarChar, "recovery")
+      .input("type", sql.VarChar, ptype)
       .input("status", sql.VarChar, "")
-      .input("datetime", sql.DateTime, new Date(time))
+      .input("datetime", sql.DateTime, imgDate)
       .query(query);
     console.log(`✅ Image saved to name_reciepts for doc ${doc}`);
   } catch (err) {
@@ -396,19 +401,13 @@ const CashEntryController = {
       // Commit transaction
       await transaction.commit();
 
-      // Store receipt image if applicable (TC, Crown Fit, Meezan Bank)
-      const imageRequiredMethods = ["tc", "crownfit", "mbl"];
-      const isImageMethod = paymentMethod && (imageRequiredMethods?.includes(paymentMethod?.toLowerCase()) || 
-                           paymentMethod?.toLowerCase()?.includes("meezan"));
-
-      if (isImageMethod) {
-        const { paymentImage } = req.body;
-        if (paymentImage) {
-          await insertNameReceiptImage(nextDoc, custId, paymentImage, time);
-          console.log(`📸 Receipt image processed for ${paymentMethod} (doc: ${nextDoc})`);
-        } else {
-          console.warn(`⚠️ Method ${paymentMethod} usually requires an image, but paymentImage was missing or null.`);
-        }
+      // Store receipt image if provided
+      const { paymentImage } = req.body;
+      if (paymentImage) {
+        // Cash method uses 'crv', others use 'brv'
+        const docType = paymentMethod?.toLowerCase() === 'cash' ? 'crv' : 'brv';
+        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType);
+        console.log(`📸 Receipt image processed for ${paymentMethod} (doc: ${nextDoc})`);
       }
 
       res.json({ success: true, doc: nextDoc });

@@ -4,18 +4,24 @@ export const useVoucherSync = (entries = [], setEntries, func) => {
   const isSyncing = useRef(false); // ✅ always a ref object
   const intervalRef = useRef(null);
 
-  console.log(isSyncing);
+  const entriesRef = useRef(entries);
+  
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
   const retryVoucher = useCallback(async () => {
-    if (!func || entries.length === 0 || isSyncing.current) return;
+    const currentEntries = entriesRef.current;
+    if (!func || currentEntries.length === 0 || isSyncing.current) return;
 
     isSyncing.current = true;
-    console.log("🔄 Retrying vouchers:", entries.length);
+    console.log("🔄 Retrying vouchers:", currentEntries.length);
 
     try {
-      for (const entry of entries) {
+      // Loop over a copy to avoid mutation issues during iteration
+      for (const entry of [...currentEntries]) {
         try {
           await func(entry);
-          //   const remaining = entries.filter((entry) => entry.id !== newEntry.id);
           setEntries((prev) => prev.filter((e) => e.id !== entry.id));
         } catch (err) {
           console.warn(`❌ Failed for entry ${entry.id}, will retry later.`);
@@ -24,7 +30,7 @@ export const useVoucherSync = (entries = [], setEntries, func) => {
     } finally {
       isSyncing.current = false;
     }
-  }, [entries, func]);
+  }, [func, setEntries]); // Removed entries dependency
 
   useEffect(() => {
     if (!func) return;
@@ -45,10 +51,8 @@ export const useVoucherSync = (entries = [], setEntries, func) => {
       }
     };
 
-    // Start immediately if online
     startSync();
 
-    // Listen for online/offline events
     window.addEventListener("online", startSync);
     window.addEventListener("offline", stopSync);
 
@@ -57,7 +61,7 @@ export const useVoucherSync = (entries = [], setEntries, func) => {
       window.removeEventListener("online", startSync);
       window.removeEventListener("offline", stopSync);
     };
-  }, [retryVoucher]);
+  }, [retryVoucher, func]);
 
   return { retryVoucher };
 };

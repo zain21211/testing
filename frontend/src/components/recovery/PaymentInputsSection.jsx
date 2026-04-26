@@ -218,6 +218,7 @@ export const PaymentInputsSection = ({
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                 {shownMethods.map((method) => {
                     const isRequired = method.key !== 'cash';
+                    // const isRequired = true;
                     const methodImage = paymentImages?.[method.key] || null;
                     const hasValue = method.value && method.value !== '0' && method.value !== '';
                     

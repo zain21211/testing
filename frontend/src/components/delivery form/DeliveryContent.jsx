@@ -12,7 +12,6 @@ import {
 import SignatureCanvas from "react-signature-canvas";
 import SignaturePad from "./SignaturePad";
 import { formatCurrency } from "../../utils/formatCurrency";
-import RadioButtons from "./RadioButtons";
 import { useEffect, useState } from "react";
 import MyCheckbox from "../Checkbox";
 import { formatedTime } from "../../utils/FormatedTime";
@@ -82,10 +81,7 @@ const DeliveryContent = ({
     error,
     captureRef,
     dialogFields,
-    extra,
-    secondaryFields,
     handleChange,
-    handleRadioChange,
     getImage,
     images,
 }) => {
@@ -204,19 +200,20 @@ const DeliveryContent = ({
                         gap: 2,
                         flexDirection: 'row-reverse',
                         justifyContent: "space-between",
-                        // alignItems: "center",
                     }}
                 >
+                    {/* First 3 fields (Right side due to row-reverse) */}
                     <Box
                         sx={{
-                            width: { xs: '45%', sm: '50%', md: '30%' },
-                            display: "grid",
+                            width: '48%',
+                            display: "flex",
+                            flexDirection: "column",
                             gap: 2,
-                            gridTemplateColumns: "repeat(1, 1fr)",
                         }}
                     >
-                        {dialogFields.map((field) => (
+                        {dialogFields.slice(0, 3).map((field) => (
                             <TextField
+                                key={field.name}
                                 label={field.name}
                                 fullWidth
                                 disabled={field.disabled}
@@ -262,69 +259,62 @@ const DeliveryContent = ({
                             />
                         ))}
                     </Box>
+                    {/* Last 3 fields (Left side due to row-reverse) */}
                     <Box
                         sx={{
-                            width: { xs: '55%', sm: '50%', md: '30%' },
-
+                            width: '48%',
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
                         }}
                     >
-                        {/* for radio buttons */}
-                        <Box
-                            sx={{
-                                mb: 3,
-                                display: "flex",
-                                justifyContent: "center",
+                        {dialogFields.slice(3, 6).map((field) => (
+                            <TextField
+                                key={field.name}
+                                label={field.name}
+                                fullWidth
+                                disabled={field.disabled}
+                                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                                sx={{
+                                    ...bigger,
+                                    textAlign: 'left',
 
-                            }}
-                        >
-                            <RadioButtons
-                                selected={secondaryFields.map((field) => field.name)}
-                                handleChange={handleRadioChange}
+                                    "& .MuiInputLabel-root": {
+                                        fontSize: "2.25rem!important", // ⬅️ Increase size
+                                        fontWeight: "bold", // ⬅️ Make bold
+                                        fontFamily: "jameel noori nastaleeq, serif!important",
+                                        color: "black!important", // ⬅️ Change color if needed
+                                        letterSpacing: "normal",
+                                        right: 0,
+                                        left: "auto",
+                                        // transformOrigin: "top right",
+                                        // paddingBottom: '5rem',
+                                    },
+                                }}
+                                InputProps={{
+                                    sx: {
+                                        "& .MuiInputBase-input.Mui-disabled": {
+                                            WebkitTextFillColor: field.color,
+                                        },
+                                        textAlign: 'left',
+                                        color: field.color,
+                                        backgroundColor: field.backgroundColor,
+                                    },
+                                }}
+                                InputLabelProps={{
+                                    shrink: true, // keeps label above when filled (optional)
+                                }}
+                                value={
+                                    field.val?.[id] !== undefined
+                                        ? formatCurrency(field.val[id])
+                                        : field.val !== undefined && field.val !== null
+                                            ? formatCurrency(Number(field.val))
+                                            : ""
+                                }
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => handleChange(id, e.target.value)}
                             />
-                        </Box>
-
-                        {/* for secondaryFields */}
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', Width: { xs: '80%', sm: '80%', md: '100%' } }}>
-                            {secondaryFields.length > 0 &&
-                                secondaryFields.map((field) => (
-                                    <>
-                                        <TextField
-                                            label={field.name}
-                                            fullWidth
-                                            disabled={field.disabled}
-                                            // sx={{ ...bigger, textAlign: field.align, mb: 1 }}
-                                            inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                            sx={{
-                                                ...bigger,
-                                                textAlign: field.align,
-
-                                                "& .MuiInputLabel-root": {
-                                                    fontSize: "1.5rem!important", // ⬅️ Increase size
-                                                    fontWeight: "bold", // ⬅️ Make bold
-                                                    fontFamily: "poppins, serif!important",
-                                                    color: "black!important", // ⬅️ Change color if needed
-                                                    letterSpacing: "normal",
-                                                    // paddingBottom: '5rem',
-                                                },
-                                            }}
-                                            InputProps={{
-                                                sx: {
-                                                    "& .MuiInputBase-input.Mui-disabled": {
-                                                        WebkitTextFillColor: field.color,
-                                                    },
-                                                    textAlign: field.align,
-                                                    color: field.color,
-                                                    backgroundColor: field.backgroundColor,
-                                                },
-                                            }}
-                                            value={formatCurrency(extra[field.name])}
-                                            onFocus={(e) => e.target.select()}
-                                            onChange={(e) => field.handleChange(id, e.target.value)}
-                                        />
-                                    </>
-                                ))}
-                        </Box>
-
+                        ))}
                     </Box>
                 </Box>
 

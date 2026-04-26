@@ -108,7 +108,7 @@ export const useEntries = () => {
             if (response.status !== 200 && response.status !== 201) {
                 return { method, success: false, error: response.data?.error || `Server Error (${response.status})` };
             }
-            return { method, success: true };
+            return { method, success: true, doc: response.data.doc };
           } catch (error) {
             if (error.response && error.response.status === 400 && error.response.data && error.response.data.error === "Duplicate transaction IDs") {
               return { method, success: true };
@@ -124,8 +124,12 @@ export const useEntries = () => {
         
         let updatedSubEntryStatus = { ...subEntryStatus };
         let currentErrors = [];
+        let generatedDocs = [];
         results.forEach(res => {
             updatedSubEntryStatus[res.method] = res.success;
+            if (res.success && res.doc) {
+                generatedDocs.push(res.doc);
+            }
             if (!res.success && res.error) {
                 currentErrors.push(`${res.method.toUpperCase()}: ${res.error}`);
             }
@@ -134,7 +138,7 @@ export const useEntries = () => {
         const allRequiredMethods = Object.entries(amounts).filter(([_, amount]) => amount > 0).map(([m]) => m);
         const allSuccess = allRequiredMethods.every(m => updatedSubEntryStatus[m] === true);
 
-        return { allSuccess, newSubEntryStatus: updatedSubEntryStatus, errors: currentErrors };
+        return { allSuccess, newSubEntryStatus: updatedSubEntryStatus, errors: currentErrors, generatedDocs };
       } catch (error) {
         return { allSuccess: false, newSubEntryStatus: entry.subEntryStatus || {}, errors: [error.message] };
       }
@@ -171,8 +175,9 @@ export const useEntries = () => {
       newEntry.retryCount = 0;
       
       let outErrors = [];
+      let outDocs = [];
       try {
-        const { allSuccess, newSubEntryStatus, errors } = await makeCashEntry(
+        const { allSuccess, newSubEntryStatus, errors, generatedDocs } = await makeCashEntry(
           newEntry,
           coordinates,
           address
@@ -183,6 +188,7 @@ export const useEntries = () => {
             newEntry.retryCount = 1;
         }
         outErrors = errors || [];
+        outDocs = generatedDocs || [];
       } catch (err) {
         newEntry.status = false;
         newEntry.retryCount = 1;
@@ -192,7 +198,7 @@ export const useEntries = () => {
       setEntries((prevEntries) => [...prevEntries, newEntry]);
       setIsLoading(false);
 
-      return { success: newEntry.status, errors: outErrors };
+      return { success: newEntry.status, errors: outErrors, generatedDocs: outDocs };
     },
     [makeCashEntry, setEntries]
   );

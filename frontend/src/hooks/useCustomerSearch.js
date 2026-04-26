@@ -193,7 +193,8 @@ export const useCustomerSearch = ({
     if (!ID || allCustomerOptions?.length === 0) return;
 
     if (selectedCustomer?.acid !== Number(ID)) {
-      const customerToSelect = allCustomerOptions?.find(
+      // Search the FULL list, not just the filtered one
+      const customerToSelect = localCustomerList?.find(
         (c) => c.acid === Number(ID)
       );
       if (customerToSelect) {

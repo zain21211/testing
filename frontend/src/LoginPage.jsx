@@ -99,8 +99,9 @@ const Login = () => {
 
   const userTypes = ["sm", "admin", "operator"];
   const userType = userData?.userType?.toLowerCase() || "";
+  const isBilty = userType.includes("bilty");
   let isList = false;
-  if (userTypes.some(type => userType.includes(type))) {
+  if (userTypes.some(type => userType.includes(type)) || isBilty) {
     isList = true
   }
 
@@ -268,7 +269,7 @@ const Login = () => {
             maxWidth: "900px",
             gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: "repeat(auto-fit, minmax(250px, 1fr))" },
           }}> */}
-            {packingList.some(e => userType.includes(e)) && (
+            {!isBilty && packingList.some(e => userType.includes(e)) && (
               <>
                 <Button
                   component={RouterLink}
@@ -290,7 +291,7 @@ const Login = () => {
                 </Button>
               </>
             )}
-            {(forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
+            {!isBilty && (forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
               <Button
                 component={RouterLink}
                 to="/turnoverreport"
@@ -301,7 +302,7 @@ const Login = () => {
                 Spo Working
               </Button>
             )}
-            {(paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
+            {!isBilty && (paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
               <>
               <Button
                 component={RouterLink}
@@ -323,7 +324,7 @@ const Login = () => {
               </Button>
                 </>
             )}
-            {((userType !== 'payment' && !userType.includes('pack')) &&
+            {!isBilty && ((userType !== 'payment' && !userType.includes('pack')) &&
               <>
                 <Button
                   component={RouterLink}
@@ -366,24 +367,28 @@ const Login = () => {
             )}
             {isList && (
               <>
-                <Button
-                  component={RouterLink}
-                  to="/productslist" // Non-customers can still go to create order manually
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#ff00eaff" }}
-                >
-                  Products
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/list" // Non-customers can still go to create order manually
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#3f51b5" }}
-                >
-                  Customer Route Order
-                </Button>
+                {!isBilty && (
+                  <>
+                    <Button
+                      component={RouterLink}
+                      to="/productslist" // Non-customers can still go to create order manually
+                      variant="contained"
+                      size="large"
+                      sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#ff00eaff" }}
+                    >
+                      Products
+                    </Button>
+                    <Button
+                      component={RouterLink}
+                      to="/list" // Non-customers can still go to create order manually
+                      variant="contained"
+                      size="large"
+                      sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#3f51b5" }}
+                    >
+                      Customer Route Order
+                    </Button>
+                  </>
+                )}
                 <Button
                   component={RouterLink}
                   to="/delivery" // Non-customers can still go to create order manually

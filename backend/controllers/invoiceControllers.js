@@ -24,12 +24,13 @@ const invoiceControllers = {
       join coa c
       on d.acid = c.id
       WHERE d.status = 'invoice'
+      --and c.Subsidary not like '%counter%'
       and (d.s_status is null  
       or d.s_status = '' )
-      and goods like '%' + @Transporter + '%'
+      --and goods like '%' + @Transporter + '%'
       and c.route like '%' + @Route + '%'
       AND CAST(d.[date] AS DATE) BETWEEN CAST(GETDATE() AS DATE) 
-                                 AND CAST(DATEADD(DAY, 1, GETDATE()) AS DATE)
+      AND CAST(DATEADD(DAY, 1, GETDATE()) AS DATE)
       --group by d.goods
       order by d.goods, c.rno;
     `;
@@ -57,7 +58,7 @@ const invoiceControllers = {
     console.log(status && !(nug && to));
     const vehicle = to?.toLowerCase();
     if (!req.body && Object.keys(nug).length === 0) {
-      return res.status(400).json({ msg: "missing params" });
+      return res.status(400).json( { msg: "missing params" });
     }
     let query;
 
@@ -83,11 +84,11 @@ const invoiceControllers = {
             request.input(
               "To",
               sql.VarChar,
-              vehicle.includes("ka")
-                ? "kr"
-                : vehicle.includes("suz")
-                  ? "sr"
-                  : to
+              vehicle?.includes("ka")
+                ? "KR"
+                : vehicle?.includes("suz")
+                  ? "SR"
+                  : to?.toUpperCase()
             );
 
             return request.query(query);
@@ -169,11 +170,11 @@ const invoiceControllers = {
     const today = new Date();
     const dayName = days[today.getDay()];
 
-    // const vehical = "km";
     const type = usertype.split("-")[1] || ""; // sr or kr
     const day = route ? route : type ? dayName.toLowerCase() : "";
     const isAdmin = usertype.includes("admin") || username.includes("zain");
     const transporter = isAdmin || type ? "" : username;
+    const isSpecialUser = username.toLowerCase().includes("kr") || username.toLowerCase().includes("sr") || type.toLowerCase().includes("kr") || type.toLowerCase().includes("sr");
 
     let query = `
 WITH LedgerTotals AS (
@@ -198,6 +199,14 @@ TodayPSDetail AS (
      FROM psdetail
   WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's psdetail
     GROUP BY acid, doc
+),
+TodayBRV AS (
+    SELECT 
+        acid,
+        SUM(credit) AS TodayBRV
+    FROM ledgers
+    WHERE type = 'BRV' AND CAST(date AS date) = CAST(GETDATE() AS date)
+    GROUP BY acid
 )
 SELECT 
     c.id AS ACID,
@@ -209,18 +218,20 @@ SELECT
    -- ISNULL(p.TotalDocs, 0) AS TotalDocs,
     ISNULL(p.LastAmount, 0) AS amount,
     (p.Shopper) AS shopper,
+    ISNULL(b.TodayBRV, 0) AS todayBRV,
     (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) - ISNULL(p.LastAmount, 0) AS prevBalance,
     (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) AS currentBalance
 FROM coa c
-JOIN TourDays t
+LEFT JOIN TourDays t
     ON left(c.route, 3) = t.Route
 LEFT JOIN TodayPSDetail p
     ON p.acid = c.id
+LEFT JOIN TodayBRV b
+    ON b.acid = c.id
 LEFT JOIN LedgerTotals l
     ON l.acid = c.id
 WHERE 
-  t.day like @day+'%'
-   and  t.route LIKE @type +'%'
+  (1 = ${isSpecialUser ? 0 : 1} OR (t.day like @day+'%' and t.route LIKE @type +'%'))
 AND (@vehicle = '' OR p.vehicle LIKE '%' + @vehicle + '%')
 and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
     `;

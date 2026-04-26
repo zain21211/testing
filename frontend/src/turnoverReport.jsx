@@ -176,20 +176,21 @@ export function useRemarkDialog({ open, acid, name, onSubmitRemark, onClose }) {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
+    const location = useLocation();
     const handleNavigate = useCallback(
         (page) => {
-            console.log(page)
             if (!acid) return;
             const startDate = new Date();
             startDate.setMonth(startDate.getMonth() - 3);
+            const currentPath = location.pathname + location.search;
             const url = `/${page}?name=${encodeURIComponent(name || "")}&acid=${encodeURIComponent(
                 acid
             )}&startDate=${startDate.toISOString().split("T")[0]}&endDate=${new Date()
                 .toISOString()
-                .split("T")[0]}`;
+                .split("T")[0]}&from=${encodeURIComponent(currentPath)}`;
             navigate(url);
         },
-        [acid, name, navigate]
+        [acid, name, navigate, location.pathname, location.search]
     );
 
     const handleSubmit = () => {
@@ -273,9 +274,11 @@ export const RemarkDialogUI = ({
 };
 // RemarkDialog.tsx
 export const RemarkDialog = React.memo(
-    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally, setCustomer, }) => {
-        const { remark, setRemark, error, handleNavigate, handleSubmit } =
+    ({ images, open, onClose, acid, name, onSubmitRemark, pastRemarks, onRender, customer, setIsTally, setCustomer, handleNavigate: customHandleNavigate }) => {
+        const { remark, setRemark, error, handleNavigate: defaultHandleNavigate, handleSubmit } =
             useRemarkDialog({ open, acid, name, onSubmitRemark, onClose });
+
+        const handleNavigate = customHandleNavigate || defaultHandleNavigate;
 
         if (!onRender) {
             alert("nothing to  render")

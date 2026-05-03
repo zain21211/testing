@@ -5,7 +5,7 @@ import axios from 'axios';
 const url = `${import.meta.env.VITE_API_URL}`;
 import useLocalStorageState from 'use-local-storage-state';
 
-const CustomerList = ({ customers, fetchList, to, setTo, deliver }) => {
+const CustomerList = ({ customers, fetchList, to, setTo, deliver, user }) => {
     const [loadingCustomerId, setLoadingCustomerId] = useState(null);
     const [nug, setNug] = useLocalStorageState('loadNugs', {});
     const [loading, setLoading] = useState(false)
@@ -26,7 +26,7 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver }) => {
         try {
             setLoading(true)
             const res = await axios.put(`${url}/invoices/loadList/update`, {
-                nug, status: 'loaded', to
+                nug, status: 'loaded', to, username: user?.username
             })
             const doc = res.data.updated;
             deleteItem(doc);
@@ -48,12 +48,13 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver }) => {
         <List>
             {customers.map((customer) => (
                 <CustomerListItem
-                    key={customer.acid}
+                    key={customer.doc || customer.acid}
                     customer={customer}
                     nug={nug}
                     setNug={setNug}
                     onLoad={handleLoadCustomer}
                     loading={loadingCustomerId === customer.acid}
+                    user={user}
                 />
             ))}
             <Box

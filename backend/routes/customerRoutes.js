@@ -18,6 +18,7 @@ router.post("/createImages", customerController.createImages);
 router.post("/createDeliveryImages", customerController.createDeliveryImages);
 router.put("/updateImages", customerController.updateImages);
 router.get("/inactive", customerController.getInactiveProducts);
+router.get("/loaders", customerController.getLoaders);
 router.get("/", authenticateToken, customerController.getCustomers);
 
 module.exports = router;

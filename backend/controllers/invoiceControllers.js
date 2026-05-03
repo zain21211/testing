@@ -15,11 +15,14 @@ const invoiceControllers = {
     const query = `
       SELECT 
         d.doc, 
+        d.date,
         c.id as ACID, 
         c.urduname as UrduName, 
         d.goods as transporter,
         d.shopper,
-        c.route
+        c.route,
+        d.vehicle,
+        COUNT(*) OVER() as TotalCount
       FROM psdetail d
       join coa c
       on d.acid = c.id
@@ -29,8 +32,9 @@ const invoiceControllers = {
       or d.s_status = '' )
       --and goods like '%' + @Transporter + '%'
       and c.route like '%' + @Route + '%'
-      AND CAST(d.[date] AS DATE) BETWEEN CAST(GETDATE() AS DATE) 
-      AND CAST(DATEADD(DAY, 1, GETDATE()) AS DATE)
+      and d.date >= DATEADD(year, DATEDIFF(year, 0, GETDATE()), 0)
+     -- AND CAST(d.[date] AS DATE) BETWEEN CAST(GETDATE() AS DATE) 
+      --AND CAST(DATEADD(DAY, 1, GETDATE()) AS DATE)
       --group by d.goods
       order by d.goods, c.rno;
     `;
@@ -157,7 +161,7 @@ const invoiceControllers = {
   },
 
   getDeliveryList: async (req, res) => {
-    const { usertype = "", username = "", route = "" } = req.query;
+    const { usertype = "", username = "", route = "", acid = "", doc = "" } = req.query;
     const days = [
       "Sunday",
       "Monday",
@@ -173,7 +177,7 @@ const invoiceControllers = {
     const type = usertype.split("-")[1] || ""; // sr or kr
     const day = route ? route : type ? dayName.toLowerCase() : "";
     const isAdmin = usertype.includes("admin") || username.includes("zain");
-    const transporter = isAdmin || type ? "" : username;
+    const transporter = type ? "" : username;
     const isSpecialUser = username.toLowerCase().includes("kr") || username.toLowerCase().includes("sr") || type.toLowerCase().includes("kr") || type.toLowerCase().includes("sr");
 
     let query = `
@@ -197,7 +201,6 @@ TodayPSDetail AS (
        max(vehicle) as vehicle,
        MAX(s_status) AS s_status
      FROM psdetail
-  WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's psdetail
     GROUP BY acid, doc
 ),
 TodayBRV AS (
@@ -215,6 +218,7 @@ SELECT
     t.route AS route,
     -- ISNULL(p.LastDate, NULL) AS LastDate,
     p.doc as doc,
+    p.LastDate as date,
    -- ISNULL(p.TotalDocs, 0) AS TotalDocs,
     ISNULL(p.LastAmount, 0) AS amount,
     (p.Shopper) AS shopper,
@@ -232,12 +236,15 @@ LEFT JOIN LedgerTotals l
     ON l.acid = c.id
 WHERE 
   (1 = ${isSpecialUser ? 0 : 1} OR (t.day like @day+'%' and t.route LIKE @type +'%'))
-AND (@vehicle = '' OR p.vehicle LIKE '%' + @vehicle + '%')
+AND (@acid = '' OR c.id LIKE @acid + '%')
+AND (@doc = '' OR p.doc LIKE '%' + @doc + '%')
 and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
+AND p.s_status = 'loaded'
     `;
-    if (isAdmin) {
-      query += ` AND p.s_status = 'loaded' `;
+    if (!isAdmin) {
+      query += `AND (@vehicle = '' OR p.vehicle LIKE '%' + @vehicle + '%')`;
     }
+    
     query += `ORDER BY 
     c.rno;`;
 
@@ -247,6 +254,8 @@ and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
       request.input("day", sql.VarChar, day);
       request.input("vehicle", sql.VarChar, transporter);
       request.input("type", sql.VarChar, type);
+      request.input("acid", sql.VarChar, acid);
+      request.input("doc", sql.VarChar, doc);
 
       const result = await request.query(query);
       const data = result.recordset;
@@ -773,5 +782,29 @@ WHERE P.Doc = @DocNumber
       res.status(500).json({ status: "false", msg: `action failed: ${err}` });
     }
   },
+  operatorDirectDelivery: async (req, res) => {
+    const { doc, username, status = 'delivered' } = req.body;
+
+    if (!doc || !username) {
+      return res.status(400).json({ message: "Missing doc or username" });
+    }
+
+    try {
+      const pool = await dbConnection();
+      await pool.request()
+        .input("doc", sql.Int, doc)
+        .input("username", sql.VarChar, username)
+        .input("status", sql.VarChar, status)
+        .query(`
+          UPDATE psdetail 
+          SET s_status = @status, vehicle = @username 
+          WHERE doc = @doc AND type = 'sale'
+        `);
+      res.status(200).json({ message: "Delivery updated successfully" });
+    } catch (error) {
+      console.error("Error in operatorDirectDelivery:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
 };
 module.exports = invoiceControllers;

@@ -517,7 +517,10 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
             extraInfo = trader["doc"];
         }
 
-        const displayValue = typeof value === "number" ? formatCurrency(value) : value;
+        let displayValue = typeof value === "number" ? formatCurrency(value) : value;
+        if (key === "date") {
+            displayValue = formatDate(value);
+        }
         const label = key.includes("lrecovery")
             ? "L.Recovery"
             : key.includes("ale")
@@ -608,7 +611,7 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
 };
 
 // ✅ Parent wrapper
-export const TraderCard = React.memo(({ trader, fields, onClick, flag = false, doneEntries = [] }) => {
+export const TraderCard = React.memo(({ trader, fields, onClick, flag = false, doneEntries = [], sx = {} }) => {
     const entry = doneEntries?.includes(trader.ACID)
 
     return (
@@ -626,6 +629,7 @@ export const TraderCard = React.memo(({ trader, fields, onClick, flag = false, d
                     transform: "scale(1.02)",
                     transition: "transform 0.2s",
                 },
+                ...sx
             }}
         >
 

@@ -406,8 +406,16 @@ const RecoveryPaper = () => {
       { amount: parsedCrownFit, method: 'crownfit' },
     ];
 
+    const isDanish = user?.username?.toLowerCase().includes("danish");
+
     const missingRequiredImage = paymentMethodsArr.some(
-      ({ amount, method }) => method !== 'cash' && amount > 0 && !paymentImages?.[method]
+      ({ amount, method }) => {
+        if (amount <= 0) return false;
+        if (method === 'cash') {
+          return !isDanish && !paymentImages?.[method];
+        }
+        return !paymentImages?.[method];
+      }
     );
 
     const hasImageWithoutAmount = paymentMethodsArr.some(

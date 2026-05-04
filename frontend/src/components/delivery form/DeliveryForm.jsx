@@ -733,7 +733,7 @@ const DeliveryForm = () => {
 
     const handlePost = useCallback(
         async (acid, name, doc, captureRef, manualImage) => {
-            const amount = cash[acid] || 0;
+            const amount = cash?.[acid] || 0;
             const isDanish = user?.username?.toLowerCase().includes("danish");
 
             if (amount > 0 && !manualImage && !isDanish) {
@@ -754,7 +754,7 @@ const DeliveryForm = () => {
                 timestamp: new Date().toISOString(),
                 userName: user?.username || "Unknown User",
                 amounts: {
-                    cash: cash[acid],
+                    cash: cash?.[acid] || 0,
                 },
             };
             setEntries(prev => [...prev, newEntry])
@@ -776,7 +776,7 @@ const DeliveryForm = () => {
                 closeDialog();
             }
         },
-        [user.username, cash, address, coordinates, isTally, posting, fetchList, closeDialog, setEntries, setDoneEntries]
+        [user?.username, cash, address, coordinates, isTally, posting, fetchList, closeDialog, setEntries, setDoneEntries]
     );
 
     // Custom navigation handler to preserve dialog state

@@ -563,6 +563,7 @@ END
       type = "sale",
       status = "",
       date = new Date(),
+      userName = "",
     } = req.body;
     try {
       const pool = await imageDb();
@@ -578,8 +579,8 @@ END
       };
 
       const query = `
-      INSERT INTO name_reciepts ( doc, acid, image, type, status, datetime)
-      VALUES ( @doc, @acid, @img, @type, @status, @datetime)
+      INSERT INTO name_reciepts ( doc, acid, image, type, status, datetime, UserName)
+      VALUES ( @doc, @acid, @img, @type, @status, @datetime, @userName)
     `;
 
       const request = pool.request();
@@ -589,6 +590,7 @@ END
       request.input("status", mssql.VarChar, status);
       request.input("datetime", mssql.DateTime, date);
       request.input("img", mssql.VarBinary, toBuffer(img));
+      request.input("userName", mssql.VarChar, userName);
 
       await request.query(query);
 

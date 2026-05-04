@@ -300,13 +300,13 @@ const toBuffer = (data) => {
   return Buffer.from(base64, "base64");
 };
 
-const insertNameReceiptImage = async (doc, acid, image, time, ptype) => {
+const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) => {
   if (!image) return;
   try {
     const pool = await imageDb();
     const query = `
-      INSERT INTO name_reciepts (doc, acid, image, type, status, datetime)
-      VALUES (@doc, @acid, @img, @type, @status, @datetime)
+      INSERT INTO name_reciepts (doc, acid, image, type, status, datetime, UserName)
+      VALUES (@doc, @acid, @img, @type, @status, @datetime, @userName)
     `;
     
     // Add 5 hours manually to offset the timezone difference
@@ -321,6 +321,7 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype) => {
       .input("type", sql.VarChar, ptype)
       .input("status", sql.VarChar, "")
       .input("datetime", sql.DateTime, imgDate)
+      .input("userName", sql.VarChar, userName || "")
       .query(query);
     console.log(`✅ Image saved to name_reciepts for doc ${doc}`);
   } catch (err) {
@@ -406,7 +407,7 @@ const CashEntryController = {
       if (paymentImage) {
         // Cash method uses 'crv', others use 'brv'
         const docType = paymentMethod?.toLowerCase() === 'cash' ? 'crv' : 'brv';
-        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType);
+        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType, userName);
         console.log(`📸 Receipt image processed for ${paymentMethod} (doc: ${nextDoc})`);
       }
 

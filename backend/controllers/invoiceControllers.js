@@ -110,7 +110,7 @@ const invoiceControllers = {
 
         request.input("Status", sql.VarChar, status);
         request.input("Doc", sql.Int, id);
-        request.query(query);
+        await request.query(query);
       }
 
       res.status(200).json({

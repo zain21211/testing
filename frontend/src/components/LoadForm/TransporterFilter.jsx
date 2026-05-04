@@ -103,7 +103,7 @@ const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disabl
           onChange={(e) => handleInputChange('docSort', e.target.value)}
           SelectProps={{ native: true }}
         >
-          <option value="">None</option>
+          <option value="None"></option>
           <option value="DESC">Highest First</option>
           <option value="ASC">Lowest First</option>
         </TextField>

@@ -660,7 +660,7 @@ const DeliveryForm = () => {
         } catch (error) {
             console.error("Submission failed:", error);
         } finally {
-            setSubmittingCards(prev => ({ ...prev, [trader.ACID]: false }));
+            setSubmittingCards(prev => ({ ...prev, [trader.doc]: false }));
         }
     };
 
@@ -696,6 +696,7 @@ const DeliveryForm = () => {
                     type: newEntry.doc ? 'sale' : 'crv',
                     status: newEntry.status ? 'tally' : 'diff',
                     date: newEntry.timestamp,
+                    userName: newEntry.userName,
                 });
             }
 

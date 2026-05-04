@@ -744,7 +744,7 @@ const DeliveryForm = () => {
                 id: acid,
                 coordinates,
                 status: isTally ? 'tally' : 'diff',
-                timestamp: new Date(new Date().getTime() + 5 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' '),
+                timestamp: new Date().toISOString(),
                 userName: user?.username || "Unknown User",
             };
             setEntries(prev => [...prev, newEntry])

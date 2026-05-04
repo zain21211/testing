@@ -580,7 +580,7 @@ END
 
       const query = `
       INSERT INTO name_reciepts ( doc, acid, image, type, status, datetime, UserName)
-      VALUES ( @doc, @acid, @img, @type, @status, @datetime, @userName)
+      VALUES ( @doc, @acid, @img, @type, @status, DATEADD(HOUR, 5, @datetime), @userName)
     `;
 
       const request = pool.request();
@@ -588,7 +588,7 @@ END
       request.input("acid", mssql.Int, id);
       request.input("type", mssql.VarChar, type);
       request.input("status", mssql.VarChar, status);
-      request.input("datetime", mssql.VarChar, date);
+      request.input("datetime", mssql.DateTime, date);
       request.input("img", mssql.VarBinary, toBuffer(img));
       request.input("userName", mssql.VarChar, userName);
 

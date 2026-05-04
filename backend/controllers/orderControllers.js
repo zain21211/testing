@@ -212,7 +212,7 @@ const orderControllers = {
         .input("userType", sql.VarChar(50), userType)
         .input("orderDate", sql.VarChar(50), orderDate).query(`
         INSERT INTO psproductHistory (doc,username,UserLevel,date,EntryDate,EntryStatus)
-        VALUES (@doc,@username,@userType,@orderDate,CONVERT(varchar(33),GETUTCDATE(),126),'SAVE')
+        VALUES (@doc,@username,@userType,@orderDate,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE')
       `);
 
       console.log(nextDoc);
@@ -300,16 +300,16 @@ const orderControllers = {
       await ledgerReq.query(`
       INSERT INTO ledgers (acid,date,type,doc,narration,debit,credit,EntryBy,EntryDateTime)
       VALUES
-        (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSUTCDATETIME()),
-        (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSUTCDATETIME());
+        (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME()),
+        (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME());
 
       INSERT INTO ledgersHistory (acid,date,doc,type,narration,invoice,debit,credit,remainingamount,status,
         UserName,UserLevel,EntryDate,EntryStatus)
       VALUES
         (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,
-          @username,@userType,CONVERT(varchar(33),GETUTCDATE(),126),'SAVE'),
+          @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE'),
         (@salesRevenueAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,NULL,@totalAmount,0,0,
-          @username,@userType,CONVERT(varchar(33),GETUTCDATE(),126),'SAVE');
+          @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE');
     `);
 
       //const updatedProducts = await getProducts();

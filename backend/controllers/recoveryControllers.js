@@ -52,10 +52,9 @@ const CashEntryController = {
         .input("credit", sql.Decimal(18, 2), receivedAmount)
         .input("narration1", sql.VarChar, narration)
         .input("entryBy1", sql.VarChar, userName)
-        .input("entryDateTime1", sql.DateTime, new Date())
         .query(`
           INSERT INTO ledgers (date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime)
-          VALUES (@date1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, @entryDateTime1)
+          VALUES (@date1, @type1, @doc1, @acid1, @credit, @narration1, @entryBy1, GETDATE())
         `);
 
       // Insert debit entry (cash/bank/etc.)
@@ -64,10 +63,9 @@ const CashEntryController = {
         .input("debit", sql.Decimal(18, 2), receivedAmount)
         .input("narration2", sql.VarChar, narration)
         .input("entryBy2", sql.VarChar, userName)
-        .input("entryDateTime2", sql.DateTime, new Date())
         .query(`
           INSERT INTO ledgers (date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime)
-          VALUES (@date1, @type1, @doc1, @acid2, @debit, @narration2, @entryBy2, @entryDateTime2)
+          VALUES (@date1, @type1, @doc1, @acid2, @debit, @narration2, @entryBy2, GETDATE())
         `);
 
       await transaction.commit();

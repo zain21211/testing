@@ -697,12 +697,6 @@ WHERE P.Doc = @DocNumber
     const { payload } = req.body;
     try {
       const formattedNumber = convertPhoneNumber(payload.number);
-      const date = new Date();
-
-      // extract date and time separately for SQL
-      const requestDate = date.toISOString().split("T")[0];
-      const requestTime = date.toTimeString().split(" ")[0];
-
       const pool = await dbConnection();
 
       await pool.request().query`
@@ -718,8 +712,8 @@ WHERE P.Doc = @DocNumber
         doc
       )
       VALUES (
-        ${requestDate},
-        ${requestTime},
+        CAST(GETDATE() AS DATE),
+        CAST(GETDATE() AS TIME),
         ${payload.requestBy},
         ${payload.acid},
         ${payload.subname},

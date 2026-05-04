@@ -198,23 +198,15 @@ ORDER BY o.overdue DESC;
   },
 
   postRemarks: async (req, res) => {
-    const { datetime, acid, spo, remarks } = req.body;
-
-    // Ensure it's a Date object
-    const date = new Date(datetime);
-
-    // Add 5 hours
-    date.setHours(date.getHours() + 5);
     try {
       const pool = await dbConnection();
       await pool
         .request()
-        .input("datetime", sql.DateTime, date)
         .input("acid", sql.Int, acid)
         .input("spo", sql.VarChar, spo)
         .input("remarks", sql.NVarChar, remarks).query(`
         INSERT INTO SPOWORKING (datetime, acid, spo, remarks)
-        VALUES (@datetime, @acid, @spo, @remarks)
+        VALUES (GETDATE(), @acid, @spo, @remarks)
       `);
       res.status(200).send({ success: true, message: "Inserted successfully" });
     } catch (err) {

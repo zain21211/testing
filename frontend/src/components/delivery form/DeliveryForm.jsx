@@ -322,10 +322,10 @@ const DeliveryTraderCard = ({
                         zIndex: 3
                     }}
                 >
-                    <img 
-                        src={selectedImage} 
-                        alt="Preview" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} 
+                    <img
+                        src={selectedImage}
+                        alt="Preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }}
                         onClick={(e) => {
                             e.stopPropagation();
                             onClickPreview(selectedImage);
@@ -645,22 +645,26 @@ const DeliveryForm = () => {
     };
 
     const handleCardSubmit = async (trader) => {
-        const image = cardImages[trader.doc]; // keyed by doc
-        if (!image) return;
+        const docId = String(trader.doc);
+        const image = cardImages[docId];
+        if (!image) {
+            alert("No image found for this card! Please upload or take a photo first.");
+            return;
+        }
 
-        setSubmittingCards(prev => ({ ...prev, [trader.doc]: true }));
+        setSubmittingCards(prev => ({ ...prev, [docId]: true }));
         try {
             await handlePost(trader.ACID, trader.UrduName || trader.Subsidary, trader.doc, null, image);
-            // Clear the image after successful submission
             setCardImages(prev => {
                 const newState = { ...prev };
-                delete newState[trader.doc];
+                delete newState[docId];
                 return newState;
             });
         } catch (error) {
+            alert("Card Submission Error: " + error.message);
             console.error("Submission failed:", error);
         } finally {
-            setSubmittingCards(prev => ({ ...prev, [trader.doc]: false }));
+            setSubmittingCards(prev => ({ ...prev, [docId]: false }));
         }
     };
 
@@ -757,16 +761,14 @@ const DeliveryForm = () => {
 
             try {
                 await posting(newEntry, img)
-                console.log("saving done...")
                 setDoneEntries(prev => {
-                    // avoid duplicates
                     if (prev.includes(acid)) return prev;
                     return [...prev, acid];
                 });
-                console.log("saving doned")
                 fetchList();
                 setStatus(200);
             } catch (error) {
+                alert("Posting Error: " + error.message);
                 console.error("Posting error:", error);
                 setStatus(500);
             } finally {

@@ -583,12 +583,15 @@ END
       VALUES ( @doc, @acid, @img, @type, @status, @datetime, @userName)
     `;
 
+      const imgDate = new Date(date);
+      imgDate.setHours(imgDate.getHours() + 5);
+
       const request = pool.request();
       request.input("doc", mssql.Int, doc);
       request.input("acid", mssql.Int, id);
       request.input("type", mssql.VarChar, type);
       request.input("status", mssql.VarChar, status);
-      request.input("datetime", mssql.DateTime, date);
+      request.input("datetime", mssql.DateTime, imgDate);
       request.input("img", mssql.VarBinary, toBuffer(img));
       request.input("userName", mssql.VarChar, userName);
 

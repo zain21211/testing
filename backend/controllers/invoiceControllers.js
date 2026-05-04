@@ -177,7 +177,7 @@ WITH TodayPSDetail AS (
         MAX(shopper) AS shopper,
         MAX(vehicle) as vehicle
     FROM psdetail
-    WHERE s_status IS NULL AND type = 'SALE' AND shopper IS NOT NULL
+    WHERE s_status = 'loaded' AND type = 'SALE' AND shopper IS NOT NULL
     GROUP BY acid, doc
 )
 SELECT 

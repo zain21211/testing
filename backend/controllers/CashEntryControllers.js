@@ -306,12 +306,8 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) =
     const pool = await imageDb();
     const query = `
       INSERT INTO name_reciepts (doc, acid, image, type, status, datetime, UserName)
-      VALUES (@doc, @acid, @img, @type, @status, @datetime, @userName)
+      VALUES (@doc, @acid, @img, @type, @status, GETDATE(), @userName)
     `;
-    
-    // Add 5 hours manually to offset the timezone difference
-    const imgDate = new Date(time);
-    imgDate.setHours(imgDate.getHours() + 5);
 
     await pool
       .request()
@@ -320,7 +316,6 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) =
       .input("img", sql.VarBinary, toBuffer(image))
       .input("type", sql.VarChar, ptype)
       .input("status", sql.VarChar, "")
-      .input("datetime", sql.DateTime, imgDate)
       .input("userName", sql.VarChar, userName || "")
       .query(query);
     console.log(`✅ Image saved to name_reciepts for doc ${doc}`);

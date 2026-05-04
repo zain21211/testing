@@ -416,7 +416,7 @@ WHERE Id = @Id;
 
   // Images insert
   createImages: async (req, res) => {
-    const { acid, customer, shop, agreement, username, date } = req.body;
+    const { acid, customer, shop, agreement, username } = req.body;
     try {
       const pool = await imageDb();
       if (!acid) {
@@ -432,7 +432,7 @@ WHERE Id = @Id;
 
       const query = `
       INSERT INTO coaimages ( ACID, Customer, Shop, Agreement, imageby, datetime)
-      VALUES ( @acid, @customer, @shop, @agreement, @username, @Date)
+      VALUES ( @acid, @customer, @shop, @agreement, @username, GETDATE())
     `;
 
       const request = pool.request();
@@ -440,7 +440,6 @@ WHERE Id = @Id;
       request.input("customer", mssql.Image, toBuffer(customer));
       request.input("shop", mssql.Image, toBuffer(shop));
       request.input("username", mssql.VarChar, username || "unknown");
-      request.input("Date", mssql.DateTime, date);
       request.input("agreement", mssql.Image, toBuffer(agreement));
 
       await request.query(query);
@@ -462,11 +461,8 @@ WHERE Id = @Id;
       shop,
       agreement,
       username,
-      date = new Date(),
     } = req.body;
 
-    const dateTime = getPakistanISODateString(date);
-    console.log("Updating images with date:", new Date(dateTime));
     try {
       const pool = await imageDb();
       if (!acid) {
@@ -485,7 +481,7 @@ WHERE Id = @Id;
 BEGIN
     UPDATE COAIMAGES
     SET 
-        datetime=@Date,
+        datetime=GETDATE(),
         imageby=@username,
         Customer = @customer,
         Shop = @shop,
@@ -495,7 +491,7 @@ END
 ELSE
 BEGIN
     INSERT INTO COAIMAGES (acid, Customer, Shop, Agreement, imageby, datetime)
-    VALUES (@acid, @customer, @shop, @agreement, @username, @Date);
+    VALUES (@acid, @customer, @shop, @agreement, @username, GETDATE());
 END
 
     `;
@@ -506,7 +502,6 @@ END
       request.input("shop", mssql.Image, toBuffer(shop));
       request.input("agreement", mssql.Image, toBuffer(agreement));
       request.input("username", mssql.VarChar, username || "unknown");
-      request.input("Date", mssql.VarChar, dateTime);
 
       await request.query(query);
 
@@ -562,7 +557,6 @@ END
       id,
       type = "sale",
       status = "",
-      date = new Date(),
       userName = "",
     } = req.body;
     try {
@@ -580,7 +574,7 @@ END
 
       const query = `
       INSERT INTO name_reciepts ( doc, acid, image, type, status, datetime, UserName)
-      VALUES ( @doc, @acid, @img, @type, @status, DATEADD(HOUR, 5, @datetime), @userName)
+      VALUES ( @doc, @acid, @img, @type, @status, GETDATE(), @userName)
     `;
 
       const request = pool.request();
@@ -588,7 +582,6 @@ END
       request.input("acid", mssql.Int, id);
       request.input("type", mssql.VarChar, type);
       request.input("status", mssql.VarChar, status);
-      request.input("datetime", mssql.DateTime, date);
       request.input("img", mssql.VarBinary, toBuffer(img));
       request.input("userName", mssql.VarChar, userName);
 

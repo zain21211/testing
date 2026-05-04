@@ -8,6 +8,7 @@ import React, {
 import axios from "axios";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
+import imageCompression from "browser-image-compression";
 import isEqual from "lodash/isEqual";
 import SignaturePad from "./SignaturePad";
 import html2canvas from "html2canvas";
@@ -269,14 +270,31 @@ const DeliveryTraderCard = ({
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                onImageSelect(trader.doc, reader.result, true); // keyed by doc (unique per invoice)
-            };
-            reader.readAsDataURL(file);
+            try {
+                // 🔹 Compress image before reading it
+                const compressedFile = await imageCompression(file, {
+                    maxSizeMB: 0.3, // Target around 300 KB
+                    maxWidthOrHeight: 1280, // Resize if needed
+                    useWebWorker: true,
+                });
+
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    onImageSelect(trader.doc, reader.result, true); // keyed by doc (unique per invoice)
+                };
+                reader.readAsDataURL(compressedFile);
+            } catch (error) {
+                console.error("Image compression error:", error);
+                // Fallback to original file if compression fails
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    onImageSelect(trader.doc, reader.result, true);
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
 

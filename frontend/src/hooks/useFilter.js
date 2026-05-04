@@ -24,8 +24,6 @@ function makeWildcardRegex(input) {
  * @param {string} options.productInputValue - search input
  * @param {string|number} options.productID - selected product ID
  * @param {boolean} options.initialDataLoading - loading flag
- * @param {Function} options.setSelectedProduct - setter for selected product
- * @param {Object} options.quantityInputRef - ref for qty input (optional)
  */
 export function useFilterAutocomplete(
     products,
@@ -35,16 +33,12 @@ export function useFilterAutocomplete(
         productInputValue = "",
         productID = "",
         initialDataLoading = false,
-        setSelectedProduct,
-        quantityInputRef,
     }
 ) {
     const filteredOptions = useMemo(() => {
         if (initialDataLoading) return [];
 
-
         let filtered = [...products];
-        console.log("for filtering the input is", productInputValue)
 
         // Filter by Company (must start with input)
         if (companyFilter?.trim()) {
@@ -53,7 +47,6 @@ export function useFilterAutocomplete(
                 (p) => p.Company && companyRegex.test(p.Company.toLowerCase())
             );
         }
-
 
         // Filter by Category/Model
         if (categoryFilter?.trim()) {
@@ -77,12 +70,8 @@ export function useFilterAutocomplete(
             } else {
                 return []; // Invalid pattern
             }
-        } else {
-            // If no input value, match selected productID
-            console.log("product id", productID)
-            filtered = products.filter((p) => String(p.ID) === String(productID));
-            if (setSelectedProduct) setSelectedProduct(filtered[0] || null);
-            if (quantityInputRef?.current) quantityInputRef.current.focus();
+        } else if (productID) {
+            filtered = products.filter((p) => String(p.ID) === String(productID) || String(p.code) === String(productID));
         }
 
         return filtered;
@@ -93,8 +82,6 @@ export function useFilterAutocomplete(
         productInputValue,
         initialDataLoading,
         productID,
-        setSelectedProduct,
-        quantityInputRef,
     ]);
 
     return filteredOptions;

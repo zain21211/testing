@@ -222,10 +222,10 @@ export const RemarkDialogUI = ({
                     </Button>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, width: '100%' }}>
-                    <Button 
-                        component="label" 
-                        variant="contained" 
-                        color="info" 
+                    <Button
+                        component="label"
+                        variant="contained"
+                        color="info"
                         startIcon={<CloudUploadIcon />}
                         sx={{ whiteSpace: 'nowrap' }}
                     >
@@ -263,6 +263,7 @@ const DeliveryTraderCard = ({
     selectedImage,
     onClickPreview,
     onSubmit,
+    onDeselect,
     isSubmitting
 }) => {
     const fileInputRef = useRef(null);
@@ -280,11 +281,11 @@ const DeliveryTraderCard = ({
     };
 
     return (
-        <Card sx={{ 
-            position: 'relative', 
-            boxShadow: 3, 
-            borderRadius: '12px', 
-            overflow: 'hidden', 
+        <Card sx={{
+            position: 'relative',
+            boxShadow: 3,
+            borderRadius: '12px',
+            overflow: 'hidden',
             border: selectedImage ? '2px solid green' : '1px solid #eee',
             display: 'flex',
             flexDirection: 'column',
@@ -299,36 +300,59 @@ const DeliveryTraderCard = ({
                 trader={trader}
                 onClick={onClick}
                 doneEntries={[]}
-                sx={{ 
-                    boxShadow: 'none', 
+                sx={{
+                    boxShadow: 'none',
                     borderRadius: 0,
-                    "&:hover": { transform: 'none', boxShadow: 'none' } 
+                    "&:hover": { transform: 'none', boxShadow: 'none' }
                 }}
             />
             {selectedImage && (
-                <Box 
-                    sx={{ 
-                        position: 'absolute', 
-                        top: 5, 
-                        left: 5, 
-                        width: 50, 
-                        height: 50, 
-                        borderRadius: 1, 
-                        overflow: 'hidden', 
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 5,
+                        left: 5,
+                        width: 100,
+                        height: 100,
+                        borderRadius: 1,
+                        overflow: 'visible', // Changed to visible for the cross
                         border: '2px solid white',
-                        boxShadow: 2,
+                        boxShadow: 4,
                         cursor: 'pointer',
                         zIndex: 3
                     }}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onClickPreview(selectedImage);
-                    }}
                 >
-                    <img src={selectedImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img 
+                        src={selectedImage} 
+                        alt="Preview" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClickPreview(selectedImage);
+                        }}
+                    />
+                    <IconButton
+                        size="small"
+                        sx={{
+                            position: 'absolute',
+                            top: -10,
+                            right: -10,
+                            bgcolor: 'error.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'error.dark' },
+                            boxShadow: 2,
+                            p: 0.5
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDeselect(trader.doc);
+                        }}
+                    >
+                        <CloseOutlined sx={{ fontSize: 18 }} />
+                    </IconButton>
                 </Box>
             )}
-            
+
             <Box
                 sx={{
                     display: 'flex',
@@ -344,25 +368,25 @@ const DeliveryTraderCard = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Nug (shopper) Display - Swapped order: Number on left, Label on right */}
-                <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 0.5, 
-                    bgcolor: '#e0e0e0', 
-                    px: 1.5, 
-                    py: 1   , 
+                <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    bgcolor: '#e0e0e0',
+                    px: 1.5,
+                    py: 1,
                     borderRadius: '20px',
                     border: '1px solid #ccc'
                 }}>
-                    <Typography sx={{ 
-                        fontSize: "2rem", 
+                    <Typography sx={{
+                        fontSize: "2rem",
                         fontWeight: 'bold',
                         fontFamily: "poppins, sans-serif"
                     }}>
                         {trader.shopper || 0}
                     </Typography>
-                    <Typography sx={{ 
-                        fontFamily: "Jameel Noori Nastaleeq, serif", 
+                    <Typography sx={{
+                        fontFamily: "Jameel Noori Nastaleeq, serif",
                         fontSize: "2.5rem",
                         lineHeight: 1,
                         fontWeight: 'bold',
@@ -456,13 +480,16 @@ const DeliveryForm = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [cardImages, setCardImages] = useState({});
     const [submittingCards, setSubmittingCards] = useState({});
-    
+
     // Cropper & Preview States
     const [cropSrc, setCropSrc] = useState(null);
     const [cropAcid, setCropAcid] = useState(null);
     const cropperRef = useRef(null);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewSrc, setPreviewSrc] = useState(null);
+
+    // --- LOCAL FILTERING STATE ---
+    const [localFilters, setLocalFilters] = useState({ route: '', acid: '', doc: '', dateSort: 'DESC', docSort: '' });
 
     // const captureRef = useRef();
     // --- USER & ROLES ---
@@ -494,6 +521,39 @@ const DeliveryForm = () => {
         fetchList,
         routes
     } = useFetchList("delivery");
+
+    const filteredCustomers = useMemo(() => {
+        let result = [...customers];
+
+        // Apply filters
+        if (localFilters.route) {
+            result = result.filter(c => c.route?.toLowerCase().includes(localFilters.route.toLowerCase()));
+        }
+        if (localFilters.acid) {
+            result = result.filter(c => String(c.ACID).includes(localFilters.acid));
+        }
+        if (localFilters.doc) {
+            result = result.filter(c => String(c.doc).includes(localFilters.doc));
+        }
+
+        // Apply sorting
+        result.sort((a, b) => {
+            if (localFilters.docSort) {
+                return localFilters.docSort === 'ASC' ? (a.doc || 0) - (b.doc || 0) : (b.doc || 0) - (a.doc || 0);
+            }
+
+            const dateA = new Date(a.date || a.LastDate || 0).getTime();
+            const dateB = new Date(b.date || b.LastDate || 0).getTime();
+
+            if (dateA === dateB) {
+                // Secondary sort by doc if dates tie
+                return localFilters.dateSort === 'ASC' ? (a.doc || 0) - (b.doc || 0) : (b.doc || 0) - (a.doc || 0);
+            }
+            return localFilters.dateSort === 'ASC' ? dateA - dateB : dateB - dateA;
+        });
+
+        return result;
+    }, [customers, localFilters]);
 
     const handleChange = (id, val) => {
         const cleaned = cleanNumbers(val);
@@ -575,7 +635,7 @@ const DeliveryForm = () => {
         if (typeof cropperRef.current?.cropper !== "undefined") {
             const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas();
             const croppedDataUrl = croppedCanvas.toDataURL('image/jpeg');
-            
+
             compressImage(croppedDataUrl, (compressedResult) => {
                 setCardImages(prev => ({ ...prev, [cropAcid]: compressedResult })); // cropAcid now holds doc
                 setCropSrc(null);
@@ -719,11 +779,11 @@ const DeliveryForm = () => {
     // Custom navigation handler to preserve dialog state
     const customHandleNavigate = useCallback((page) => {
         if (!selectedTrader) return;
-        
+
         // 1. Update current URL with dialog state so "Back" button works
-        setSearchParams({ 
-            acid: selectedTrader.ACID, 
-            openDialog: 'true' 
+        setSearchParams({
+            acid: selectedTrader.ACID,
+            openDialog: 'true'
         }, { replace: true });
 
         // 2. Navigation logic is handled by useRemarkDialog in RemarkDialog
@@ -809,7 +869,7 @@ const DeliveryForm = () => {
     return (
         <Container sx={{ p: 0 }}>
             {/* {(userRoles.isAdmin || userRoles.isZain) && ( */}
-                <TransporterFilter onFilterChange={fetchList} routes={routes} />
+            <TransporterFilter onFilterChange={() => { }} onLocalFilterChange={setLocalFilters} disableAutoSearch={true} routes={routes} />
             {/* )} */}
 
             {/* <Box sx={{
@@ -848,7 +908,7 @@ const DeliveryForm = () => {
             {/* <EntriesDisplay open={openDetails} onClose={() => setOpenDetails(false)} entries={entries} setEntries={setEntries} setDoneEntries={setDoneEntries} /> */}
 
             {/* not found */}
-            {customers.length === 0 && !listLoading && (
+            {filteredCustomers.length === 0 && !listLoading && (
                 <Box
                     sx={{
                         height: "69vh",
@@ -880,7 +940,7 @@ const DeliveryForm = () => {
             )}
 
             {/* while list loading */}
-            {status && !(customers.length === 0 || listLoading) && (
+            {status && !(filteredCustomers.length === 0 || listLoading) && (
                 <Box
                     sx={{
                         display: "flex",
@@ -899,7 +959,7 @@ const DeliveryForm = () => {
                 gap: 2,
                 p: 1
             }}>
-                {customers.map((customer) => (
+                {filteredCustomers.map((customer) => (
                     <DeliveryTraderCard
                         key={customer.doc || `${customer.ACID}-${Math.random()}`}
                         trader={customer}
@@ -913,6 +973,13 @@ const DeliveryForm = () => {
                             setPreviewOpen(true);
                         }}
                         onSubmit={handleCardSubmit}
+                        onDeselect={(doc) => {
+                            setCardImages(prev => {
+                                const newState = { ...prev };
+                                delete newState[doc];
+                                return newState;
+                            });
+                        }}
                         isSubmitting={submittingCards[customer.doc]}
                     />
                 ))}

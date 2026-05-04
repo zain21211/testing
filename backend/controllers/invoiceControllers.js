@@ -62,7 +62,7 @@ const invoiceControllers = {
     console.log(status && !(nug && to));
     const vehicle = to?.toLowerCase();
     if (!req.body && Object.keys(nug).length === 0) {
-      return res.status(400).json( { msg: "missing params" });
+      return res.status(400).json({ msg: "missing params" });
     }
     let query;
 
@@ -161,99 +161,53 @@ const invoiceControllers = {
   },
 
   getDeliveryList: async (req, res) => {
-    const { usertype = "", username = "", route = "", acid = "", doc = "" } = req.query;
-    const days = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-    const today = new Date();
-    const dayName = days[today.getDay()];
+    const { usertype = "", username = "", acid = "", doc = "" } = req.query;
 
-    const type = usertype.split("-")[1] || ""; // sr or kr
-    const day = route ? route : type ? dayName.toLowerCase() : "";
-    const isAdmin = usertype.includes("admin") || username.includes("zain");
-    const transporter = type ? "" : username;
-    const isSpecialUser = username.toLowerCase().includes("kr") || username.toLowerCase().includes("sr") || type.toLowerCase().includes("kr") || type.toLowerCase().includes("sr");
+    const isOperator = usertype.toLowerCase().includes("operator") || username.toLowerCase().includes("operator");
+    const isAdmin = usertype.toLowerCase().includes("admin") || username.toLowerCase().includes("zain") || isOperator;
+    const transporter = isAdmin ? "" : username;
 
     let query = `
-WITH LedgerTotals AS (
-    SELECT 
-        acid,
-        SUM(debit) AS TotalDebit,
-        SUM(credit) AS TotalCredit
-    FROM ledgers
-  --  WHERE CAST(date AS date) = CAST(GETDATE() AS date)   -- only today's ledger entries
-    GROUP BY acid
-),
-TodayPSDetail AS (
+WITH TodayPSDetail AS (
     SELECT 
         acid,
         MAX(date) AS LastDate,
         doc,
-        COUNT(DISTINCT doc) AS TotalDocs,
         MAX(amount) AS LastAmount,
         MAX(shopper) AS shopper,
-       max(vehicle) as vehicle,
-       MAX(s_status) AS s_status
-     FROM psdetail
+        MAX(vehicle) as vehicle
+    FROM psdetail
+    WHERE s_status IS NULL AND type = 'SALE' AND shopper IS NOT NULL
     GROUP BY acid, doc
-),
-TodayBRV AS (
-    SELECT 
-        acid,
-        SUM(credit) AS TodayBRV
-    FROM ledgers
-    WHERE type = 'BRV' AND CAST(date AS date) = CAST(GETDATE() AS date)
-    GROUP BY acid
 )
 SELECT 
     c.id AS ACID,
     c.urduname AS UrduName,
-   -- c.route AS CustomerRoute,
-    t.route AS route,
-    -- ISNULL(p.LastDate, NULL) AS LastDate,
+    c.route AS route,
     p.doc as doc,
     p.LastDate as date,
-   -- ISNULL(p.TotalDocs, 0) AS TotalDocs,
     ISNULL(p.LastAmount, 0) AS amount,
-    (p.Shopper) AS shopper,
-    ISNULL(b.TodayBRV, 0) AS todayBRV,
-    (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) - ISNULL(p.LastAmount, 0) AS prevBalance,
-    (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) AS currentBalance
+    p.shopper AS shopper,
+    p.vehicle
 FROM coa c
-LEFT JOIN TourDays t
-    ON left(c.route, 3) = t.Route
-LEFT JOIN TodayPSDetail p
+INNER JOIN TodayPSDetail p
     ON p.acid = c.id
-LEFT JOIN TodayBRV b
-    ON b.acid = c.id
-LEFT JOIN LedgerTotals l
-    ON l.acid = c.id
 WHERE 
-  (1 = ${isSpecialUser ? 0 : 1} OR (t.day like @day+'%' and t.route LIKE @type +'%'))
-AND (@acid = '' OR c.id LIKE @acid + '%')
-AND (@doc = '' OR p.doc LIKE '%' + @doc + '%')
-and (ISNULL(l.TotalDebit, 0) - ISNULL(l.TotalCredit, 0)) > 0
-AND p.s_status = 'loaded'
+    (@acid = '' OR c.id LIKE @acid + '%')
+    AND (@doc = '' OR p.doc LIKE '%' + @doc + '%')
     `;
+
     if (!isAdmin) {
-      query += `AND (@vehicle = '' OR p.vehicle LIKE '%' + @vehicle + '%')`;
+      query += `AND p.vehicle = @vehicle `;
     }
-    
+
     query += `ORDER BY 
-    c.rno;`;
+    p.LastDate DESC, p.doc DESC;`;
 
     try {
       const pool = await dbConnection();
       const request = pool.request();
-      request.input("day", sql.VarChar, day);
       request.input("vehicle", sql.VarChar, transporter);
-      request.input("type", sql.VarChar, type);
       request.input("acid", sql.VarChar, acid);
       request.input("doc", sql.VarChar, doc);
 

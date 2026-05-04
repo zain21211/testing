@@ -427,12 +427,48 @@ const DeliveryForm = () => {
         routes
     } = useFetchList("delivery");
 
+    // --- LOCAL FILTERING STATE ---
+    const [localFilters, setLocalFilters] = useState({ route: '', acid: '', doc: '', dateSort: 'DESC', docSort: '' });
+
+    const filteredCustomers = useMemo(() => {
+        let result = [...customers];
+        
+        // Apply filters
+        if (localFilters.route) {
+            result = result.filter(c => c.route?.toLowerCase().includes(localFilters.route.toLowerCase()));
+        }
+        if (localFilters.acid) {
+            result = result.filter(c => String(c.ACID).includes(localFilters.acid));
+        }
+        if (localFilters.doc) {
+            result = result.filter(c => String(c.doc).includes(localFilters.doc));
+        }
+
+        // Apply sorting
+        result.sort((a, b) => {
+            if (localFilters.docSort) {
+                return localFilters.docSort === 'ASC' ? (a.doc || 0) - (b.doc || 0) : (b.doc || 0) - (a.doc || 0);
+            }
+            
+            const dateA = new Date(a.date || a.LastDate || 0).getTime();
+            const dateB = new Date(b.date || b.LastDate || 0).getTime();
+            
+            if (dateA === dateB) {
+                // Secondary sort by doc if dates tie
+                return localFilters.dateSort === 'ASC' ? (a.doc || 0) - (b.doc || 0) : (b.doc || 0) - (a.doc || 0);
+            }
+            return localFilters.dateSort === 'ASC' ? dateA - dateB : dateB - dateA;
+        });
+
+        return result;
+    }, [customers, localFilters]);
+
     // --- RENDER ---
     return (
         <Container sx={{ p: 0 }}>
             {/* filters */}
             <Box sx={{ m: 2 }}>
-                <TransporterFilter onFilterChange={fetchList} routes={routes} />
+                <TransporterFilter onFilterChange={() => {}} onLocalFilterChange={setLocalFilters} disableAutoSearch={true} routes={routes} />
             </Box>
 
             {/* for loading */}
@@ -440,11 +476,11 @@ const DeliveryForm = () => {
 
             {/* for list detail cards */}
             <Box sx={{ display: listLoading ? "none" : "grid", gap: 3, mb: "10rem" }}>
-                {customers.map((customer) => (
+                {filteredCustomers.map((customer) => (
                     <TraderCard
                         fields={fields}
                         trader={customer}
-                        key={customers.acid}
+                        key={customer.ACID || customer.doc || Math.random()}
                         onClick={() => openDialog(customer)}
                     />
                 ))}

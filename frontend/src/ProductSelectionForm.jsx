@@ -68,6 +68,22 @@ export default function OrderPage({
     }, [productIDInput]);
 
     useEffect(() => {
+        if (productID) {
+            const found = products.find(p => String(p.ID) === String(productID) || String(p.code) === String(productID));
+            if (found) {
+                setSelectedProduct(found);
+                setProductInputValue(found.Name || "");
+                setTimeout(() => {
+                    quantityInputRef.current?.focus();
+                }, 100);
+            } else {
+                setSelectedProduct(null);
+                setProductInputValue("");
+            }
+        }
+    }, [productID, products]);
+
+    useEffect(() => {
         if (user?.userType?.toLowerCase().includes('sm')) {
             productIDInputRef.current?.focus();
         }
@@ -78,6 +94,7 @@ export default function OrderPage({
         if (!productInputValue) {
             setSelectedProduct(null); // clear selection if input is empty
             setProductID(null);       // also clear productID immediately
+            setProductIDInput('');
             return;
         }
     }, [productInputValue])
@@ -258,15 +275,12 @@ export default function OrderPage({
     const hasStock = selectedProduct?.StockQty >= orderQuantity;
     const isAllowed = !user.userType.toLowerCase().includes('spo');
 
-    // ------- Filtered options (replace with useFilter hook later) -------
     const filteredAutocompleteOptions = useFilterAutocomplete(products, {
         companyFilter,
         categoryFilter,
         productInputValue,
         productID,
         initialDataLoading,
-        setSelectedProduct,
-        quantityInputRef,
     });
 
     // scheme

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Autocomplete, TextField, Box, Button } from '@mui/material';
 import debounce from 'lodash.debounce';
 
-const TransporterFilter = ({ onFilterChange, routes }) => {
+const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disableAutoSearch }) => {
   const [filters, setFilters] = useState({
     route: '',
     acid: '',
@@ -11,16 +11,12 @@ const TransporterFilter = ({ onFilterChange, routes }) => {
     docSort: ''
   });
 
-  // Use a function declaration to ensure hoisting within the component
-  function handleGet() {
-    console.log('handleGet called with filters:', filters);
-    if (typeof onFilterChange === 'function') {
-      onFilterChange(filters);
-    }
-  }
-
   const handleInputChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+    const newFilters = { ...filters, [field]: value };
+    setFilters(newFilters);
+    if (typeof onLocalFilterChange === 'function') {
+      onLocalFilterChange(newFilters);
+    }
   };
 
   const debouncedFilterChange = useMemo(
@@ -33,9 +29,11 @@ const TransporterFilter = ({ onFilterChange, routes }) => {
   );
 
   useEffect(() => {
-    debouncedFilterChange(filters);
+    if (!disableAutoSearch) {
+      debouncedFilterChange(filters);
+    }
     return () => debouncedFilterChange.cancel();
-  }, [filters, debouncedFilterChange]);
+  }, [filters, debouncedFilterChange, disableAutoSearch]);
 
   return (
     <Box sx={{
@@ -72,6 +70,7 @@ const TransporterFilter = ({ onFilterChange, routes }) => {
         <TextField
           label="ACID"
           size="small"
+          type="number"
           value={filters.acid}
           onChange={(e) => handleInputChange('acid', e.target.value)}
         />
@@ -79,6 +78,7 @@ const TransporterFilter = ({ onFilterChange, routes }) => {
         <TextField
           label="Doc #"
           size="small"
+          type="number"
           value={filters.doc}
           onChange={(e) => handleInputChange('doc', e.target.value)}
         />
@@ -107,24 +107,6 @@ const TransporterFilter = ({ onFilterChange, routes }) => {
           <option value="DESC">Highest First</option>
           <option value="ASC">Lowest First</option>
         </TextField>
-      </Box>
-
-      {/* Button Row */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-        <Button
-          variant='contained'
-          sx={{
-            height: 45,
-            minWidth: 150,
-            fontSize: '1rem',
-            fontWeight: 'bold',
-            borderRadius: 2,
-            boxShadow: 2
-          }}
-          onClick={handleGet}
-        >
-          SEARCH
-        </Button>
       </Box>
     </Box>
   );

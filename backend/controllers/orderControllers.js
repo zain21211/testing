@@ -51,11 +51,11 @@ const checkDuplicate = async (transactionid) => {
   try {
     const pool = await getPool();
     const result = await pool.request()
-      .input("transactionid", sql.VarChar, transactionid)
+      .input("transactionId", sql.VarChar, transactionid)
       .query(`
       SELECT 1
       FROM ledgers
-      where transactionid=@transactionid;
+      where transactionId=@transactionId OR transactionId=@transactionId + '-DR';
     `);
 
     const duplicate = result.recordset.length > 0;
@@ -162,7 +162,7 @@ const orderControllers = {
           } = item;
 
           await transaction.request()
-            .input("date", sql.VarChar(50), orderDate)
+            .input("date", sql.DateTime, new Date(orderDate))
             .input("prid", sql.Int, prid)
             .input("acid", sql.Int, acid)
             .input("qty", sql.Int, qty)
@@ -233,9 +233,9 @@ const orderControllers = {
           .input("doc", sql.Int, nextDoc)
           .input("username", sql.VarChar(50), safeUsername)
           .input("userType", sql.VarChar(50), safeUserType)
-          .input("orderDate", sql.VarChar(50), orderDate).query(`
-          INSERT INTO psproductHistory (doc,username,UserLevel,date,EntryDate,EntryStatus)
-          VALUES (@doc,@username,@userType,@orderDate,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE')
+          .input("orderDate", sql.DateTime, new Date(orderDate)).query(`
+          INSERT INTO psproductHistory (Doc, UserName, UserLevel, Date, EntryDate, EntryStatus)
+          VALUES (@doc, @username, @userType, @orderDate, SYSDATETIME(), 'SAVE')
         `);
       } catch (e) {
         throw new Error(`Step 3 (History) failed: ${e.message}`);
@@ -252,7 +252,7 @@ const orderControllers = {
         const detailReq = transaction.request();
         await detailReq
           .input("nextDoc", sql.Int, parseInt(nextDoc))
-          .input("orderDate", sql.VarChar(50), orderDate)
+          .input("orderDate", sql.DateTime, new Date(orderDate))
           .input("customerAcid", sql.Int, parseInt(customerAcid))
           .input("description", sql.VarChar(255), description)
           .input("totalAmount", sql.Decimal(18, 2), totalAmount)
@@ -282,20 +282,21 @@ const orderControllers = {
       } catch (e) {
         throw new Error(`Step 4 (PSDetail) failed: ${e.message}`);
       }
-      let entryTime = new Date(orderDate);
-
-      await transaction.request()
-        .input("nextDoc", sql.Int, parseInt(nextDoc))
-        .input("orderDate", sql.VarChar(50), orderDate)
-        .input("entryDate", sql.DateTime, entryTime)
-        .input("customerAcid", sql.Int, parseInt(customerAcid))
-        .input("description", sql.VarChar(255), description)
-        .input("totalAmount", sql.Decimal(18, 2), totalAmount)
-        .input("status", sql.VarChar(50), status)
-        .input("dueDate", sql.DateTime, dueDate)
-        .input("PBALANCE", sql.Int, 0)
-        .input("FREIGHT", sql.Int, 0)
-        .input("username", sql.VarChar(50), safeUsername).query(`
+      const entryDate = new Date();
+      try {
+        const detailHistReq = transaction.request();
+        await detailHistReq
+          .input("nextDoc", sql.Int, parseInt(nextDoc))
+          .input("orderDate", sql.DateTime, new Date(orderDate))
+          .input("entryDate", sql.DateTime, entryDate)
+          .input("customerAcid", sql.Int, parseInt(customerAcid))
+          .input("description", sql.VarChar(255), description)
+          .input("totalAmount", sql.Decimal(18, 2), totalAmount)
+          .input("status", sql.VarChar(50), status)
+          .input("dueDate", sql.DateTime, dueDate)
+          .input("PBALANCE", sql.Int, 0)
+          .input("FREIGHT", sql.Int, 0)
+          .input("username", sql.VarChar(50), safeUsername).query(`
     INSERT INTO PSDetailHistory
       (Doc, Date, Type, Acid, Description, Amount, GrossProfit, DueDate, PBalance, EntryDate, username)
     VALUES
@@ -313,13 +314,16 @@ const orderControllers = {
         @username
       )
   `);
+      } catch (e) {
+        throw new Error(`Step 4b (DetailHistory) failed: ${e.message}`);
+      }
 
       // ✅ 5. Insert into ledgers + ledgersHistory
       const ledgerReq = transaction.request();
       ledgerReq
         .input("customerAcid", sql.Int, parseInt(customerAcid))
         .input("salesRevenueAcid", sql.Int, parseInt(safeSalesRevenueAcid))
-        .input("orderDate", sql.VarChar(50), orderDate)
+        .input("orderDate", sql.DateTime, new Date(orderDate))
         .input("nextDoc", sql.Int, nextDoc)
         .input("description", sql.VarChar(255), description)
         .input("username", sql.VarChar(50), safeUsername)
@@ -331,16 +335,16 @@ const orderControllers = {
         await ledgerReq.query(`
         INSERT INTO ledgers (Acid,Date,Type,Doc,NarrationS,Debit,Credit,EntryBy,EntryDateTime,transactionId)
         VALUES
-          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID),
-          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID);
+          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID + '-DR'),
+          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID + '-CR');
 
         INSERT INTO ledgersHistory (Acid,Date,Doc,Type,Narration,Invoice,Debit,Credit,remainingamount,status,
           UserName,UserLevel,EntryDate,EntryStatus)
         VALUES
           (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,
-            @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE'),
+            @username,@userType,SYSDATETIME(),'SAVE'),
           (@salesRevenueAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,NULL,@totalAmount,0,0,
-            @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE');
+            @username,@userType,SYSDATETIME(),'SAVE');
       `);
       } catch (e) {
         throw new Error(`Step 5 (Ledgers) failed: ${e.message}`);

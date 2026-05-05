@@ -122,7 +122,7 @@ const orderControllers = {
     let pool, transaction;
     try {
       pool = await getPool();
-      
+
       // Safety defaults
       const safeUsername = username || "unknown_user";
       const safeUserType = userType || "STAFF";
@@ -333,10 +333,10 @@ const orderControllers = {
 
       try {
         await ledgerReq.query(`
-        INSERT INTO ledgers (Acid,Date,Type,Doc,NarrationS,Debit,Credit,EntryBy,EntryDateTime,transactionId)
+        INSERT INTO ledgers (Acid,Date,Type,Doc,NarrationS,narration,Debit,Credit,EntryBy,EntryDateTime,transactionId)
         VALUES
-          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID + '-DR'),
-          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID + '-CR');
+          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID + '-DR'),
+          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID + '-CR');
 
         INSERT INTO ledgersHistory (Acid,Date,Doc,Type,Narration,Invoice,Debit,Credit,remainingamount,status,
           UserName,UserLevel,EntryDate,EntryStatus)
@@ -377,8 +377,8 @@ const orderControllers = {
           logToFile(`❌ Rollback failed: ${rbErr.message}`);
         }
       }
-      res.status(500).json({ 
-        error: "Failed to create order", 
+      res.status(500).json({
+        error: "Failed to create order",
         details: error.message,
         payload: { customerAcid, totalAmount, orderDate }
       });

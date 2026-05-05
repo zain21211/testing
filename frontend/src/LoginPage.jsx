@@ -193,19 +193,22 @@ const Login = () => {
     setIsLoggedIn(false);
     setUserData(null);
     setIsCustomer(false);
+    setAvatar(null);   // clear avatar so previous user's pic never shows
     navigate("/");
   };
 
   const [avatar, setAvatar] = useState(null);
 
-  // Load avatar from IndexedDB on login
+  // Load avatar from IndexedDB whenever the logged-in user changes.
+  // Always reset to null first so a previous user's image never persists.
   useEffect(() => {
+    setAvatar(null);
     if (userData?.username) {
       avatarStore.getItem(`avatar_${userData.username}`).then((saved) => {
         if (saved) setAvatar(saved);
       });
     }
-  }, [userData]);
+  }, [userData?.username]); // key on username, not the whole object
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];

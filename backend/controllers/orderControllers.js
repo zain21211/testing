@@ -129,63 +129,59 @@ const orderControllers = {
       const parsedLines = JSON.parse(JSON.stringify(linesJson || []));
       if (!parsedLines.length) throw new Error("No items found in order.");
 
-      // ✅ 1. Insert into PsProduct (batch insert)a
-      const psProductInserts = parsedLines.map((item) => {
-        const {
-          prid,
-          acid,
-          qty,
-          aQty,
-          bQty,
-          rate,
-          suggestedPrice,
-          vest,
-          discP1,
-          discP2,
-          vist,
-          SchPc,
-          sch,
-          isClaim,
-          profit,
-          spo,
-        } = item;
-
-        return transactionRequest
-          .input("date", sql.VarChar(50), orderDate)
-          .input("prid", sql.Int, prid)
-          .input("acid", sql.Int, acid)
-          .input("qty", sql.Int, qty)
-          .input("aQty", sql.Int, qty)
-          .input("bQty", sql.Int, qty)
-          .input("rate", sql.Decimal(18, 2), suggestedPrice)
-          .input("suggestedPrice", sql.Decimal(18, 2), suggestedPrice)
-          .input("vest", sql.Decimal(18, 2), vest)
-          .input("discP1", sql.Decimal(18, 2), discP1)
-          .input("discP2", sql.Decimal(18, 2), discP2)
-          .input("vist", sql.Decimal(18, 2), vist)
-          .input("SchPc", sql.Int, SchPc)
-          .input("sch", sql.Int, sch)
-          .input("isClaim", sql.Bit, isClaim)
-          .input("spo", sql.VarChar(255), spo)
-          .input("profit", sql.Decimal(18, 2), profit)
-          .input("doc", sql.Int, parseInt(nextDoc))
-          .input("username", sql.VarChar(50), safeUsername).query(`
-          INSERT INTO PsProduct
-          ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQTY],[Qty],[Rate],
-           [SuggestedRate],[VEST],[DiscP],[Discount],[DiscP2],[Discount2],[VIST],
-           [SellingType],[SchPc],[Sch],[department],[isclaim],[SPO],[profit], [entryby])
-          VALUES
-          (@date,'SALE',@doc,'OUT',@prid,@acid,0,@aQty,@bQty,@rate,
-           @suggestedPrice,@vest,@discP1,
-           (ISNULL(@discP1,0)/100)*ISNULL(@rate,0)*ISNULL(@qty,0),
-           @discP2,
-           (ISNULL(@discP2,0)/100)*ISNULL(@rate,0)*ISNULL(@qty,0),
-           @vist,'DEFAULT',@SchPc,@sch,'A1',@isClaim,@spo,@profit, @username)
-        `);
-      });
-
+      // ✅ 1. Insert into PsProduct (batch insert)
       try {
-        await Promise.all(psProductInserts);
+        for (const item of parsedLines) {
+          const {
+            prid,
+            acid,
+            qty,
+            rate,
+            suggestedPrice,
+            vest,
+            discP1,
+            discP2,
+            vist,
+            SchPc,
+            sch,
+            isClaim,
+            profit,
+            spo,
+          } = item;
+
+          await transaction.request()
+            .input("date", sql.VarChar(50), orderDate)
+            .input("prid", sql.Int, prid)
+            .input("acid", sql.Int, acid)
+            .input("qty", sql.Int, qty)
+            .input("aQty", sql.Int, qty)
+            .input("bQty", sql.Int, qty)
+            .input("rate", sql.Decimal(18, 2), suggestedPrice)
+            .input("suggestedPrice", sql.Decimal(18, 2), suggestedPrice)
+            .input("vest", sql.Decimal(18, 2), vest)
+            .input("discP1", sql.Decimal(18, 2), discP1)
+            .input("discP2", sql.Decimal(18, 2), discP2)
+            .input("vist", sql.Decimal(18, 2), vist)
+            .input("SchPc", sql.Int, SchPc)
+            .input("sch", sql.Int, sch)
+            .input("isClaim", sql.Bit, isClaim)
+            .input("spo", sql.VarChar(255), spo)
+            .input("profit", sql.Decimal(18, 2), profit)
+            .input("doc", sql.Int, parseInt(nextDoc))
+            .input("username", sql.VarChar(50), safeUsername).query(`
+            INSERT INTO PsProduct
+            ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQTY],[Qty],[Rate],
+             [SuggestedRate],[VEST],[DiscP],[Discount],[DiscP2],[Discount2],[VIST],
+             [SellingType],[SchPc],[Sch],[department],[isclaim],[SPO],[profit], [entryby])
+            VALUES
+            (@date,'SALE',@doc,'OUT',@prid,@acid,0,@aQty,@bQty,@rate,
+             @suggestedPrice,@vest,@discP1,
+             (ISNULL(@discP1,0)/100)*ISNULL(@rate,0)*ISNULL(@qty,0),
+             @discP2,
+             (ISNULL(@discP2,0)/100)*ISNULL(@rate,0)*ISNULL(@qty,0),
+             @vist,'DEFAULT',@SchPc,@sch,'A1',@isClaim,@spo,@profit, @username)
+          `);
+        }
       } catch (e) {
         throw new Error(`Step 1 (PsProduct) failed: ${e.message}`);
       }

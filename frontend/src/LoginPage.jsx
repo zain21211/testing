@@ -1,180 +1,161 @@
-// src/pages/Login.jsx or src/components/Login.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios"; // Ensure you have axios installed
-import { useNavigate, Link as RouterLink } from "react-router-dom"; // Renamed Link to RouterLink to avoid conflict with MUI Link
-
-// Material UI Components
+import axios from "axios";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import {
-  Container,
-  Typography,
-  Box,
-  TextField,
-  Button,
-  Paper,
-  CircularProgress,
-  Alert,
-  Link as MuiLink, // MUI Link
-  IconButton,
-  InputAdornment,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
+  Container, Typography, Box, TextField, Button, Paper, CircularProgress,
+  Alert, IconButton, InputAdornment, FormControl, OutlinedInput, Checkbox,
+  FormControlLabel, Grid, Avatar, Card, CardContent, CardActionArea, useTheme
 } from "@mui/material";
 
-const paymentVoucher = ['admin', 'payment']
-const packingList = ['pack', 'admin', 'operator']
-const list = ["sm", 'admin']
-const forSpo = ['spo', 'admin', 'operator'] // for sales and spoworking
-
-// const spoWorking = ['spo']
-// Material UI Icons
+// Icons
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-// import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined"; // Not used in the form currently
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import { jwtDecode } from "jwt-decode";
+import InventoryIcon from '@mui/icons-material/Inventory';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import HistoryIcon from '@mui/icons-material/History';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import RouteIcon from '@mui/icons-material/Route';
+import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
 
-const url = import.meta.env.VITE_API_URL
+const paymentVoucher = ['admin', 'payment'];
+const packingList = ['pack', 'admin', 'operator'];
+const forSpo = ['spo', 'admin', 'operator'];
+const userTypes_list = ["sm", 'admin'];
+
+const url = import.meta.env.VITE_API_URL;
+
+// --- Sub-component: Action Card ---
+const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
+  const navigate = useNavigate();
+  return (
+    <Card 
+      sx={{ 
+        height: '100%',
+        borderRadius: '24px',
+        background: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          transform: 'translateY(-8px)',
+          boxShadow: `0 12px 30px -10px ${color}80`,
+          borderColor: color,
+        }
+      }}
+    >
+      <CardActionArea 
+        onClick={() => path ? navigate(path) : onClick()}
+        sx={{ height: '100%', p: 3 }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          textAlign: 'center',
+          gap: 2 
+        }}>
+          <Avatar sx={{ 
+            bgcolor: `${color}15`, 
+            color: color, 
+            width: 64, 
+            height: 64,
+            mb: 1
+          }}>
+            <Icon sx={{ fontSize: 32 }} />
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight="700" sx={{ color: '#1a1a1a', mb: 0.5 }}>
+              {title}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.3 }}>
+              {subtitle}
+            </Typography>
+          </Box>
+        </Box>
+      </CardActionArea>
+    </Card>
+  );
+};
+
 const Login = () => {
-  // const [name, setName] = useState(""); // 'name' state was not used in login form, can be removed if not needed for other logic
+  // Helper to get initial state - strictly checking localStorage
+  const getInitialAuthState = () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const user = localStorage.getItem("user");
+      if (token && user) {
+        const decoded = jwtDecode(token);
+        // If no exp exists, assume it's a permanent token; otherwise check against now
+        const isValid = !decoded.exp || (decoded.exp * 1000 > Date.now());
+        if (isValid) {
+          return { isLoggedIn: true, userData: JSON.parse(user) };
+        }
+      }
+    } catch (e) {
+      console.error("Auth initialization error:", e);
+      localStorage.clear(); // Clear potentially corrupt data
+    }
+    return { isLoggedIn: false, userData: null };
+  };
+
+  const [initialAuth] = useState(getInitialAuthState());
+  const [isLoggedIn, setIsLoggedIn] = useState(initialAuth.isLoggedIn);
+  const [userData, setUserData] = useState(initialAuth.userData);
+  
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState(null);
-  // const [decoded, setDecoded] = useState({}); // 'decoded' state not actively used elsewhere, jwtDecode result used directly
   const navigate = useNavigate();
-  const [checked, setChecked] = useState(true); // For "Remember Me"
+  const [checked, setChecked] = useState(true);
   const [isCustomer, setIsCustomer] = useState(false);
-  // const [user, setUser] = useState(null); // 'user' state seems redundant with 'userData'
 
-  // Helper function to check token expiration
-  function isTokenExpired(token) {
-    if (!token) return true; // No token means it's effectively expired/invalid
-    try {
-      const decodedToken = jwtDecode(token);
-      if (!decodedToken.exp) return false; // No expiration claim, assume not expired
-      return decodedToken.exp < Date.now() / 1000; // Compare exp time with current time
-    } catch (e) {
-      console.error("Invalid token:", e);
-      return true; // Invalid token structure
-    }
-  }
-
-  // Effect 1: Initialize component state from localStorage on mount
+  // Sync state if localStorage changes (optional but good for multi-tab)
   useEffect(() => {
-    const tokenFromStorage = localStorage.getItem("authToken");
-    const userStringFromStorage = localStorage.getItem("user");
+    const auth = getInitialAuthState();
+    if (auth.isLoggedIn !== isLoggedIn) {
+      setIsLoggedIn(auth.isLoggedIn);
+      setUserData(auth.userData);
+    }
+  }, []);
 
-    if (tokenFromStorage && userStringFromStorage) {
-      if (!isTokenExpired(tokenFromStorage)) {
-        try {
-          const parsedUser = JSON.parse(userStringFromStorage);
-          setUserData(parsedUser);
-          setIsLoggedIn(true);
-          // isCustomer will be set by Effect 2 based on userData
-        } catch (e) {
-          console.error("Failed to parse user data from localStorage:", e);
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("user");
-          setIsLoggedIn(false);
-          setUserData(null);
-        }
-      } else {
-        // Token exists but is expired
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("user");
-        setIsLoggedIn(false);
-        setUserData(null);
+  // Still keep this for customer/SPO redirection
+  useEffect(() => {
+    if (userData?.userType) {
+      const isCust = userData.userType.toLowerCase().includes("cust");
+      setIsCustomer(isCust);
+      if (isLoggedIn) {
+        if (isCust) navigate("/order");
+        else if (userData.userType.toLowerCase().includes("spo")) navigate("/turnoverreport");
       }
-    } else {
-      // No token or no user string in localStorage
-      setIsLoggedIn(false);
-      setUserData(null);
     }
-  }, []); // Empty dependency array means this runs only once on mount
+  }, [userData, isLoggedIn, navigate]);
 
-  const userTypes = ["sm", "admin", "operator"];
-  const userType = userData?.userType?.toLowerCase() || "";
-  const isBilty = userType.includes("bilty");
-  let isList = false;
-  if (userTypes.some(type => userType.includes(type)) || isBilty) {
-    isList = true
-  }
-
-  // Effect 2: Update isCustomer whenever userData changes
-  useEffect(() => {
-    if (userData && typeof userData.userType === 'string') {
-      const customerCheck = userData.userType.toLowerCase().includes("cust");
-      setIsCustomer(customerCheck);
-    } else {
-      setIsCustomer(false); // Reset if no userData or userType is not a string
-    }
-  }, [userData]); // This effect runs when userData changes
-
-  // Effect 3: Handle redirection for customers
-  useEffect(() => {
-    if (isLoggedIn && isCustomer && userData) {
-      // console.log("Customer detected, navigating to /order. UserData:", userData);
-      navigate("/order");
-    }
-  }, [isLoggedIn, isCustomer, userData, navigate]);
-
-  // Runs when these dependencies change  // Effect 3: Handle redirection for customers
-  useEffect(() => {
-    const isSpo = userData?.userType?.toLowerCase().includes("spo");
-    if (isLoggedIn && isSpo && userData) {
-      // console.log("Customer detected, navigating to /order. UserData:", userData);
-      navigate("/turnoverreport");
-    }
-  }, [isLoggedIn, isCustomer, userData, navigate]); // Runs when these dependencies change
-
-  const handleChangeRememberMe = (event) => {
-    setChecked(event.target.checked);
-  };
-
-  const handleLogin = async (event) => {
-    event.preventDefault();
+  const handleLogin = async (e) => {
+    e.preventDefault();
     setError(null);
     setIsLoading(true);
-    console.log("api")
-
-
     try {
-      const response = await axios.post(
-        `${url}/login`,
-        {
-          // username: name, // If 'name' was meant to be username, it should be sent
-          password: password,
-          checked: checked // Assuming 'checked' is 'rememberMe'
-        }
-      );
-
-      const receivedToken = response.data.token;
-      // console.log("expires in: ", response.data.options);
-      const userFromApi = jwtDecode(receivedToken);
-
-      localStorage.setItem("authToken", receivedToken);
-      localStorage.setItem("user", JSON.stringify(userFromApi));
-
-      setUserData(userFromApi); // This will trigger Effect 2 and then potentially Effect 3
-      setIsLoggedIn(true);      // This will also contribute to triggering Effect 3
-
-      // No direct navigation here; Effect 3 will handle it.
-      setPassword(""); // Clear password on successful login
+      const res = await axios.post(`${url}/login`, { password, checked });
+      const token = res.data.token;
+      const user = jwtDecode(token);
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      setUserData(user);
+      setIsLoggedIn(true);
+      setPassword("");
     } catch (err) {
-      let errorMessage = "An unexpected error occurred. Please try again.";
-      if (axios.isAxiosError(err) && err.response) {
-        errorMessage =
-          err.response.data.message || err.response.data.error || errorMessage;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      console.error("Login failed:", err);
-      setError(errorMessage);
+      setError(err.response?.data?.message || "Login failed");
       setPassword("");
     } finally {
       setIsLoading(false);
@@ -182,379 +163,234 @@ const Login = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
+    localStorage.clear();
     setIsLoggedIn(false);
     setUserData(null);
-    setIsCustomer(false); // Ensure isCustomer is also reset
-    // setName(""); // Clear name field if it were used
-    setPassword("");
-    // Navigate to login page or home page if not already on it
-    // navigate("/login"); // Or simply let the component re-render to show the form
+    setIsCustomer(false);
+    navigate("/");
   };
 
-  // Conditional Rendering Logic
-  if (isLoggedIn) {
+  const userType = userData?.userType?.toLowerCase() || "";
+  const isBilty = userType.includes("bilty");
 
-    // for usertype customer
-    if (isCustomer || userData?.userType?.toLowerCase().includes("spo")) {
-      // User is a customer, Effect 3 should be redirecting them.
-      // Show a loading indicator while the redirect happens.
-      return (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-
-            // height: "80vh", // Use viewport height to center vertically
-          }}
-        >
-          <CircularProgress />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            {/* {isCustomer ? 'Redirecting to your orders...' : 'Redirecting to your report...'} */}
-            Redirecting to your report...
-          </Typography>
-        </Box>
-      );
-    }
-    // For non-customer users, show the dashboard
+  if (isLoggedIn && (isCustomer || userType.includes("spo"))) {
     return (
-      <Box
-        sx={{
-          padding: 2,
-          display: "flex",
-          alignItems: "center", // Vertically center content
-          justifyContent: "center", // Horizontally center content
-          minHeight: "calc(100vh - 110px)",
-        }}
-      >
-        <Paper
-          elevation={6}
-          sx={{
-            width: "80%",
-            maxWidth: 1000,
-            padding: 4,
-            borderRadius: "35px",
-            border: "1px solid",
-            borderColor: "grey.300",
-            textAlign: "center",
-          }}
-        >
-          <Typography variant="h5" component="h2" gutterBottom>
-            Welcome Back, {userData?.name || userData?.username || "User"}!
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            You are logged in.
-          </Typography>
-          <Box sx={{
-            mt: 8,
-            display: "flex",
-            marginX: "auto",
-            maxWidth: "900px",
-            flexDirection: { xs: 'column', md: 'row' },
-            flexWrap: 'wrap',
-            gap: 2,
-            alignItems: 'center',
-            justifyContent: 'center',
-            "& > *": {
-              width: { xs: "100%", md: "25%" }, // children full width only in column
-            },
-          }}>
-            {/* <Box sx={{
-            gap: 2,
-            display: "grid",
-            margin: "0 auto",
-            maxWidth: "900px",
-            gridTemplateColumns: { xs: 'repeat(1, 1fr)', md: "repeat(auto-fit, minmax(250px, 1fr))" },
-          }}> */}
-            {!isBilty && packingList.some(e => userType.includes(e)) && (
-              <>
-                <Button
-                  component={RouterLink}
-                  to="/pending"
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", bgcolor: "#ff3d07ff", fontWeight: "Bold", flexGrow: 1 }}
-                >
-                  Packing List
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/load"
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", bgcolor: "#00a611ff", fontWeight: "Bold", flexGrow: 1 }}
-                >
-                  Load Form
-                </Button>
-              </>
-            )}
-            {!isBilty && (forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
-              <Button
-                component={RouterLink}
-                to="/turnoverreport"
-                variant="contained"
-                size="large"
-                sx={{ py: 1.5, height: "60px", bgcolor: "#FFC107", fontWeight: "Bold ", color: "black", flexGrow: 1 }}
-              >
-                Spo Working
-              </Button>
-            )}
-            {!isBilty && (paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
-              <>
-              <Button
-                component={RouterLink}
-                to="/paymentvoucher"
-                variant="contained"
-                size="large"
-                sx={{ flexGrow: 1, py: 1.5, height: "60px", bgcolor: "	#795548" }}
-              >
-                Payment Voucher
-              </Button>
-              <Button
-                  component={RouterLink}
-                  to="/saleshistory"
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#009688" }}
-                >
-                  Sales History
-              </Button>
-                </>
-            )}
-            {!isBilty && ((userType !== 'payment' && !userType.includes('pack')) &&
-              <>
-                <Button
-                  component={RouterLink}
-                  to="/coa"
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", bgcolor: "#610051ff", fontWeight: "Bold", flexGrow: 1 }}
-                >
-                  Accounts
-                </Button>
-
-                <Button
-                  component={RouterLink}
-                  to="/recovery"
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, flexGrow: 1, height: "60px", bgcolor: "green" }}
-                >
-                  Recovery
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/sales"
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#009688" }}
-                >
-                  Sales
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/order" // Non-customers can still go to create order manually
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", flexGrow: 1, }}
-                >
-                  Create New Order
-                </Button>
-              </>
-            )}
-            {isList && (
-              <>
-                {!isBilty && (
-                  <>
-                    <Button
-                      component={RouterLink}
-                      to="/productslist" // Non-customers can still go to create order manually
-                      variant="contained"
-                      size="large"
-                      sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#ff00eaff" }}
-                    >
-                      Products
-                    </Button>
-                    <Button
-                      component={RouterLink}
-                      to="/list" // Non-customers can still go to create order manually
-                      variant="contained"
-                      size="large"
-                      sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#3f51b5" }}
-                    >
-                      Customer Route Order
-                    </Button>
-                  </>
-                )}
-                <Button
-                  component={RouterLink}
-                  to="/delivery" // Non-customers can still go to create order manually
-                  variant="contained"
-                  size="large"
-                  sx={{ py: 1.5, height: "60px", flexGrow: 1, bgcolor: "#a41260ff" }}
-                >
-                  Delivery Form
-                </Button>
-              </>
-            )}
-
-          </Box>
-          <Button
-            onClick={handleLogout}
-            variant="outlined"
-            color="inherit"
-            sx={{
-              mt: 8, // Reduced margin top a bit
-              width: { xs: '100%', md: '900px' },
-              height: "60px",
-              bgcolor: "error.main", // Using theme color for red
-              color: "white",
-              fontWeight: "bold",
-              "&:hover": {
-                bgcolor: "error.dark", // Darken on hover
-                color: "white",
-              },
-            }}
-          >
-            Logout
-          </Button>
-        </Paper >
-      </Box >
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
-  // If not logged in, show the login form
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center", // Vertically center content
-        justifyContent: "center", // Horizontally center content
-        minHeight: "calc(100vh - 64px)", // Adjust 64px based on your AppBar height, if any
-        bgcolor: "grey.100",
-        padding: 2,
-      }}
-    >
-      <Paper
-        elevation={6}
-        sx={{
-          width: "100%",
-          maxWidth: 400,
-          padding: 4,
-          borderRadius: 2,
-          border: "1px solid",
-          borderColor: "grey.300",
-        }}
-      >
-        <Box sx={{ textAlign: "center", mb: 4 }}>
-          <Typography
-            variant="h4"
-            component="h1"
-            fontWeight="bold"
-            color="text.primary"
-          >
-            Login.
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Access your account.
-          </Typography>
-        </Box>
-
-        <Box
-          component="form"
-          onSubmit={handleLogin}
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-        >
-          {/* Removed Name/Username field as it wasn't used in handleLogin payload */}
-          <div>
-            <Typography
-              variant="body2"
-              component="label"
-              htmlFor="password-input"
-              color="text.secondary"
-              sx={{ display: "block", mb: 0.5, fontWeight: "medium" }}
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: isLoggedIn 
+        ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      py: 4,
+      px: 2,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {isLoggedIn ? (
+        <Container maxWidth="lg">
+          <Box sx={{ mb: 6, textAlign: 'center' }}>
+            <Avatar 
+              sx={{ 
+                width: 80, height: 80, mx: 'auto', mb: 2, 
+                bgcolor: 'primary.main', fontSize: '2rem',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
+              }}
             >
-              Password
+              {userData?.username?.charAt(0).toUpperCase() || <PersonIcon />}
+            </Avatar>
+            <Typography variant="h3" fontWeight="800" sx={{ color: '#1a1a1a', mb: 1 }}>
+              Welcome back, {userData?.username || "Admin"}
             </Typography>
-            <FormControl fullWidth variant="outlined">
+            <Typography variant="h6" sx={{ color: '#555', fontWeight: 400 }}>
+              What would you like to manage today?
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            {!isBilty && packingList.some(e => userType.includes(e)) && (
+              <>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Packing List" subtitle="Manage pending orders"
+                    icon={InventoryIcon} color="#ff3d07" path="/pending" 
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Load Form" subtitle="Track shipping & logistics"
+                    icon={LocalShippingIcon} color="#00a611" path="/load" 
+                  />
+                </Grid>
+              </>
+            )}
+
+            {!isBilty && (forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
+              <Grid item xs={12} sm={6} md={3}>
+                <ActionCard 
+                  title="SPO Working" subtitle="Turnover & sales reports"
+                  icon={AssessmentIcon} color="#FFC107" path="/turnoverreport" 
+                />
+              </Grid>
+            )}
+
+            {!isBilty && (paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
+              <>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Payments" subtitle="Vouchers & transactions"
+                    icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher" 
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="History" subtitle="Detailed sales records"
+                    icon={HistoryIcon} color="#009688" path="/saleshistory" 
+                  />
+                </Grid>
+              </>
+            )}
+
+            {!isBilty && userType !== 'payment' && !userType.includes('pack') && (
+              <>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Accounts" subtitle="Manage COA & customers"
+                    icon={PeopleAltIcon} color="#610051" path="/coa" 
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Recovery" subtitle="Pending dues & collections"
+                    icon={ReceiptLongIcon} color="#2e7d32" path="/recovery" 
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Sales" subtitle="Daily sales performance"
+                    icon={TrendingUpIcon} color="#009688" path="/sales" 
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="New Order" subtitle="Create fresh sales invoice"
+                    icon={AddShoppingCartIcon} color="#1976d2" path="/order" 
+                  />
+                </Grid>
+              </>
+            )}
+
+            {userTypes_list.some(type => userType.includes(type)) || isBilty ? (
+              <>
+                {!isBilty && (
+                  <>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <ActionCard 
+                        title="Products" subtitle="Inventory & stock list"
+                        icon={ShoppingBagIcon} color="#ff00ea" path="/productslist" 
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <ActionCard 
+                        title="Routes" subtitle="Customer route mapping"
+                        icon={RouteIcon} color="#3f51b5" path="/list" 
+                      />
+                    </Grid>
+                  </>
+                )}
+                <Grid item xs={12} sm={6} md={3}>
+                  <ActionCard 
+                    title="Delivery" subtitle="Active delivery tracking"
+                    icon={DeliveryDiningIcon} color="#a41260" path="/delivery" 
+                  />
+                </Grid>
+              </>
+            ) : null}
+
+            <Grid item xs={12}>
+              <Button
+                fullWidth
+                onClick={handleLogout}
+                variant="outlined"
+                startIcon={<LogoutIcon />}
+                sx={{ 
+                  mt: 4, py: 2, borderRadius: '16px', color: '#d32f2f', borderColor: '#d32f2f',
+                  fontWeight: 700, '&:hover': { bgcolor: '#d32f2f', color: 'white', borderColor: '#d32f2f' }
+                }}
+              >
+                Logout from System
+              </Button>
+            </Grid>
+          </Grid>
+        </Container>
+      ) : (
+        <Paper 
+          elevation={24} 
+          sx={{ 
+            p: 5, width: '100%', maxWidth: 450, borderRadius: '32px',
+            background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+          }}
+        >
+          <Box sx={{ textAlign: 'center', mb: 5 }}>
+            <Typography variant="h4" fontWeight="900" sx={{ color: '#1a1a1a', letterSpacing: '-1px' }}>
+              Welcome back.
+            </Typography>
+            <Typography variant="body1" sx={{ color: '#666' }}>
+              Enter your password to access the system.
+            </Typography>
+          </Box>
+
+          <Box component="form" onSubmit={handleLogin}>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <Typography variant="body2" fontWeight="600" sx={{ mb: 1, ml: 1 }}>Password</Typography>
               <OutlinedInput
-                id="password-input"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
                 required
-                size="medium"
-                startAdornment={
-                  <InputAdornment position="start">
-                    <LockOutlinedIcon color="action" />
-                  </InputAdornment>
-                }
+                sx={{ borderRadius: '16px', bgcolor: 'white' }}
+                startAdornment={<InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>}
                 endAdornment={
                   <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                      disabled={isLoading}
-                    >
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 }
               />
             </FormControl>
-          </div>
 
-          <Box sx={{ textAlign: "right", mt: -1.5 }}>
-            <FormControlLabel
-              control={<Checkbox checked={checked} onChange={handleChangeRememberMe} />}
-              label="Remember Me"
+            <FormControlLabel 
+              control={<Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)} />} 
+              label="Keep me signed in"
+              sx={{ mb: 4, ml: 0.5 }}
             />
-          </Box>
 
-          {error && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              aria-live="assertive"
-              onClose={() => setError(null)} // Allow dismissing error
+            {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>{error}</Alert>}
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={isLoading}
+              sx={{ 
+                py: 2, borderRadius: '16px', fontSize: '1.1rem', fontWeight: 700,
+                textTransform: 'none', boxShadow: '0 10px 20px -10px #1976d2'
+              }}
             >
-              {error}
-            </Alert>
-          )}
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            size="large"
-            disabled={isLoading}
-            sx={{
-              py: 1.5,
-              mt: 2,
-              transition: "background-color 0.15s ease-in-out",
-              bgcolor: isLoading ? "primary.light" : "primary.main", // Adjusted loading color
-              "&:hover": {
-                bgcolor: isLoading ? "primary.light" : "primary.dark",
-              },
-            }}
-          >
-            {isLoading ? (
-              <>
-                <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
-                Signing In...
-              </>
-            ) : (
-              "Sign In"
-            )}
-          </Button>
-        </Box>
-      </Paper>
+              {isLoading ? <CircularProgress size={24} color="inherit" /> : "Sign In"}
+            </Button>
+          </Box>
+        </Paper>
+      )}
     </Box>
   );
 };

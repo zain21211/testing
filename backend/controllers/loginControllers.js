@@ -15,7 +15,7 @@ const loginController = async (req, res) => {
       .json({ message: "password are required." });
   }
 
-  const options = !checked ? { expiresIn: '1h' } : {};
+  const options = checked ? { expiresIn: '365d' } : { expiresIn: '1h' };
 
   try {
 

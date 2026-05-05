@@ -184,7 +184,11 @@ const orderControllers = {
         `);
       });
 
-      await Promise.all(psProductInserts);
+      try {
+        await Promise.all(psProductInserts);
+      } catch (e) {
+        throw new Error(`Step 1 (PsProduct) failed: ${e.message}`);
+      }
 
       // ✅ 2. Update stock (normal + claim)
       const updateStockQuery = `
@@ -206,19 +210,27 @@ const orderControllers = {
         GROUP BY prid
       ) sub ON p.id = sub.prid;
     `;
-      await transactionRequest
-        .input("nextDoc", sql.Int, nextDoc)
-        .query(updateStockQuery);
+      try {
+        await transactionRequest
+          .input("nextDoc", sql.Int, nextDoc)
+          .query(updateStockQuery);
+      } catch (e) {
+        throw new Error(`Step 2 (UpdateStock) failed: ${e.message}`);
+      }
 
       // ✅ 3. Insert into psproductHistory
-      await transaction.request()
-        .input("doc", sql.Int, nextDoc)
-        .input("username", sql.VarChar(50), safeUsername)
-        .input("userType", sql.VarChar(50), safeUserType)
-        .input("orderDate", sql.VarChar(50), orderDate).query(`
-        INSERT INTO psproductHistory (doc,username,UserLevel,date,EntryDate,EntryStatus)
-        VALUES (@doc,@username,@userType,@orderDate,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE')
-      `);
+      try {
+        await transaction.request()
+          .input("doc", sql.Int, nextDoc)
+          .input("username", sql.VarChar(50), safeUsername)
+          .input("userType", sql.VarChar(50), safeUserType)
+          .input("orderDate", sql.VarChar(50), orderDate).query(`
+          INSERT INTO psproductHistory (doc,username,UserLevel,date,EntryDate,EntryStatus)
+          VALUES (@doc,@username,@userType,@orderDate,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE')
+        `);
+      } catch (e) {
+        throw new Error(`Step 3 (History) failed: ${e.message}`);
+      }
 
       console.log(nextDoc);
       const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -227,35 +239,39 @@ const orderControllers = {
       const dueDate = new Date();
 
       // ✅ 4. Insert into PSDetail
-      await transactionRequest
-        .input("nextDoc", sql.Int, parseInt(nextDoc))
-        .input("orderDate", sql.VarChar(50), orderDate)
-        .input("customerAcid", sql.Int, parseInt(customerAcid))
-        .input("description", sql.VarChar(255), description)
-        .input("totalAmount", sql.Decimal(18, 2), totalAmount)
-        .input("status", sql.VarChar(50), status)
-        .input("dueDate", sql.DateTime, dueDate)
-        .input("PBALANCE", sql.Int, 0)
-        .input("FREIGHT", sql.Int, 0)
-        .input("username", sql.VarChar(50), safeUsername).query(`
-  INSERT INTO PSDetail
-  (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, dueDate, pbalance, freight)
-  VALUES
-  (
-    @nextDoc,
-    @orderDate,
-    'SALE',
-    @customerAcid,
-    @description,
-    @totalAmount,
-    (SELECT SUM(profit) FROM psproduct WHERE doc = @nextDoc),
-    @status,
-    'P',
-    @DueDate,
-    @PBALANCE,
-    @FREIGHT
-        )
-`);
+      try {
+        await transactionRequest
+          .input("nextDoc", sql.Int, parseInt(nextDoc))
+          .input("orderDate", sql.VarChar(50), orderDate)
+          .input("customerAcid", sql.Int, parseInt(customerAcid))
+          .input("description", sql.VarChar(255), description)
+          .input("totalAmount", sql.Decimal(18, 2), totalAmount)
+          .input("status", sql.VarChar(50), status)
+          .input("dueDate", sql.DateTime, dueDate)
+          .input("PBALANCE", sql.Int, 0)
+          .input("FREIGHT", sql.Int, 0)
+          .input("username", sql.VarChar(50), safeUsername).query(`
+    INSERT INTO PSDetail
+    (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, dueDate, pbalance, freight)
+    VALUES
+    (
+      @nextDoc,
+      @orderDate,
+      'SALE',
+      @customerAcid,
+      @description,
+      @totalAmount,
+      (SELECT SUM(profit) FROM PsProduct WHERE doc = @nextDoc),
+      @status,
+      'P',
+      @DueDate,
+      @PBALANCE,
+      @FREIGHT
+          )
+  `);
+      } catch (e) {
+        throw new Error(`Step 4 (PSDetail) failed: ${e.message}`);
+      }
       let entryTime = new Date(orderDate);
 
       await transaction.request()
@@ -301,20 +317,24 @@ const orderControllers = {
         .input("totalAmount", sql.Decimal(18, 2), totalAmount)
         .input("transactionID", sql.VarChar(255), safeTransactionID);
 
-      await ledgerReq.query(`
-      INSERT INTO ledgers (acid,date,type,doc,narration,debit,credit,EntryBy,EntryDateTime,transactionid)
-      VALUES
-        (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID),
-        (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID);
+      try {
+        await ledgerReq.query(`
+        INSERT INTO ledgers (acid,date,type,doc,narration,debit,credit,EntryBy,EntryDateTime,transactionid)
+        VALUES
+          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID),
+          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID);
 
-      INSERT INTO ledgersHistory (acid,date,doc,type,narration,invoice,debit,credit,remainingamount,status,
-        UserName,UserLevel,EntryDate,EntryStatus)
-      VALUES
-        (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,
-          @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE'),
-        (@salesRevenueAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,NULL,@totalAmount,0,0,
-          @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE');
-    `);
+        INSERT INTO ledgersHistory (acid,date,doc,type,narration,invoice,debit,credit,remainingamount,status,
+          UserName,UserLevel,EntryDate,EntryStatus)
+        VALUES
+          (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,
+            @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE'),
+          (@salesRevenueAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,NULL,@totalAmount,0,0,
+            @username,@userType,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE');
+      `);
+      } catch (e) {
+        throw new Error(`Step 5 (Ledgers) failed: ${e.message}`);
+      }
 
       //const updatedProducts = await getProducts();
 

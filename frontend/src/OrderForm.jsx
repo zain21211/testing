@@ -461,7 +461,7 @@ const OrderForm = () => {
     } catch (err) {
       // Errors
       const errorMessage =
-        err.response?.data?.message || "Failed to create order.";
+        err.response?.data?.details || err.response?.data?.message || err.response?.data?.error || "Failed to create order.";
       dispatch(clearSelection({ key: "orderForm" }));
       console.error(
         "Order creation failed:",

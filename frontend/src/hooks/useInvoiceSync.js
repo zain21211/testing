@@ -6,11 +6,11 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
   const [loading, setLoading] = useState(false);
   const isSyncing = useRef(false); // prevent overlaps
 
-  const retryInvoices = useCallback(async () => {
+  const retryInvoices = useCallback(async (isManual = false) => {
     if (isSyncing.current || !invoice || invoice.length === 0) return;
 
     isSyncing.current = true;
-    setLoading(true);
+    if (isManual) setLoading(true);
 
     try {
       const results = await Promise.allSettled(
@@ -35,21 +35,21 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
         console.log(
           `Synced ${successfulIndexes.length} invoice(s) successfully`
         );
-        alert("Invoice synced");
+        if (isManual) alert("Invoice synced successfully!");
       }
-      setLoading(false);
-
     } catch (err) {
-      setLoading(false);
-
       console.error("Retry failed:", err);
     } finally {
-      console.error("finally the invoice synced");
-
       setLoading(false);
       isSyncing.current = false;
     }
   }, [invoice, token, setInvoice]);
+
+  const clearInvoices = useCallback(() => {
+    if (window.confirm("Are you sure you want to clear all pending invoices? This will stop the retry loop.")) {
+      setInvoice([]);
+    }
+  }, [setInvoice]);
 
   useEffect(() => {
     if (!invoice || invoice.length === 0) return;
@@ -58,7 +58,8 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
 
     const startSync = () => {
       if (navigator.onLine) {
-        interval = setInterval(retryInvoices, 5000);
+        // Auto-sync every 60 seconds
+        interval = setInterval(() => retryInvoices(false), 60000);
       }
     };
 
@@ -83,5 +84,5 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
     };
   }, [retryInvoices, invoice]);
 
-  return { retryInvoices, loading };
+  return { retryInvoices: () => retryInvoices(true), clearInvoices, loading };
 };

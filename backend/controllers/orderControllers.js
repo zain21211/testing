@@ -110,13 +110,22 @@ const orderControllers = {
     let pool, transaction;
     try {
       pool = await getPool();
+      
+      // Safety defaults
+      const safeUsername = username || "unknown_user";
+      const safeUserType = userType || "STAFF";
+      const safeSalesRevenueAcid = salesRevenueAcid || 4;
+      const safeTransactionID = transactionID || `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
       const nextDoc = await getNextDocNumber(pool, "sale");
-      const duplicate = await checkDuplicate(transactionID);
+      const duplicate = await checkDuplicate(safeTransactionID);
 
       if (duplicate) return res.status(204).json({ message: "Duplicate document number found." });
 
       transaction = new sql.Transaction(pool);
       await transaction.begin();
+
+      const transactionRequest = transaction.request();
 
       const parsedLines = JSON.parse(JSON.stringify(linesJson || []));
       if (!parsedLines.length) throw new Error("No items found in order.");
@@ -142,8 +151,7 @@ const orderControllers = {
           spo,
         } = item;
 
-        return pool
-          .request()
+        return transactionRequest
           .input("date", sql.VarChar(50), orderDate)
           .input("prid", sql.Int, prid)
           .input("acid", sql.Int, acid)
@@ -162,7 +170,7 @@ const orderControllers = {
           .input("spo", sql.VarChar(255), spo)
           .input("profit", sql.Decimal(18, 2), profit)
           .input("doc", sql.Int, parseInt(nextDoc))
-          .input("username", sql.VarChar(50), username).query(`
+          .input("username", sql.VarChar(50), safeUsername).query(`
           INSERT INTO PsProduct
           ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQTY],[Qty],[Rate],
            [SuggestedRate],[VEST],[DiscP],[Discount],[DiscP2],[Discount2],[VIST],
@@ -199,17 +207,15 @@ const orderControllers = {
         GROUP BY prid
       ) sub ON p.id = sub.prid;
     `;
-      await pool
-        .request()
+      await transactionRequest
         .input("nextDoc", sql.Int, nextDoc)
         .query(updateStockQuery);
 
       // ✅ 3. Insert into psproductHistory
-      await pool
-        .request()
+      await transaction.request()
         .input("doc", sql.Int, nextDoc)
-        .input("username", sql.VarChar(50), username)
-        .input("userType", sql.VarChar(50), userType)
+        .input("username", sql.VarChar(50), safeUsername)
+        .input("userType", sql.VarChar(50), safeUserType)
         .input("orderDate", sql.VarChar(50), orderDate).query(`
         INSERT INTO psproductHistory (doc,username,UserLevel,date,EntryDate,EntryStatus)
         VALUES (@doc,@username,@userType,@orderDate,CONVERT(varchar(33),SYSDATETIME(),126),'SAVE')
@@ -222,8 +228,7 @@ const orderControllers = {
       const dueDate = new Date();
 
       // ✅ 4. Insert into PSDetail
-      await pool
-        .request()
+      await transactionRequest
         .input("nextDoc", sql.Int, parseInt(nextDoc))
         .input("orderDate", sql.VarChar(50), orderDate)
         .input("customerAcid", sql.Int, parseInt(customerAcid))
@@ -233,7 +238,7 @@ const orderControllers = {
         .input("dueDate", sql.DateTime, dueDate)
         .input("PBALANCE", sql.Int, 0)
         .input("FREIGHT", sql.Int, 0)
-        .input("username", sql.VarChar(50), username).query(`
+        .input("username", sql.VarChar(50), safeUsername).query(`
   INSERT INTO PSDetail
   (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, dueDate, pbalance, freight)
   VALUES
@@ -254,8 +259,7 @@ const orderControllers = {
 `);
       let entryTime = new Date(orderDate);
 
-      await pool
-        .request()
+      await transaction.request()
         .input("nextDoc", sql.Int, parseInt(nextDoc))
         .input("orderDate", sql.VarChar(50), orderDate)
         .input("entryDate", sql.DateTime, entryTime)
@@ -266,7 +270,7 @@ const orderControllers = {
         .input("dueDate", sql.DateTime, dueDate)
         .input("PBALANCE", sql.Int, 0)
         .input("FREIGHT", sql.Int, 0)
-        .input("username", sql.VarChar(50), username).query(`
+        .input("username", sql.VarChar(50), safeUsername).query(`
     INSERT INTO PSDetailHistory
       (Doc, Date, Type, Acid, Description, Amount, GrossProfit, DueDate, PBalance, entryDAte, username)
     VALUES
@@ -286,22 +290,23 @@ const orderControllers = {
   `);
 
       // ✅ 5. Insert into ledgers + ledgersHistory
-      const ledgerReq = pool.request();
+      const ledgerReq = transaction.request();
       ledgerReq
         .input("customerAcid", sql.Int, parseInt(customerAcid))
-        .input("salesRevenueAcid", sql.Int, parseInt(4))
+        .input("salesRevenueAcid", sql.Int, parseInt(safeSalesRevenueAcid))
         .input("orderDate", sql.VarChar(50), orderDate)
         .input("nextDoc", sql.Int, nextDoc)
         .input("description", sql.VarChar(255), description)
-        .input("username", sql.VarChar(50), username)
-        .input("userType", sql.VarChar(50), userType)
-        .input("totalAmount", sql.Decimal(18, 2), totalAmount);
+        .input("username", sql.VarChar(50), safeUsername)
+        .input("userType", sql.VarChar(50), safeUserType)
+        .input("totalAmount", sql.Decimal(18, 2), totalAmount)
+        .input("transactionID", sql.VarChar(255), safeTransactionID);
 
       await ledgerReq.query(`
-      INSERT INTO ledgers (acid,date,type,doc,narration,debit,credit,EntryBy,EntryDateTime)
+      INSERT INTO ledgers (acid,date,type,doc,narration,debit,credit,EntryBy,EntryDateTime,transactionid)
       VALUES
-        (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME()),
-        (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME());
+        (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID),
+        (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID);
 
       INSERT INTO ledgersHistory (acid,date,doc,type,narration,invoice,debit,credit,remainingamount,status,
         UserName,UserLevel,EntryDate,EntryStatus)

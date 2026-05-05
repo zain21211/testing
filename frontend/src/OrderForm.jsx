@@ -150,7 +150,7 @@ const OrderForm = () => {
   const customerInputRef = useRef(null);
 
   // --- Local Storage State ---
-  const [invoice, setInvoice] = useLocalStorageState("invoice", null);
+  const [invoice, setInvoice] = useLocalStorageState("invoice", []);
   const [orderItems, setOrderItems] = useLocalStorageState(
     "orderFormOrderItems",
     [],
@@ -175,10 +175,10 @@ const OrderForm = () => {
   }, [today]);
 
   // custom hooks
-  const { retryInvoices, loading: syncing } = useInvoiceSync(
+  const { retryInvoices, clearInvoices, loading: syncing } = useInvoiceSync(
     invoice,
     setInvoice,
-    token,
+    token
   );
   // --- Effects ---
 
@@ -405,16 +405,16 @@ const OrderForm = () => {
         date: selectedDate,
         acid: String(selectedCustomer.acid),
         type: "SALE",
-        qty: parseFloat(item.orderQuantity) || 0,
-        aQty: parseFloat(item.quantity) || 0,
-        bQty: parseFloat(item.orderQuantity) || 0,
-        rate: parseFloat(item.rate),
+        qty: Number(item.orderQuantity),
+        aQty: Number(item.quantity),
+        bQty: Number(item.orderQuantity),
+        rate: Number(item.rate),
         suggestedPrice: Number(item.suggestedPrice),
         vest: Number(item.vest),
         discP1: Number(item.discount1),
         discP2: Number(item.discount2),
         vist: Math.round(item.amount),
-        SchPc: Boolean(item.Sch) ? Number(item.schPc) || 0 : 0,
+        SchPc: Number(item.schPc) || 0,
         sch: Boolean(item.Sch),
         isClaim: Boolean(item.isClaim),
         prid: String(item.productID) || "0",
@@ -422,14 +422,16 @@ const OrderForm = () => {
         remakes: item.remakes || "",
         spo: String(spo || user?.username || "no user"),
       })),
-      transcationID: uuidv4(),
       orderDate: selectedDate,
       customerAcid: String(selectedCustomer.acid),
       userId: user?.UserID,
-      username: user?.username,
+      username: user?.username || "unknown",
+      userType: user?.UserLevel || "STAFF",
+      salesRevenueAcid: 4,
+      transactionID: `TXN-${Date.now()}-${user?.UserID || 'guest'}`,
       totalAmount: orderItems.reduce(
         (sum, item) => sum + (Number(item.amount) || 0),
-        0,
+        0
       ),
       totalQuantity: Number(orderItemsTotalQuantity),
       status: status || "ESTIMATE",
@@ -787,15 +789,26 @@ const OrderForm = () => {
             </Button>
           )}
           {invoice?.length > 0 && (
-            <Button
-              variant="contained"
-              color="error"
-              sx={{ height: "100%", fontSize: "1rem" }}
-              onClick={retryInvoices}
-              disabled={syncing}
-            >
-              {syncing ? `Syncing` : `Retry Invoices ( ${invoice.length} )`}
-            </Button>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="contained"
+                color="error"
+                sx={{ height: "100%", fontSize: "1rem" }}
+                onClick={retryInvoices}
+                disabled={syncing}
+              >
+                {syncing ? `Syncing` : `Retry Invoices ( ${invoice.length} )`}
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                sx={{ height: "100%", fontSize: "1rem" }}
+                onClick={clearInvoices}
+                disabled={syncing}
+              >
+                Stop Sync
+              </Button>
+            </Box>
           )}
         </Box>
 

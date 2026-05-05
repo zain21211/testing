@@ -258,15 +258,14 @@ const Login = () => {
         reader.readAsDataURL(compressed);
         reader.onloadend = async () => {
           const base64data = reader.result;
-          // Save to IndexedDB — no 5 MB localStorage limit
           await avatarStore.setItem(`avatar_${userData.username}`, base64data);
-          // Remove old copy from localStorage if any
           localStorage.removeItem(`avatar_${userData.username}`);
           setAvatar(base64data);
           setIsCropOpen(false);
-          // Release the Object URL now that we're done
           URL.revokeObjectURL(tempImage);
           setTempImage(null);
+          // Notify Header (and any other listener) to reload the avatar instantly
+          window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: { username: userData.username } }));
         };
       } catch (err) {
         console.error("Crop/compress error:", err);
@@ -278,6 +277,7 @@ const Login = () => {
         setIsCropOpen(false);
         URL.revokeObjectURL(tempImage);
         setTempImage(null);
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: { username: userData.username } }));
       }
     }, "image/jpeg", 0.8);
   };

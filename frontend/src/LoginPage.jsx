@@ -5,8 +5,16 @@ import { jwtDecode } from "jwt-decode";
 import {
   Container, Typography, Box, TextField, Button, Paper, CircularProgress,
   Alert, IconButton, InputAdornment, FormControl, OutlinedInput, Checkbox,
-  FormControlLabel, Grid, Avatar, Card, CardContent, CardActionArea, useTheme
+  FormControlLabel, Grid, Avatar, Card, CardContent, CardActionArea, useTheme,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
+
+import Cropper from "react-cropper";
+import "cropperjs/dist/cropper.css";
+import imageCompression from "browser-image-compression";
+import localforage from "localforage";
+
+const avatarStore = localforage.createInstance({ name: "avatarDB" });
 
 // Icons
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
@@ -40,52 +48,65 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
   return (
     <Card 
       sx={{ 
-        height: '100%',
-        borderRadius: '24px',
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.3)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        aspectRatio: '1 / 1',
+        width: '100%',
+        borderRadius: { xs: '12px', md: '24px' },
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(12px)',
+        border: `2px solid ${color}20`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+        transition: 'all 0.3s ease',
+        overflow: 'hidden',
         '&:hover': {
-          transform: 'translateY(-8px)',
-          boxShadow: `0 12px 30px -10px ${color}80`,
+          transform: 'scale(1.05)',
+          boxShadow: `0 12px 32px -8px ${color}60`,
           borderColor: color,
+          background: `${color}08`,
         }
       }}
     >
       <CardActionArea 
         onClick={() => path ? navigate(path) : onClick()}
-        sx={{ height: '100%', p: 3 }}
-      >
-        <Box sx={{ 
+        sx={{ 
+          width: '100%',
+          height: '100%', 
           display: 'flex', 
           flexDirection: 'column', 
-          alignItems: 'center', 
-          textAlign: 'center',
-          gap: 2 
-        }}>
-          <Avatar sx={{ 
-            bgcolor: `${color}15`, 
-            color: color, 
-            width: 64, 
-            height: 64,
-            mb: 1
-          }}>
-            <Icon sx={{ fontSize: 32 }} />
-          </Avatar>
-          <Box>
-            <Typography variant="h6" fontWeight="700" sx={{ color: '#1a1a1a', mb: 0.5 }}>
-              {title}
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#666', lineHeight: 1.3 }}>
-              {subtitle}
-            </Typography>
-          </Box>
-        </Box>
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6%',
+          p: '4%',
+        }}
+      >
+        {/* 
+          Card width = 1/3 of screen ≈ 33vw.
+          We want icon to fill ~65% of card = ~22vw.
+          clamp(40px, 22vw, 180px) covers mobile → desktop.
+        */}
+        <Icon sx={{ 
+          fontSize: 'clamp(32px, 16vw, 140px)',
+          color: color,
+          display: 'block',
+          lineHeight: 1,
+          filter: `drop-shadow(0 2px 8px ${color}50)`,
+        }} />
+        <Typography 
+          fontWeight="900" 
+          sx={{ 
+            color: '#222', 
+            fontSize: 'clamp(0.6rem, 3.5vw, 1.1rem)',
+            lineHeight: 1,
+            textAlign: 'center',
+            fontWeight: 900,
+          }}
+        >
+          {title}
+        </Typography>
       </CardActionArea>
     </Card>
   );
 };
+
 
 const Login = () => {
   // Helper to get initial state - strictly checking localStorage
@@ -119,6 +140,11 @@ const Login = () => {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(true);
   const [isCustomer, setIsCustomer] = useState(false);
+
+  // Crop State
+  const [tempImage, setTempImage] = useState(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const cropperRef = React.useRef(null);
 
   // Sync state if localStorage changes (optional but good for multi-tab)
   useEffect(() => {
@@ -170,6 +196,89 @@ const Login = () => {
     navigate("/");
   };
 
+  const [avatar, setAvatar] = useState(null);
+
+  // Load avatar from IndexedDB on login
+  useEffect(() => {
+    if (userData?.username) {
+      avatarStore.getItem(`avatar_${userData.username}`).then((saved) => {
+        if (saved) setAvatar(saved);
+      });
+    }
+  }, [userData]);
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";
+
+    try {
+      // PRE-COMPRESS before the cropper ever touches it.
+      // A 12MP camera photo needs ~48MB RAM as a canvas. Downscale it first.
+      const preCompressed = await imageCompression(file, {
+        maxWidthOrHeight: 800,   // cropper never needs more than this
+        maxSizeMB: 0.5,
+        useWebWorker: true,
+        fileType: "image/jpeg",
+      });
+      const objectUrl = URL.createObjectURL(preCompressed);
+      setTempImage(objectUrl);
+      setIsCropOpen(true);
+    } catch (err) {
+      console.error("Pre-compression failed:", err);
+      // Fallback: try loading directly (may still crash on very low-memory devices)
+      const objectUrl = URL.createObjectURL(file);
+      setTempImage(objectUrl);
+      setIsCropOpen(true);
+    }
+  };
+
+  const handleCrop = async () => {
+    const cropper = cropperRef.current?.cropper;
+    if (!cropper) return;
+
+    // Get a small cropped canvas (400x400 is plenty for an avatar)
+    const canvas = cropper.getCroppedCanvas({ width: 400, height: 400 });
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        // Compress the already-small cropped blob
+        const compressed = await imageCompression(blob, {
+          maxSizeMB: 0.08,          // ~80 KB target
+          maxWidthOrHeight: 400,
+          useWebWorker: true,
+          fileType: "image/jpeg",
+        });
+
+        const reader = new FileReader();
+        reader.readAsDataURL(compressed);
+        reader.onloadend = async () => {
+          const base64data = reader.result;
+          // Save to IndexedDB — no 5 MB localStorage limit
+          await avatarStore.setItem(`avatar_${userData.username}`, base64data);
+          // Remove old copy from localStorage if any
+          localStorage.removeItem(`avatar_${userData.username}`);
+          setAvatar(base64data);
+          setIsCropOpen(false);
+          // Release the Object URL now that we're done
+          URL.revokeObjectURL(tempImage);
+          setTempImage(null);
+        };
+      } catch (err) {
+        console.error("Crop/compress error:", err);
+        // Fallback: low-quality inline jpeg
+        const fallback = canvas.toDataURL("image/jpeg", 0.5);
+        await avatarStore.setItem(`avatar_${userData.username}`, fallback);
+        localStorage.removeItem(`avatar_${userData.username}`);
+        setAvatar(fallback);
+        setIsCropOpen(false);
+        URL.revokeObjectURL(tempImage);
+        setTempImage(null);
+      }
+    }, "image/jpeg", 0.8);
+  };
+
   const userType = userData?.userType?.toLowerCase() || "";
   const isBilty = userType.includes("bilty");
 
@@ -187,102 +296,126 @@ const Login = () => {
       background: isLoggedIn 
         ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      py: 4,
-      px: 2,
+      pt: isLoggedIn ? { xs: 0.5, md: 1 } : 4,
+      pb: 4,
+      px: { xs: 0, sm: 2 }, 
       display: 'flex',
-      alignItems: 'center',
+      alignItems: isLoggedIn ? 'flex-start' : 'center',
       justifyContent: 'center'
     }}>
       {isLoggedIn ? (
-        <Container maxWidth="lg">
-          <Box sx={{ mb: 6, textAlign: 'center' }}>
-            <Avatar 
-              sx={{ 
-                width: 80, height: 80, mx: 'auto', mb: 2, 
-                bgcolor: 'primary.main', fontSize: '2rem',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
-              }}
-            >
-              {userData?.username?.charAt(0).toUpperCase() || <PersonIcon />}
-            </Avatar>
-            <Typography variant="h3" fontWeight="800" sx={{ color: '#1a1a1a', mb: 1 }}>
-              Welcome back, {userData?.username || "Admin"}
-            </Typography>
-            <Typography variant="h6" sx={{ color: '#555', fontWeight: 400 }}>
-              What would you like to manage today?
-            </Typography>
+        <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 4 }, width: '100%' }}>
+          <Box sx={{ 
+            mb: { xs: 2, md: 4 }, 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            gap: { xs: 2, md: 6 },
+            textAlign: { xs: 'center', sm: 'left' }
+          }}>
+            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              <input
+                type="file"
+                accept="image/*"
+                capture="user"
+                id="avatar-upload"
+                style={{ display: 'none' }}
+                onChange={handleAvatarChange}
+              />
+              <label htmlFor="avatar-upload">
+                <Avatar 
+                  src={avatar}
+                  sx={{ 
+                    width: { xs: 120, md: 200 }, height: { xs: 120, md: 200 }, 
+                    bgcolor: 'primary.main', fontSize: '4rem',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
+                    cursor: 'pointer',
+                    '&:hover': { opacity: 0.8 }
+                  }}
+                >
+                  {!avatar && (userData?.username?.charAt(0).toUpperCase() || <PersonIcon />)}
+                </Avatar>
+              </label>
+            </Box>
+            <Box>
+              <Typography 
+                variant="h2" 
+                fontWeight="900" 
+                sx={{ 
+                  color: '#1a1a1a', mb: 1,
+                  fontSize: { xs: '1.75rem', md: '4rem' },
+                  letterSpacing: '-1px',
+                  lineHeight: 1.1
+                }}
+              >
+                Welcome back, {userData?.username || "Admin"}
+              </Typography>
+              <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '1rem', md: '1.5rem' } }}>
+                What would you like to manage today?
+              </Typography>
+            </Box>
           </Box>
 
-          <Grid container spacing={3}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: { xs: '6px', sm: '12px', md: '20px' },
+              width: '100%',
+            }}
+          >
             {!isBilty && packingList.some(e => userType.includes(e)) && (
               <>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Packing List" subtitle="Manage pending orders"
-                    icon={InventoryIcon} color="#ff3d07" path="/pending" 
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Load Form" subtitle="Track shipping & logistics"
-                    icon={LocalShippingIcon} color="#00a611" path="/load" 
-                  />
-                </Grid>
+                <ActionCard 
+                  title="Packing" subtitle="Pending"
+                  icon={InventoryIcon} color="#ff3d07" path="/pending" 
+                />
+                <ActionCard 
+                  title="Load" subtitle="Shipping"
+                  icon={LocalShippingIcon} color="#00a611" path="/load" 
+                />
               </>
             )}
 
             {!isBilty && (forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
-              <Grid item xs={12} sm={6} md={3}>
-                <ActionCard 
-                  title="SPO Working" subtitle="Turnover & sales reports"
-                  icon={AssessmentIcon} color="#FFC107" path="/turnoverreport" 
-                />
-              </Grid>
+              <ActionCard 
+                title="SPO" subtitle="Working"
+                icon={AssessmentIcon} color="#FFC107" path="/turnoverreport" 
+              />
             )}
 
             {!isBilty && (paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
               <>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Payments" subtitle="Vouchers & transactions"
-                    icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher" 
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="History" subtitle="Detailed sales records"
-                    icon={HistoryIcon} color="#009688" path="/saleshistory" 
-                  />
-                </Grid>
+                <ActionCard 
+                  title="Payment" subtitle="Voucher"
+                  icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher" 
+                />
+                <ActionCard 
+                  title="History" subtitle="Sales"
+                  icon={HistoryIcon} color="#009688" path="/saleshistory" 
+                />
               </>
             )}
 
             {!isBilty && userType !== 'payment' && !userType.includes('pack') && (
               <>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Accounts" subtitle="Manage COA & customers"
-                    icon={PeopleAltIcon} color="#610051" path="/coa" 
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Recovery" subtitle="Pending dues & collections"
-                    icon={ReceiptLongIcon} color="#2e7d32" path="/recovery" 
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Sales" subtitle="Daily sales performance"
-                    icon={TrendingUpIcon} color="#009688" path="/sales" 
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="New Order" subtitle="Create fresh sales invoice"
-                    icon={AddShoppingCartIcon} color="#1976d2" path="/order" 
-                  />
-                </Grid>
+                <ActionCard 
+                  title="Accounts" subtitle="COA"
+                  icon={PeopleAltIcon} color="#610051" path="/coa" 
+                />
+                <ActionCard 
+                  title="Recovery" subtitle="Dues"
+                  icon={ReceiptLongIcon} color="#2e7d32" path="/recovery" 
+                />
+                <ActionCard 
+                  title="Sales" subtitle="Daily"
+                  icon={TrendingUpIcon} color="#009688" path="/sales" 
+                />
+                <ActionCard 
+                  title="New Order" subtitle="Invoice"
+                  icon={AddShoppingCartIcon} color="#1976d2" path="/order" 
+                />
               </>
             )}
 
@@ -290,55 +423,75 @@ const Login = () => {
               <>
                 {!isBilty && (
                   <>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <ActionCard 
-                        title="Products" subtitle="Inventory & stock list"
-                        icon={ShoppingBagIcon} color="#ff00ea" path="/productslist" 
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <ActionCard 
-                        title="Routes" subtitle="Customer route mapping"
-                        icon={RouteIcon} color="#3f51b5" path="/list" 
-                      />
-                    </Grid>
+                    <ActionCard 
+                      title="Products" subtitle="Stock"
+                      icon={ShoppingBagIcon} color="#ff00ea" path="/productslist" 
+                    />
+                    <ActionCard 
+                      title="Routes" subtitle="Mapping"
+                      icon={RouteIcon} color="#3f51b5" path="/list" 
+                    />
                   </>
                 )}
-                <Grid item xs={12} sm={6} md={3}>
-                  <ActionCard 
-                    title="Delivery" subtitle="Active delivery tracking"
-                    icon={DeliveryDiningIcon} color="#a41260" path="/delivery" 
-                  />
-                </Grid>
+                <ActionCard 
+                  title="Delivery" subtitle="Tracking"
+                  icon={DeliveryDiningIcon} color="#a41260" path="/delivery" 
+                />
               </>
             ) : null}
+          </Box>
 
-            <Grid item xs={12}>
-              <Button
-                fullWidth
-                onClick={handleLogout}
-                variant="outlined"
-                startIcon={<LogoutIcon />}
-                sx={{ 
-                  mt: 4, py: 2, borderRadius: '16px', color: '#d32f2f', borderColor: '#d32f2f',
-                  fontWeight: 700, '&:hover': { bgcolor: '#d32f2f', color: 'white', borderColor: '#d32f2f' }
-                }}
-              >
-                Logout from System
-              </Button>
-            </Grid>
-          </Grid>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            mt: { xs: 4, md: 8 },
+            mb: 2
+          }}>
+            <IconButton
+              onClick={handleLogout}
+              sx={{ 
+                width: 56, 
+                height: 56, 
+                bgcolor: 'rgba(211, 47, 47, 0.1)',
+                color: '#d32f2f',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { 
+                  bgcolor: '#d32f2f',
+                  color: 'white',
+                  transform: 'rotate(180deg) scale(1.1)',
+                  boxShadow: '0 0 25px rgba(211, 47, 47, 0.4)'
+                },
+                boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
+              }}
+            >
+              <LogoutIcon sx={{ fontSize: 24 }} />
+            </IconButton>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                mt: 1.5, 
+                fontWeight: 700, 
+                color: '#999', 
+                letterSpacing: '3px', 
+                textTransform: 'uppercase',
+                fontSize: '0.6rem'
+              }}
+            >
+              End Session
+            </Typography>
+          </Box>
         </Container>
       ) : (
         <Paper 
           elevation={24} 
           sx={{ 
-            p: 5, width: '100%', maxWidth: 450, borderRadius: '32px',
+            p: { xs: 2.5, md: 3 }, width: '100%', maxWidth: 450, borderRadius: '32px',
             background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
           }}
         >
-          <Box sx={{ textAlign: 'center', mb: 5 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
             <Typography variant="h4" fontWeight="900" sx={{ color: '#1a1a1a', letterSpacing: '-1px' }}>
               Welcome back.
             </Typography>
@@ -391,6 +544,37 @@ const Login = () => {
           </Box>
         </Paper>
       )}
+
+      {/* Cropper Dialog */}
+      <Dialog open={isCropOpen} onClose={() => setIsCropOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>Adjust Profile Picture</DialogTitle>
+        <DialogContent dividers>
+          {tempImage && (
+            <Box sx={{ width: '100%', height: 400, bgcolor: '#000' }}>
+              <Cropper
+                src={tempImage}
+                style={{ height: 400, width: "100%" }}
+                initialAspectRatio={1}
+                aspectRatio={1}
+                guides={true}
+                ref={cropperRef}
+                viewMode={1}
+                dragMode="move"
+                autoCropArea={1}
+                background={false}
+                responsive={true}
+                checkOrientation={true}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setIsCropOpen(false)} sx={{ fontWeight: 600 }}>Cancel</Button>
+          <Button onClick={handleCrop} variant="contained" color="primary" sx={{ borderRadius: '12px', px: 4, fontWeight: 700 }}>
+            Save Picture
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -2,6 +2,15 @@
 const sql = require("mssql");
 const dbConnection = require("../database/connection");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
+const logFile = path.join(__dirname, "..", "order_debug.log");
+
+function logToFile(data) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}\n`;
+  fs.appendFileSync(logFile, logMessage);
+}
 
 // to get the doc number
 const getNextDocNumber = async (poolOrTransaction, type) => {
@@ -107,6 +116,8 @@ const orderControllers = {
     const time = now.toTimeString().split(" ")[0]; // 16:45:51
     const description = `SV KR ${date} ${time} ${username}`;
 
+    logToFile(`📥 NEW ORDER ATTEMPT - CID: ${customerAcid}, Total: ${totalAmount}`);
+    logToFile({ payload: { customerAcid, totalAmount, orderDate, productsCount: linesJson?.length } });
     console.log("📥 Received postOrder payload:", JSON.stringify({ customerAcid, totalAmount, orderDate, productsCount: linesJson?.length }));
     let pool, transaction;
     try {
@@ -349,13 +360,17 @@ const orderControllers = {
         doc: nextDoc,
       });
     } catch (error) {
+      logToFile(`❌ postOrder Error: ${error.message}`);
+      logToFile({ error_stack: error.stack });
       console.error("❌ postOrder Error detail:", error);
       if (transaction) {
         try {
           console.log("🔄 Rolling back transaction...");
           await transaction.rollback();
+          logToFile("🔄 Transaction rolled back successfully");
         } catch (rbErr) {
           console.error("❌ Rollback failed:", rbErr);
+          logToFile(`❌ Rollback failed: ${rbErr.message}`);
         }
       }
       res.status(500).json({ 

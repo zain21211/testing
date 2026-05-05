@@ -107,6 +107,7 @@ const orderControllers = {
     const time = now.toTimeString().split(" ")[0]; // 16:45:51
     const description = `SV KR ${date} ${time} ${username}`;
 
+    console.log("📥 Received postOrder payload:", JSON.stringify({ customerAcid, totalAmount, orderDate, productsCount: linesJson?.length }));
     let pool, transaction;
     try {
       pool = await getPool();
@@ -348,19 +349,20 @@ const orderControllers = {
         doc: nextDoc,
       });
     } catch (error) {
-      console.error("❌ postOrder Error detail:", {
-        message: error.message,
-        stack: error.stack,
-        payload: { customerAcid, totalAmount, orderDate }
-      });
+      console.error("❌ postOrder Error detail:", error);
       if (transaction) {
         try {
+          console.log("🔄 Rolling back transaction...");
           await transaction.rollback();
-        } catch { }
+        } catch (rbErr) {
+          console.error("❌ Rollback failed:", rbErr);
+        }
       }
-      res
-        .status(500)
-        .json({ error: "Failed to create order", details: error.message });
+      res.status(500).json({ 
+        error: "Failed to create order", 
+        details: error.message,
+        payload: { customerAcid, totalAmount, orderDate }
+      });
     }
   },
 

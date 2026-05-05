@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import localforage from "localforage";
+
+const avatarStore = localforage.createInstance({ name: "avatarDB" });
 import {
   AppBar,
   Toolbar,
@@ -88,7 +91,8 @@ const LOGOUT_REDIRECT_URL = "/"; // Assuming this is the path to your login page
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null); // State for user
+  const [currentUser, setCurrentUser] = useState(null);
+  const [headerAvatar, setHeaderAvatar] = useState(null); // avatar for top bar
   const isMenuOpen = Boolean(anchorEl);
   const navigate = useNavigate();
   const location = useLocation(); // Get location object
@@ -112,14 +116,17 @@ const Header = () => {
     };
 
     updateUserState(); // Initial check
+  }, [location.pathname]);
 
-    // Optional: Listen for storage events if changes can happen in other tabs
-    // window.addEventListener('storage', updateUserState);
-
-    // return () => {
-    //   window.removeEventListener('storage', updateUserState);
-    // };
-  }, [location.pathname]); // Re-run when path changes (e.g., after login navigation)
+  // Load avatar from IndexedDB whenever the current user changes
+  useEffect(() => {
+    setHeaderAvatar(null);
+    if (currentUser?.username) {
+      avatarStore.getItem(`avatar_${currentUser.username}`).then((saved) => {
+        if (saved) setHeaderAvatar(saved);
+      });
+    }
+  }, [currentUser?.username]);
 
   const isCustomer = currentUser?.userType?.toLowerCase().includes("cust") || false
 
@@ -279,8 +286,12 @@ const Header = () => {
               onClick={handleProfileMenuOpen}
               color="inherit"
             >
-              <Avatar alt={currentUser?.username || 'User'} src="">
-                {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : <AccountCircle />}
+              <Avatar 
+                alt={currentUser?.username || 'User'} 
+                src={headerAvatar || ''}
+                sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontSize: '1rem' }}
+              >
+                {!headerAvatar && (currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : <AccountCircle />)}
               </Avatar>
             </IconButton>
           )}

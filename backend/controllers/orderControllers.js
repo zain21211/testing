@@ -171,9 +171,9 @@ const orderControllers = {
             .input("doc", sql.Int, parseInt(nextDoc))
             .input("username", sql.VarChar(50), safeUsername).query(`
             INSERT INTO PsProduct
-            ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQTY],[Qty],[Rate],
+            ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQty],[Qty],[Rate],
              [SuggestedRate],[VEST],[DiscP],[Discount],[DiscP2],[Discount2],[VIST],
-             [SellingType],[SchPc],[Sch],[department],[isclaim],[SPO],[profit], [entryby])
+             [SellingType],[SchPc],[Sch],[department],[isclaim],[SPO],[profit], [EntryBy])
             VALUES
             (@date,'SALE',@doc,'OUT',@prid,@acid,0,@aQty,@bQty,@rate,
              @suggestedPrice,@vest,@discP1,
@@ -251,7 +251,7 @@ const orderControllers = {
           .input("FREIGHT", sql.Int, 0)
           .input("username", sql.VarChar(50), safeUsername).query(`
     INSERT INTO PSDetail
-    (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, dueDate, pbalance, freight)
+    (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, DueDate, PBalance, Freight)
     VALUES
     (
       @nextDoc,
@@ -260,10 +260,10 @@ const orderControllers = {
       @customerAcid,
       @description,
       @totalAmount,
-      (SELECT SUM(profit) FROM PsProduct WHERE doc = @nextDoc),
+      (SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc),
       @status,
       'P',
-      @DueDate,
+      @dueDate,
       @PBALANCE,
       @FREIGHT
           )
@@ -286,7 +286,7 @@ const orderControllers = {
         .input("FREIGHT", sql.Int, 0)
         .input("username", sql.VarChar(50), safeUsername).query(`
     INSERT INTO PSDetailHistory
-      (Doc, Date, Type, Acid, Description, Amount, GrossProfit, DueDate, PBalance, entryDAte, username)
+      (Doc, Date, Type, Acid, Description, Amount, GrossProfit, DueDate, PBalance, EntryDate, username)
     VALUES
       (
         @nextDoc,
@@ -295,7 +295,7 @@ const orderControllers = {
         @customerAcid,
         @description,
         @totalAmount,
-        ISNULL((SELECT SUM(profit) FROM psproduct WHERE doc = @nextDoc), 0),
+        ISNULL((SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc), 0),
         @dueDate,
         @PBALANCE,
         @entryDate,
@@ -318,12 +318,12 @@ const orderControllers = {
 
       try {
         await ledgerReq.query(`
-        INSERT INTO ledgers (acid,date,type,doc,narration,debit,credit,EntryBy,EntryDateTime,transactionid)
+        INSERT INTO ledgers (Acid,Date,Type,Doc,NarrationS,Debit,Credit,EntryBy,EntryDateTime,transactionId)
         VALUES
           (@customerAcid,@orderDate,'sale',@nextDoc,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID),
           (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID);
 
-        INSERT INTO ledgersHistory (acid,date,doc,type,narration,invoice,debit,credit,remainingamount,status,
+        INSERT INTO ledgersHistory (Acid,Date,Doc,Type,Narration,Invoice,Debit,Credit,remainingamount,status,
           UserName,UserLevel,EntryDate,EntryStatus)
         VALUES
           (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,

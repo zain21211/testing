@@ -57,7 +57,7 @@ import { useInvoiceSync } from "./hooks/useInvoiceSync.js";
 
 // --- Constants & Configuration ---
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const spoList = ["ARIF", "SALMAN", "ZAIN", "HAMZA"];
+const spoList = ["ARIF", "SALMAN", "ZAIN", "HAMZA", "SANAULHAQ"];
 const postButtons = [
   { text: "INVOICE", color: "green" },
   { text: "ESTIMATE", color: "error" },

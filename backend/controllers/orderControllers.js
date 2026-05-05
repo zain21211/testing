@@ -4,8 +4,8 @@ const dbConnection = require("../database/connection");
 const jwt = require("jsonwebtoken");
 
 // to get the doc number
-const getNextDocNumber = async (pool, type) => {
-  const result = await pool.request().input("type", sql.VarChar, type).query(`
+const getNextDocNumber = async (poolOrTransaction, type) => {
+  const result = await poolOrTransaction.request().input("type", sql.VarChar, type).query(`
       UPDATE DocNumber
       SET doc = doc + 1
       OUTPUT DELETED.doc
@@ -117,14 +117,13 @@ const orderControllers = {
       const safeSalesRevenueAcid = salesRevenueAcid || 4;
       const safeTransactionID = transactionID || `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      const nextDoc = await getNextDocNumber(pool, "sale");
       const duplicate = await checkDuplicate(safeTransactionID);
-
       if (duplicate) return res.status(204).json({ message: "Duplicate document number found." });
 
       transaction = new sql.Transaction(pool);
       await transaction.begin();
 
+      const nextDoc = await getNextDocNumber(transaction, "sale");
       const transactionRequest = transaction.request();
 
       const parsedLines = JSON.parse(JSON.stringify(linesJson || []));

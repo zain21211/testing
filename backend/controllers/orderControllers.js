@@ -49,7 +49,7 @@ const checkDuplicate = async (transactionid) => {
       where transactionid=@transactionid;
     `);
 
-    const duplicate = result.recordset > 0;
+    const duplicate = result.recordset.length > 0;
     return duplicate;
   } catch (err) {
     console.error("Error fetching duplicate:", err);
@@ -221,7 +221,7 @@ const orderControllers = {
       `);
 
       console.log(nextDoc);
-      const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0];
       const dueDate = new Date();
@@ -330,7 +330,11 @@ const orderControllers = {
         doc: nextDoc,
       });
     } catch (error) {
-      console.error("❌ postOrder Error:", error);
+      console.error("❌ postOrder Error detail:", {
+        message: error.message,
+        stack: error.stack,
+        payload: { customerAcid, totalAmount, orderDate }
+      });
       if (transaction) {
         try {
           await transaction.rollback();

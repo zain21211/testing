@@ -207,7 +207,8 @@ const orderControllers = {
       ) sub ON p.id = sub.prid;
     `;
       try {
-        await transactionRequest
+        const stockReq = transaction.request();
+        await stockReq
           .input("nextDoc", sql.Int, nextDoc)
           .query(updateStockQuery);
       } catch (e) {
@@ -236,7 +237,8 @@ const orderControllers = {
 
       // ✅ 4. Insert into PSDetail
       try {
-        await transactionRequest
+        const detailReq = transaction.request();
+        await detailReq
           .input("nextDoc", sql.Int, parseInt(nextDoc))
           .input("orderDate", sql.VarChar(50), orderDate)
           .input("customerAcid", sql.Int, parseInt(customerAcid))

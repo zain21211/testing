@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { io } from "socket.io-client";
 import {
   Container, Typography, Box, TextField, Button, Paper, CircularProgress,
   Alert, IconButton, InputAdornment, FormControl, OutlinedInput, Checkbox,
@@ -56,20 +57,20 @@ const FALLBACK_VISIBILITY = {
 const url = import.meta.env.VITE_API_URL;
 
 // --- Sub-component: Action Card ---
-const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
+const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick, value }) => {
   const navigate = useNavigate();
   return (
     <Card
       sx={{
-        aspectRatio: '1 / 1',
-        width: '100%',
+        height: '100%',
         borderRadius: { xs: '12px', md: '24px' },
         background: 'rgba(255, 255, 255, 0.9)',
         backdropFilter: 'blur(12px)',
         border: `2px solid ${color}20`,
         boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
         transition: 'all 0.3s ease',
-        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
         '&:hover': {
           transform: 'scale(1.05)',
           boxShadow: `0 12px 32px -8px ${color}60`,
@@ -81,8 +82,8 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
       <CardActionArea
         onClick={() => path ? navigate(path) : onClick()}
         sx={{
+          flex: 1,
           width: '100%',
-          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -91,11 +92,6 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
           p: '4%',
         }}
       >
-        {/* 
-          Card width = 1/3 of screen ≈ 33vw.
-          We want icon to fill ~65% of card = ~22vw.
-          clamp(40px, 22vw, 180px) covers mobile → desktop.
-        */}
         <Icon sx={{
           fontSize: 'clamp(32px, 16vw, 140px)',
           color: color,
@@ -103,18 +99,37 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
           lineHeight: 1,
           filter: `drop-shadow(0 2px 8px ${color}50)`,
         }} />
-        <Typography
-          fontWeight="900"
-          sx={{
-            color: '#222',
-            fontSize: 'clamp(0.6rem, 3.5vw, 1.1rem)',
-            lineHeight: 1,
-            textAlign: 'center',
-            fontWeight: 900,
-          }}
-        >
-          {title}
-        </Typography>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography
+            fontWeight="900"
+            sx={{
+              color: '#222',
+              fontSize: 'clamp(0.6rem, 3.5vw, 1.1rem)',
+              lineHeight: 1.2,
+              textAlign: 'center',
+              fontWeight: 900,
+            }}
+          >
+            {title}
+          </Typography>
+          {value !== undefined && value !== null && (
+            <Typography
+              sx={{
+                color: color,
+                fontSize: 'clamp(0.7rem, 3.8vw, 1.1rem)',
+                fontWeight: '900',
+                mt: 0.5,
+                background: `${color}15`,
+                px: 1,
+                py: 0.2,
+                borderRadius: '8px',
+                border: `1px solid ${color}30`
+              }}
+            >
+              Rs. {(!isNaN(Number(value)) ? Number(value).toLocaleString() : '0')}
+            </Typography>
+          )}
+        </Box>
       </CardActionArea>
     </Card>
   );
@@ -156,6 +171,13 @@ const Login = () => {
   // ── Visibility config (fetched from server) ─────────────────────────────
   const [visibilityConfig, setVisibilityConfig] = useState(null); // null = not yet fetched
 
+  // --- Today's Recovery Total ---
+  const [todayRecovery, setTodayRecovery] = useState(null);
+  const [todaySales, setTodaySales] = useState(null);
+  const [todayPendingOrders, setTodayPendingOrders] = useState(null);
+
+  const isAdmin = userData?.userType?.toLowerCase().includes('admin');
+
   useEffect(() => {
     // Fetch visibility config whenever user logs in
     if (!isLoggedIn) return;
@@ -172,7 +194,63 @@ const Login = () => {
         // Server unavailable — fall back to hardcoded defaults silently
         setVisibilityConfig(null);
       });
-  }, [isLoggedIn]);
+
+    // Fetch today's recovery and sales if admin
+    if (isAdmin) {
+      const fetchTotals = () => {
+        axios.get(`${url}/cash-entry/today-total`)
+          .then(res => {
+            setTodayRecovery(res.data.total);
+          })
+          .catch(err => console.error("Error fetching today recovery:", err));
+
+        axios.get(`${url}/invoices/today-total-sales`)
+          .then(res => {
+            setTodaySales(res.data.total);
+          })
+          .catch(err => console.error("Error fetching today sales:", err));
+
+        axios.get(`${url}/create-order/today-total-pending`)
+          .then(res => {
+            setTodayPendingOrders(res.data.total);
+          })
+          .catch(err => console.error("Error fetching today pending orders:", err));
+      };
+
+      fetchTotals(); // Initial fetch
+      const intervalId = setInterval(fetchTotals, 5000); // Poll every 5 seconds for external app changes
+
+      return () => clearInterval(intervalId);
+    }
+  }, [isLoggedIn, isAdmin]);
+
+  // --- Socket.io for Live Updates ---
+  useEffect(() => {
+    if (!isLoggedIn || !isAdmin) return;
+
+    // Derived socket URL (strip /api if present)
+    const socketUrl = url.endsWith('/api') ? url.replace('/api', '') : url;
+    const socket = io(socketUrl);
+
+    socket.on("recoveryUpdated", (data) => {
+      console.log("📡 Live recovery update received:", data.total);
+      setTodayRecovery(data.total);
+    });
+
+    socket.on("salesUpdated", (data) => {
+      console.log("📡 Live sales update received:", data.total);
+      setTodaySales(data.total);
+    });
+
+    socket.on("pendingOrdersUpdated", (data) => {
+      console.log("📡 Live pending orders update received:", data.total);
+      setTodayPendingOrders(data.total);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [isLoggedIn, userData?.userType]);
 
   // Helper: can the current userType see this card?
   const canSee = (formKey) => {
@@ -357,11 +435,11 @@ const Login = () => {
           <Box sx={{
             mb: { xs: 2, md: 4 },
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
+            flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'flex-start',
             gap: { xs: 2, md: 6 },
-            textAlign: { xs: 'center', sm: 'left' }
+            textAlign: 'left'
           }}>
             <Box sx={{ position: 'relative', flexShrink: 0 }}>
               <input
@@ -376,8 +454,8 @@ const Login = () => {
                 <Avatar
                   src={avatar}
                   sx={{
-                    width: { xs: 120, md: 200 }, height: { xs: 120, md: 200 },
-                    bgcolor: 'primary.main', fontSize: '4rem',
+                    width: { xs: 80, sm: 120, md: 200 }, height: { xs: 80, sm: 120, md: 200 },
+                    bgcolor: 'primary.main', fontSize: { xs: '2.5rem', md: '4rem' },
                     boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
                     cursor: 'pointer',
                     '&:hover': { opacity: 0.8 }
@@ -392,15 +470,15 @@ const Login = () => {
                 variant="h2"
                 fontWeight="900"
                 sx={{
-                  color: '#1a1a1a', mb: 1,
-                  fontSize: { xs: '1.75rem', md: '4rem' },
+                  color: '#1a1a1a', mb: { xs: 0.5, md: 1 },
+                  fontSize: { xs: '1.8rem', sm: '1.75rem', md: '4rem' },
                   letterSpacing: '-1px',
                   lineHeight: 1.1
                 }}
               >
                 Welcome back, {userData?.username || "Admin"}
               </Typography>
-              <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '1rem', md: '1.5rem' } }}>
+              <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '1.05rem', sm: '1rem', md: '1.5rem' } }}>
                 What would you like to manage today?
               </Typography>
             </Box>
@@ -410,6 +488,7 @@ const Login = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
+              gridAutoRows: '1fr', // Ensure all rows have same height
               gap: { xs: '6px', sm: '12px', md: '20px' },
               width: '100%',
             }}
@@ -454,18 +533,21 @@ const Login = () => {
               <ActionCard
                 title="Recovery" subtitle="Dues"
                 icon={ReceiptLongIcon} color="#2e7d32" path="/recovery"
+                value={isAdmin ? (todayRecovery ?? 0) : null}
               />
             )}
             {canSee("sales") && (
               <ActionCard
                 title="Sales" subtitle="Daily"
                 icon={TrendingUpIcon} color="#009688" path="/sales"
+                value={isAdmin ? (todaySales ?? 0) : null}
               />
             )}
             {canSee("neworder") && (
               <ActionCard
                 title="New Order" subtitle="Invoice"
                 icon={AddShoppingCartIcon} color="#1976d2" path="/order"
+                value={isAdmin ? (todayPendingOrders ?? 0) : null}
               />
             )}
             {canSee("products") && (

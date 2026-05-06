@@ -4,6 +4,7 @@ const dbConnection = require("../database/connection");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
+const getPakistanISODateString = require("../utils/PakTime");
 const logFile = path.join(__dirname, "..", "order_debug.log");
 
 function logToFile(data) {
@@ -28,6 +29,34 @@ const getPool = async () => {
   const pool = await dbConnection();
   if (!pool) throw new Error("Failed to obtain DB pool");
   return pool;
+};
+
+// Helper to calculate today's total sales
+const calculateTodaySales = async (pool) => {
+  const result = await pool
+    .request()
+    .query(`
+      SELECT SUM(amount) AS total 
+      FROM psdetail 
+      WHERE (type = 'sale' OR type = 'SALE') 
+        AND status = 'INVOICE' 
+        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+    `);
+  return result.recordset[0].total || 0;
+};
+
+// Helper to calculate today's total pending orders (NULL or ESTIMATE)
+const calculateTodayPendingOrders = async (pool) => {
+  const result = await pool
+    .request()
+    .query(`
+      SELECT SUM(amount) AS total 
+      FROM psdetail 
+      WHERE (type = 'sale' OR type = 'SALE') 
+        AND (status IS NULL OR status <> 'INVOICE')
+        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+    `);
+  return result.recordset[0].total || 0;
 };
 
 // to get the updated products
@@ -354,6 +383,19 @@ const orderControllers = {
 
       // ✅ Commit
       await transaction.commit();
+
+      // Trigger socket update for live sales total
+      const newSalesTotal = await calculateTodaySales(pool);
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("salesUpdated", { total: newSalesTotal });
+        
+        const newPendingTotal = await calculateTodayPendingOrders(pool);
+        io.emit("pendingOrdersUpdated", { total: newPendingTotal });
+        
+        console.log(`📡 Socket emitted salesUpdated: ${newSalesTotal} and pendingOrdersUpdated: ${newPendingTotal}`);
+      }
+
       const duration = ((performance.now() - startTime) / 1000).toFixed(2);
       res.json({
         success: true,
@@ -617,6 +659,17 @@ const orderControllers = {
         error: "Server error",
         details: error && error.message ? error.message : error,
       });
+    }
+  },
+
+  getTodayTotalPending: async (req, res) => {
+    try {
+      const pool = await getPool();
+      const total = await calculateTodayPendingOrders(pool);
+      res.json({ success: true, total });
+    } catch (error) {
+      console.error("Error fetching today pending orders:", error);
+      res.status(500).json({ error: error.message || "Internal server error" });
     }
   },
 };

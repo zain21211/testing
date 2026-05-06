@@ -78,9 +78,16 @@ export default function OrderPage({
 
 
     useEffect(() => {
-        if (selectedProduct && !productIDInput) setProductIDInput(selectedProduct.ID)
-        if (!selectedProduct)
-            setProductInputValue('')
+        if (selectedProduct) {
+            if (!productIDInput || String(productIDInput) !== String(selectedProduct.ID)) {
+                setProductIDInput(selectedProduct.ID);
+            }
+            if (productInputValue !== selectedProduct.Name) {
+                setProductInputValue(selectedProduct.Name || '');
+            }
+        } else {
+            setProductInputValue('');
+        }
     }, [selectedProduct])
 
     useEffect(() => {

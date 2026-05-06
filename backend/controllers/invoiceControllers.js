@@ -5,8 +5,37 @@ const convertPhoneNumber = require("../utils/convertPhoneNumber");
 // const dbConnection = require('../database/dbConnection');
 const sql = require("mssql");
 const dbConnection = require("../database/connection"); // Import your database connection
+const getPakistanISODateString = require("../utils/PakTime");
 // Keep timers in memory
 const lockTimers = new Map();
+
+// Helper to calculate today's total sales
+const calculateTodaySales = async (pool) => {
+  const result = await pool
+    .request()
+    .query(`
+      SELECT SUM(amount) AS total 
+      FROM psdetail 
+      WHERE (type = 'sale' OR type = 'SALE') 
+        AND status = 'INVOICE' 
+        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+    `);
+  return result.recordset[0].total || 0;
+};
+
+// Helper to calculate today's total pending orders (NULL or ESTIMATE)
+const calculateTodayPendingOrders = async (pool) => {
+  const result = await pool
+    .request()
+    .query(`
+      SELECT SUM(amount) AS total 
+      FROM psdetail 
+      WHERE (type = 'sale' OR type = 'SALE') 
+        AND (status IS NULL OR status <> 'INVOICE')
+        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+    `);
+  return result.recordset[0].total || 0;
+};
 
 const invoiceControllers = {
   getLoadList: async (req, res) => {
@@ -580,6 +609,18 @@ WHERE P.Doc = @DocNumber
           AND (l.acid = ia.acid OR l.acid = 4)
       `);
 
+      // Trigger socket update for live sales total
+      const newSalesTotal = await calculateTodaySales(pool);
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("salesUpdated", { total: newSalesTotal });
+        
+        const newPendingTotal = await calculateTodayPendingOrders(pool);
+        io.emit("pendingOrdersUpdated", { total: newPendingTotal });
+        
+        console.log(`📡 Socket emitted salesUpdated: ${newSalesTotal} and pendingOrdersUpdated: ${newPendingTotal}`);
+      }
+
       res.status(200).json({
         message: "Invoice update completed",
         emptyItemsCount: emptyItems.length,
@@ -633,6 +674,16 @@ WHERE P.Doc = @DocNumber
           // Emit socket event
           const io = req.app.get("io");
           io.emit("invoiceUnlocked", { doc });
+          
+          // Trigger socket update for live sales total
+          const newSalesTotal = await calculateTodaySales(pool2);
+          if (io) {
+            io.emit("salesUpdated", { total: newSalesTotal });
+            
+            const newPendingTotal = await calculateTodayPendingOrders(pool2);
+            io.emit("pendingOrdersUpdated", { total: newPendingTotal });
+          }
+          
           console.log(`Auto-unlocked invoice ${doc}`);
         } catch (err) {
           console.error("Auto-unlock failed", err);
@@ -644,6 +695,10 @@ WHERE P.Doc = @DocNumber
       // Emit socket event
       const io = req.app.get("io");
       io.emit("invoiceLocked", { doc });
+
+      // Trigger socket update for sales total (if status became INVOICE via auto-unlock)
+      // Actually auto-unlock sets status to INVOICE, so we should check there too.
+      // But lockInvoice sets status to 'packing', so no update needed here for sales.
 
       res.status(200).json({ msg: "successful" });
     } catch (error) {
@@ -685,6 +740,15 @@ WHERE P.Doc = @DocNumber
       // Emit socket event
       const io = req.app.get("io");
       io.emit("invoiceUnlocked", { doc });
+
+      // Trigger socket update for live sales total
+      const newSalesTotal = await calculateTodaySales(pool);
+      if (io) {
+        io.emit("salesUpdated", { total: newSalesTotal });
+        
+        const newPendingTotal = await calculateTodayPendingOrders(pool);
+        io.emit("pendingOrdersUpdated", { total: newPendingTotal });
+      }
 
       res.status(200).json({ msg: "successful" });
     } catch (error) {
@@ -753,6 +817,19 @@ WHERE P.Doc = @DocNumber
       console.error("Error in operatorDirectDelivery:", error);
       res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
+
+  getTodayTotalSales: async (req, res) => {
+    try {
+      const pool = await dbConnection();
+      const total = await calculateTodaySales(pool);
+      res.json({ success: true, total });
+    } catch (error) {
+      console.error("Error fetching today's sales:", error);
+      res.status(500).json({
+        error: error.message || "Internal server error",
+      });
+    }
+  },
 };
 module.exports = invoiceControllers;

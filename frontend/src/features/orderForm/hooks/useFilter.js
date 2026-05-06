@@ -1,5 +1,5 @@
 // src/hooks/useFilterAutocomplete.js
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 function makeWildcardRegex(input) {
     try {
@@ -78,10 +78,7 @@ export function useFilterAutocomplete(
             }
         } else {
             // If no input value, match selected productID
-            console.log("product id", productID)
             filtered = products.filter((p) => String(p.ID) === String(productID));
-            if (setSelectedProduct) setSelectedProduct(filtered[0] || null);
-            if (quantityInputRef?.current) quantityInputRef.current.focus();
         }
 
         return filtered;
@@ -92,9 +89,24 @@ export function useFilterAutocomplete(
         productInputValue,
         initialDataLoading,
         productID,
-        setSelectedProduct,
-        quantityInputRef,
     ]);
+
+    useEffect(() => {
+        if (productID) {
+            const matchedProducts = products.filter((p) => String(p.ID) === String(productID));
+            if (matchedProducts.length > 0) {
+                if (setSelectedProduct) {
+                    setSelectedProduct(matchedProducts[0]);
+                }
+                // Slight delay to ensure DOM and state updates are processed before focusing
+                setTimeout(() => {
+                    if (quantityInputRef?.current) {
+                        quantityInputRef.current.focus();
+                    }
+                }, 100);
+            }
+        }
+    }, [productID, products, setSelectedProduct, quantityInputRef]);
 
     return filteredOptions;
 }

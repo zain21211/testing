@@ -5,6 +5,7 @@ const router = express.Router();
 
 // Route to get all invoices
 router.get("/loadlist", invoiceControllers.getLoadList);
+router.get("/today-total-sales", invoiceControllers.getTodayTotalSales);
 router.get("/deliverylist", invoiceControllers.getDeliveryList);
 router.put("/loadlist", invoiceControllers.getLoadList);
 router.put("/loadList/update", invoiceControllers.postItem);

@@ -293,6 +293,18 @@ const insertLedgerEntries = async (
     `);
 };
 
+// Helper to calculate today's total recovery (CRV)
+const calculateTodayRecovery = async (pool) => {
+  const result = await pool
+    .request()
+    .query(`
+      SELECT SUM(credit) AS total 
+      FROM ledgers 
+      WHERE type = 'CRV' AND acid <> 1 AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+    `);
+  return result.recordset[0].total || 0;
+};
+
 // helper: convert base64 -> Buffer (works for "image" type)
 const toBuffer = (data) => {
   if (!data) return null;
@@ -397,6 +409,16 @@ const CashEntryController = {
       // Commit transaction
       await transaction.commit();
 
+      // Trigger socket update if it was a CRV (cash recovery) entry
+      if (methodConfig.type === "CRV") {
+        const newTotal = await calculateTodayRecovery(pool);
+        const io = req.app.get("io");
+        if (io) {
+          io.emit("recoveryUpdated", { total: newTotal });
+          console.log(`📡 Socket emitted recoveryUpdated: ${newTotal}`);
+        }
+      }
+
       // Store receipt image if provided
       const { paymentImage } = req.body;
       if (paymentImage) {
@@ -424,6 +446,19 @@ const CashEntryController = {
         details: error.toString(),
       });
     } finally {
+    }
+  },
+
+  getTodayTotalRecovery: async (req, res) => {
+    try {
+      const pool = await dbConnection();
+      const total = await calculateTodayRecovery(pool);
+      res.json({ success: true, total });
+    } catch (error) {
+      console.error("Error fetching today's recovery:", error);
+      res.status(500).json({
+        error: error.message || "Internal server error",
+      });
     }
   },
 };

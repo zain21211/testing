@@ -226,6 +226,14 @@ const ProductSelectionGrid = forwardRef(({
                             disabled={initialDataLoading}
                             sx={{ ...bigger, flex: 1 }}
                             onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    if (productIDInput) {
+                                        setProductID(productIDInput);
+                                    }
+                                }
+                            }}
                             inputProps={{ inputMode: "numeric" }}
                             InputLabelProps={{ shrink: true }}
                         />

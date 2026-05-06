@@ -38,18 +38,18 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 // Fallback defaults (used if API fetch fails)
 const FALLBACK_VISIBILITY = {
-  packing:        ["admin", "pack", "operator"],
-  load:           ["admin", "pack", "operator"],
-  spo:            ["admin", "spo", "operator"],
+  packing: ["admin", "pack", "operator"],
+  load: ["admin", "pack", "operator"],
+  spo: ["admin", "spo", "operator"],
   paymentvoucher: ["admin", "payment"],
-  saleshistory:   ["admin", "payment"],
-  accounts:       ["admin", "sm", "operator"],
-  recovery:       ["admin", "sm", "operator"],
-  sales:          ["admin", "sm", "operator"],
-  neworder:       ["admin", "sm", "operator"],
-  products:       ["admin", "sm"],
-  routes:         ["admin", "sm"],
-  delivery:       ["admin", "sm", "bilty"],
+  saleshistory: ["admin"],
+  accounts: ["admin", "operator"],
+  recovery: ["admin", "sm", "operator"],
+  sales: ["admin", "sm", "operator"],
+  neworder: ["admin", "sm", "operator"],
+  products: ["admin"],
+  routes: ["admin", "sm"],
+  delivery: ["admin", "sm", "bilty"],
 };
 
 
@@ -59,8 +59,8 @@ const url = import.meta.env.VITE_API_URL;
 const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
   const navigate = useNavigate();
   return (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         aspectRatio: '1 / 1',
         width: '100%',
         borderRadius: { xs: '12px', md: '24px' },
@@ -78,13 +78,13 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
         }
       }}
     >
-      <CardActionArea 
+      <CardActionArea
         onClick={() => path ? navigate(path) : onClick()}
-        sx={{ 
+        sx={{
           width: '100%',
-          height: '100%', 
-          display: 'flex', 
-          flexDirection: 'column', 
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '6%',
@@ -96,17 +96,17 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick }) => {
           We want icon to fill ~65% of card = ~22vw.
           clamp(40px, 22vw, 180px) covers mobile → desktop.
         */}
-        <Icon sx={{ 
+        <Icon sx={{
           fontSize: 'clamp(32px, 16vw, 140px)',
           color: color,
           display: 'block',
           lineHeight: 1,
           filter: `drop-shadow(0 2px 8px ${color}50)`,
         }} />
-        <Typography 
-          fontWeight="900" 
-          sx={{ 
-            color: '#222', 
+        <Typography
+          fontWeight="900"
+          sx={{
+            color: '#222',
             fontSize: 'clamp(0.6rem, 3.5vw, 1.1rem)',
             lineHeight: 1,
             textAlign: 'center',
@@ -145,7 +145,7 @@ const Login = () => {
   const [initialAuth] = useState(getInitialAuthState());
   const [isLoggedIn, setIsLoggedIn] = useState(initialAuth.isLoggedIn);
   const [userData, setUserData] = useState(initialAuth.userData);
-  
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
@@ -340,23 +340,23 @@ const Login = () => {
   }
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       minHeight: '100vh',
-      background: isLoggedIn 
+      background: isLoggedIn
         ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
         : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       pt: isLoggedIn ? { xs: 0.5, md: 1 } : 4,
       pb: 4,
-      px: { xs: 0, sm: 2 }, 
+      px: { xs: 0, sm: 2 },
       display: 'flex',
       alignItems: isLoggedIn ? 'flex-start' : 'center',
       justifyContent: 'center'
     }}>
       {isLoggedIn ? (
         <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 4 }, width: '100%' }}>
-          <Box sx={{ 
-            mb: { xs: 2, md: 4 }, 
-            display: 'flex', 
+          <Box sx={{
+            mb: { xs: 2, md: 4 },
+            display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: 'center',
             justifyContent: 'flex-start',
@@ -373,10 +373,10 @@ const Login = () => {
                 onChange={handleAvatarChange}
               />
               <label htmlFor="avatar-upload">
-                <Avatar 
+                <Avatar
                   src={avatar}
-                  sx={{ 
-                    width: { xs: 120, md: 200 }, height: { xs: 120, md: 200 }, 
+                  sx={{
+                    width: { xs: 120, md: 200 }, height: { xs: 120, md: 200 },
                     bgcolor: 'primary.main', fontSize: '4rem',
                     boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
                     cursor: 'pointer',
@@ -388,10 +388,10 @@ const Login = () => {
               </label>
             </Box>
             <Box>
-              <Typography 
-                variant="h2" 
-                fontWeight="900" 
-                sx={{ 
+              <Typography
+                variant="h2"
+                fontWeight="900"
+                sx={{
                   color: '#1a1a1a', mb: 1,
                   fontSize: { xs: '1.75rem', md: '4rem' },
                   letterSpacing: '-1px',
@@ -415,101 +415,101 @@ const Login = () => {
             }}
           >
             {canSee("packing") && (
-              <ActionCard 
+              <ActionCard
                 title="Packing" subtitle="Pending"
-                icon={InventoryIcon} color="#ff3d07" path="/pending" 
+                icon={InventoryIcon} color="#ff3d07" path="/pending"
               />
             )}
             {canSee("load") && (
-              <ActionCard 
+              <ActionCard
                 title="Load" subtitle="Shipping"
-                icon={LocalShippingIcon} color="#00a611" path="/load" 
+                icon={LocalShippingIcon} color="#00a611" path="/load"
               />
             )}
             {canSee("spo") && (
-              <ActionCard 
+              <ActionCard
                 title="SPO" subtitle="Working"
-                icon={AssessmentIcon} color="#FFC107" path="/turnoverreport" 
+                icon={AssessmentIcon} color="#FFC107" path="/turnoverreport"
               />
             )}
             {canSee("paymentvoucher") && (
-              <ActionCard 
+              <ActionCard
                 title="Payment" subtitle="Voucher"
-                icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher" 
+                icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher"
               />
             )}
             {canSee("saleshistory") && (
-              <ActionCard 
+              <ActionCard
                 title="History" subtitle="Sales"
-                icon={HistoryIcon} color="#009688" path="/saleshistory" 
+                icon={HistoryIcon} color="#009688" path="/saleshistory"
               />
             )}
             {canSee("accounts") && (
-              <ActionCard 
+              <ActionCard
                 title="Accounts" subtitle="COA"
-                icon={PeopleAltIcon} color="#610051" path="/coa" 
+                icon={PeopleAltIcon} color="#610051" path="/coa"
               />
             )}
             {canSee("recovery") && (
-              <ActionCard 
+              <ActionCard
                 title="Recovery" subtitle="Dues"
-                icon={ReceiptLongIcon} color="#2e7d32" path="/recovery" 
+                icon={ReceiptLongIcon} color="#2e7d32" path="/recovery"
               />
             )}
             {canSee("sales") && (
-              <ActionCard 
+              <ActionCard
                 title="Sales" subtitle="Daily"
-                icon={TrendingUpIcon} color="#009688" path="/sales" 
+                icon={TrendingUpIcon} color="#009688" path="/sales"
               />
             )}
             {canSee("neworder") && (
-              <ActionCard 
+              <ActionCard
                 title="New Order" subtitle="Invoice"
-                icon={AddShoppingCartIcon} color="#1976d2" path="/order" 
+                icon={AddShoppingCartIcon} color="#1976d2" path="/order"
               />
             )}
             {canSee("products") && (
-              <ActionCard 
+              <ActionCard
                 title="Products" subtitle="Stock"
-                icon={ShoppingBagIcon} color="#ff00ea" path="/productslist" 
+                icon={ShoppingBagIcon} color="#ff00ea" path="/productslist"
               />
             )}
             {canSee("routes") && (
-              <ActionCard 
+              <ActionCard
                 title="Routes" subtitle="Mapping"
-                icon={RouteIcon} color="#3f51b5" path="/list" 
+                icon={RouteIcon} color="#3f51b5" path="/list"
               />
             )}
             {canSee("delivery") && (
-              <ActionCard 
+              <ActionCard
                 title="Delivery" subtitle="Tracking"
-                icon={DeliveryDiningIcon} color="#a41260" path="/delivery" 
+                icon={DeliveryDiningIcon} color="#a41260" path="/delivery"
               />
             )}
             {userType === "admin" && (
-              <ActionCard 
+              <ActionCard
                 title="Visibility" subtitle="Manager"
-                icon={AdminPanelSettingsIcon} color="#6c63ff" path="/admin/visibility" 
+                icon={AdminPanelSettingsIcon} color="#6c63ff" path="/admin/visibility"
               />
             )}
           </Box>
 
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center', 
+            alignItems: 'center',
             mt: { xs: 4, md: 8 },
             mb: 2
           }}>
             <IconButton
               onClick={handleLogout}
-              sx={{ 
-                width: 56, 
-                height: 56, 
+              sx={{
+                width: 56,
+                height: 56,
                 bgcolor: 'rgba(211, 47, 47, 0.1)',
                 color: '#d32f2f',
                 transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': { 
+                '&:hover': {
                   bgcolor: '#d32f2f',
                   color: 'white',
                   transform: 'rotate(180deg) scale(1.1)',
@@ -520,13 +520,13 @@ const Login = () => {
             >
               <LogoutIcon sx={{ fontSize: 24 }} />
             </IconButton>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                mt: 1.5, 
-                fontWeight: 700, 
-                color: '#999', 
-                letterSpacing: '3px', 
+            <Typography
+              variant="caption"
+              sx={{
+                mt: 1.5,
+                fontWeight: 700,
+                color: '#999',
+                letterSpacing: '3px',
                 textTransform: 'uppercase',
                 fontSize: '0.6rem'
               }}
@@ -536,9 +536,9 @@ const Login = () => {
           </Box>
         </Container>
       ) : (
-        <Paper 
-          elevation={24} 
-          sx={{ 
+        <Paper
+          elevation={24}
+          sx={{
             p: { xs: 2.5, md: 3 }, width: '100%', maxWidth: 450, borderRadius: '32px',
             background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
@@ -574,8 +574,8 @@ const Login = () => {
               />
             </FormControl>
 
-            <FormControlLabel 
-              control={<Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)} />} 
+            <FormControlLabel
+              control={<Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)} />}
               label="Keep me signed in"
               sx={{ mb: 4, ml: 0.5 }}
             />
@@ -587,7 +587,7 @@ const Login = () => {
               fullWidth
               variant="contained"
               disabled={isLoading}
-              sx={{ 
+              sx={{
                 py: 2, borderRadius: '16px', fontSize: '1.1rem', fontWeight: 700,
                 textTransform: 'none', boxShadow: '0 10px 20px -10px #1976d2'
               }}

@@ -23,6 +23,7 @@ import ProductsList from "./components/productsLIst/productsList.jsx";
 import QRCodeGenerator from './pages/QRCodeGenerator';
 import MechanicSignupMain from './forCustomerRewars/machenicSignup/components/main';
 import SalesHistory from "./SaleHistory.jsx";
+import AdminVisibilityPage from "./pages/AdminVisibilityPage.jsx";
 
 const AppLayout = () => {
     // const theme = useTheme(); // (Still need useTheme if using styled/sx)
@@ -55,6 +56,7 @@ const AppLayout = () => {
                     <Route path="/productsList" element={<ProductsList />} />
                     <Route path="/qr-generator" element={<QRCodeGenerator />} />
                     <Route path="/Signup" element={<MechanicSignupMain />} />
+                    <Route path="/admin/visibility" element={<AdminVisibilityPage />} />
                 </Routes>
             </Box>
 

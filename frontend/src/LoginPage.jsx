@@ -34,11 +34,24 @@ import RouteIcon from '@mui/icons-material/Route';
 import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
-const paymentVoucher = ['admin', 'payment'];
-const packingList = ['pack', 'admin', 'operator'];
-const forSpo = ['spo', 'admin', 'operator'];
-const userTypes_list = ["sm", 'admin'];
+// Fallback defaults (used if API fetch fails)
+const FALLBACK_VISIBILITY = {
+  packing:        ["admin", "pack", "operator"],
+  load:           ["admin", "pack", "operator"],
+  spo:            ["admin", "spo", "operator"],
+  paymentvoucher: ["admin", "payment"],
+  saleshistory:   ["admin", "payment"],
+  accounts:       ["admin", "sm", "operator"],
+  recovery:       ["admin", "sm", "operator"],
+  sales:          ["admin", "sm", "operator"],
+  neworder:       ["admin", "sm", "operator"],
+  products:       ["admin", "sm"],
+  routes:         ["admin", "sm"],
+  delivery:       ["admin", "sm", "bilty"],
+};
+
 
 const url = import.meta.env.VITE_API_URL;
 
@@ -140,6 +153,39 @@ const Login = () => {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(true);
   const [isCustomer, setIsCustomer] = useState(false);
+  // ── Visibility config (fetched from server) ─────────────────────────────
+  const [visibilityConfig, setVisibilityConfig] = useState(null); // null = not yet fetched
+
+  useEffect(() => {
+    // Fetch visibility config whenever user logs in
+    if (!isLoggedIn) return;
+    axios.get(`${url}/form-visibility`)
+      .then(res => {
+        // Convert array to map: { "admin|packing": true, ... }
+        const map = {};
+        res.data.forEach(({ usertype, form_key, is_visible }) => {
+          map[`${usertype}|${form_key}`] = !!is_visible;
+        });
+        setVisibilityConfig(map);
+      })
+      .catch(() => {
+        // Server unavailable — fall back to hardcoded defaults silently
+        setVisibilityConfig(null);
+      });
+  }, [isLoggedIn]);
+
+  // Helper: can the current userType see this card?
+  const canSee = (formKey) => {
+    // Extract base type: e.g. "sm-kr" -> "sm", "operator-1" -> "operator"
+    const baseType = userType.split('-')[0];
+    if (visibilityConfig) {
+      // Use server config
+      return visibilityConfig[`${baseType}|${formKey}`] ?? false;
+    }
+    // Fallback to hardcoded defaults
+    return FALLBACK_VISIBILITY[formKey]?.includes(baseType) ?? false;
+  };
+
 
   // Crop State
   const [tempImage, setTempImage] = useState(null);
@@ -368,80 +414,84 @@ const Login = () => {
               width: '100%',
             }}
           >
-            {!isBilty && packingList.some(e => userType.includes(e)) && (
-              <>
-                <ActionCard 
-                  title="Packing" subtitle="Pending"
-                  icon={InventoryIcon} color="#ff3d07" path="/pending" 
-                />
-                <ActionCard 
-                  title="Load" subtitle="Shipping"
-                  icon={LocalShippingIcon} color="#00a611" path="/load" 
-                />
-              </>
+            {canSee("packing") && (
+              <ActionCard 
+                title="Packing" subtitle="Pending"
+                icon={InventoryIcon} color="#ff3d07" path="/pending" 
+              />
             )}
-
-            {!isBilty && (forSpo.includes(userType) || userData?.username.includes("ZAIN")) && (
+            {canSee("load") && (
+              <ActionCard 
+                title="Load" subtitle="Shipping"
+                icon={LocalShippingIcon} color="#00a611" path="/load" 
+              />
+            )}
+            {canSee("spo") && (
               <ActionCard 
                 title="SPO" subtitle="Working"
                 icon={AssessmentIcon} color="#FFC107" path="/turnoverreport" 
               />
             )}
-
-            {!isBilty && (paymentVoucher.includes(userType) || userData?.username.includes("ZAIN")) && (
-              <>
-                <ActionCard 
-                  title="Payment" subtitle="Voucher"
-                  icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher" 
-                />
-                <ActionCard 
-                  title="History" subtitle="Sales"
-                  icon={HistoryIcon} color="#009688" path="/saleshistory" 
-                />
-              </>
+            {canSee("paymentvoucher") && (
+              <ActionCard 
+                title="Payment" subtitle="Voucher"
+                icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher" 
+              />
             )}
-
-            {!isBilty && userType !== 'payment' && !userType.includes('pack') && (
-              <>
-                <ActionCard 
-                  title="Accounts" subtitle="COA"
-                  icon={PeopleAltIcon} color="#610051" path="/coa" 
-                />
-                <ActionCard 
-                  title="Recovery" subtitle="Dues"
-                  icon={ReceiptLongIcon} color="#2e7d32" path="/recovery" 
-                />
-                <ActionCard 
-                  title="Sales" subtitle="Daily"
-                  icon={TrendingUpIcon} color="#009688" path="/sales" 
-                />
-                <ActionCard 
-                  title="New Order" subtitle="Invoice"
-                  icon={AddShoppingCartIcon} color="#1976d2" path="/order" 
-                />
-              </>
+            {canSee("saleshistory") && (
+              <ActionCard 
+                title="History" subtitle="Sales"
+                icon={HistoryIcon} color="#009688" path="/saleshistory" 
+              />
             )}
-
-            {userTypes_list.some(type => userType.includes(type)) || isBilty ? (
-              <>
-                {!isBilty && (
-                  <>
-                    <ActionCard 
-                      title="Products" subtitle="Stock"
-                      icon={ShoppingBagIcon} color="#ff00ea" path="/productslist" 
-                    />
-                    <ActionCard 
-                      title="Routes" subtitle="Mapping"
-                      icon={RouteIcon} color="#3f51b5" path="/list" 
-                    />
-                  </>
-                )}
-                <ActionCard 
-                  title="Delivery" subtitle="Tracking"
-                  icon={DeliveryDiningIcon} color="#a41260" path="/delivery" 
-                />
-              </>
-            ) : null}
+            {canSee("accounts") && (
+              <ActionCard 
+                title="Accounts" subtitle="COA"
+                icon={PeopleAltIcon} color="#610051" path="/coa" 
+              />
+            )}
+            {canSee("recovery") && (
+              <ActionCard 
+                title="Recovery" subtitle="Dues"
+                icon={ReceiptLongIcon} color="#2e7d32" path="/recovery" 
+              />
+            )}
+            {canSee("sales") && (
+              <ActionCard 
+                title="Sales" subtitle="Daily"
+                icon={TrendingUpIcon} color="#009688" path="/sales" 
+              />
+            )}
+            {canSee("neworder") && (
+              <ActionCard 
+                title="New Order" subtitle="Invoice"
+                icon={AddShoppingCartIcon} color="#1976d2" path="/order" 
+              />
+            )}
+            {canSee("products") && (
+              <ActionCard 
+                title="Products" subtitle="Stock"
+                icon={ShoppingBagIcon} color="#ff00ea" path="/productslist" 
+              />
+            )}
+            {canSee("routes") && (
+              <ActionCard 
+                title="Routes" subtitle="Mapping"
+                icon={RouteIcon} color="#3f51b5" path="/list" 
+              />
+            )}
+            {canSee("delivery") && (
+              <ActionCard 
+                title="Delivery" subtitle="Tracking"
+                icon={DeliveryDiningIcon} color="#a41260" path="/delivery" 
+              />
+            )}
+            {userType === "admin" && (
+              <ActionCard 
+                title="Visibility" subtitle="Manager"
+                icon={AdminPanelSettingsIcon} color="#6c63ff" path="/admin/visibility" 
+              />
+            )}
           </Box>
 
           <Box sx={{ 

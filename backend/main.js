@@ -26,6 +26,7 @@ const saleRoutes = require("./routes/salesRoutes"); // Import your customer rout
 const authMiddleware = require("./middleware/tokenAuthentication"); // Import your auth middleware
 const coaRoutes = require("./routes/coaRoutes");
 const turnoverReport = require("./routes/turnOverReport");
+const formVisibilityRoutes = require("./routes/formVisibilityRoutes");
 
 // Import logging middleware
 const { createRequestLogger } = require("./logging/middleware/requestLogger");
@@ -129,6 +130,7 @@ app.use("/api", saleRoutes);
 app.use("/api/ledger", ledgerRoutes);
 app.use("/api/coa", coaRoutes);
 app.use("/api/turnover", turnoverReport);
+app.use("/api/form-visibility", formVisibilityRoutes);
 
 // Logs management routes
 app.use("/api/logs", logsRoutes);

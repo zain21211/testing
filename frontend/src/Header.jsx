@@ -23,6 +23,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 
@@ -144,6 +145,21 @@ const Header = () => {
         label: "Customer Route Order",
         icon: ListAltIcon,
         path: "/list",
+      },
+    ];
+  }
+
+  // Admin-only: Form Visibility Manager
+  if (
+    userType === "admin" &&
+    !drawerMenuItems.some(item => item.path === "/admin/visibility")
+  ) {
+    drawerMenuItems = [
+      ...drawerMenuItems,
+      {
+        label: "Visibility Manager",
+        icon: AdminPanelSettingsIcon,
+        path: "/admin/visibility",
       },
     ];
   }

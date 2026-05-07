@@ -55,6 +55,7 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver, user }) => {
                     onLoad={handleLoadCustomer}
                     loading={loadingCustomerId === customer.acid}
                     user={user}
+                    fetchList={fetchList}
                 />
             ))}
             <Box

@@ -62,7 +62,24 @@ const CustomerListItem = ({ customer, nug, setNug, user, fetchList }) => {
             <ListItemText
                 sx={{ width: "50%", textAlign: 'right' }}
                 primary={customer.UrduName}
-                secondary={`${customer.doc} - ${customer.route} `}
+                secondary={
+                    <>
+                        <span style={{ display: 'block' }}>
+                            <span style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#fff', backgroundColor: '#1976d2', padding: '1px 8px', borderRadius: '6px' }}>{customer.doc}</span>
+                            &nbsp;|&nbsp; {customer.RouteNumber || customer.route}
+                        </span>
+                        <span style={{ display: 'block', fontSize: '0.95rem', color: '#888' }}>
+                            {customer.Date ? (() => {
+                                const d = new Date(customer.Date);
+                                const day = String(d.getDate()).padStart(2, '0');
+                                const mon = d.toLocaleString('en', { month: 'short' });
+                                const yr = String(d.getFullYear()).slice(-2);
+                                return `${day}-${mon}-${yr}`;
+                            })() : ''}
+                            {customer.goods ? ` | ${customer.goods}` : ''}
+                        </span>
+                    </>
+                }
                 primaryTypographyProps={{
                     sx: {
                         fontWeight: "bold",

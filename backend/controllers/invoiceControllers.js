@@ -43,29 +43,27 @@ const invoiceControllers = {
 
     const query = `
       SELECT 
-        d.doc, 
-        d.date,
-        c.id as ACID, 
-        c.urduname as UrduName, 
-        d.goods as transporter,
-        d.shopper,
-        c.route,
-        d.vehicle,
-        COUNT(*) OVER() as TotalCount
-      FROM psdetail d
-      join coa c
-      on d.acid = c.id
-      WHERE d.status = 'invoice'
-      --and c.Subsidary not like '%counter%'
-      and (d.s_status is null  
-      or d.s_status = '' )
-      --and goods like '%' + @Transporter + '%'
-      and c.route like '%' + @Route + '%'
-      and d.date >= DATEADD(year, DATEDIFF(year, 0, GETDATE()), 0)
-     -- AND CAST(d.[date] AS DATE) BETWEEN CAST(GETDATE() AS DATE) 
-      --AND CAST(DATEADD(DAY, 1, GETDATE()) AS DATE)
-      --group by d.goods
-      order by d.goods, c.rno;
+        CAST(pd.Date AS DATE) AS Date,
+        a.route + '-' + CONVERT(VARCHAR(5), a.rno) AS RouteNumber,
+        pd.type,
+        pd.doc, 
+        a.id AS ACID,
+        a.UrduName,
+        ISNULL(pd.Shopper, '') AS shopper,
+        pd.goods,
+        a.route,
+        pd.vehicle,
+        COUNT(*) OVER() AS TotalCount
+      FROM PSDetail pd
+      INNER JOIN coa a ON pd.acid = a.Id
+      WHERE 
+        pd.status = 'invoice' 
+        AND pd.s_status IS NULL 
+        AND pd.type = 'sale'
+        AND a.Subsidary NOT LIKE '%counter%'
+        AND pd.amount <> 0
+        AND a.route LIKE '%' + @Route + '%'
+      ORDER BY a.route, a.rno, pd.doc;
     `;
 
     try {

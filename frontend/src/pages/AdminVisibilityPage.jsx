@@ -26,6 +26,7 @@ const FORM_KEYS = [
   { key: "products",       label: "Products",        emoji: "🛍️" },
   { key: "routes",         label: "Routes",          emoji: "🗺️" },
   { key: "delivery",       label: "Delivery",        emoji: "🛵" },
+  { key: "imageviewer",    label: "Image Viewer",    emoji: "🖼️" },
 ];
 
 const USER_TYPES = ["admin", "sm", "operator", "pack", "payment", "spo", "bilty"];

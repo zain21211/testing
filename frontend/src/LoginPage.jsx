@@ -36,6 +36,7 @@ import DeliveryDiningIcon from '@mui/icons-material/DeliveryDining';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import ImageIcon from '@mui/icons-material/Image';
 
 // Fallback defaults (used if API fetch fails)
 const FALLBACK_VISIBILITY = {
@@ -51,6 +52,7 @@ const FALLBACK_VISIBILITY = {
   products: ["admin"],
   routes: ["admin", "sm"],
   delivery: ["admin", "sm", "bilty"],
+  imageviewer: ["admin", "sm", "operator"],
 };
 
 
@@ -566,6 +568,12 @@ const Login = () => {
               <ActionCard
                 title="Delivery" subtitle="Tracking"
                 icon={DeliveryDiningIcon} color="#a41260" path="/delivery"
+              />
+            )}
+            {canSee("imageviewer") && (
+              <ActionCard
+                title="Images" subtitle="Viewer"
+                icon={ImageIcon} color="#0288d1" path="/image-viewer"
               />
             )}
             {userType === "admin" && (

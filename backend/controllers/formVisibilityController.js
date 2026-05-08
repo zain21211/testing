@@ -17,6 +17,7 @@ const ALL_FORM_KEYS = [
   "products",
   "routes",
   "delivery",
+  "imageviewer",
 ];
 
 const ALL_USER_TYPES = [
@@ -43,9 +44,10 @@ const DEFAULT_VISIBILITY = {
   products:       ["admin", "sm"],
   routes:         ["admin", "sm"],
   delivery:       ["admin", "sm", "bilty"],
+  imageviewer:    ["admin", "sm", "operator"],
 };
 
-// Ensure the FORM_VISIBILITY table exists and seed defaults if empty
+// Ensure the FORM_VISIBILITY table exists and seed defaults if empty or missing keys
 const ensureTableAndSeed = async (pool) => {
   // Create table if not exists
   await pool.request().query(`
@@ -64,27 +66,26 @@ const ensureTableAndSeed = async (pool) => {
     END
   `);
 
-  // Check if table is empty
-  const countResult = await pool.request().query("SELECT COUNT(*) AS cnt FROM FORM_VISIBILITY");
-  const count = countResult.recordset[0].cnt;
-
-  if (count === 0) {
-    // Seed defaults
-    for (const usertype of ALL_USER_TYPES) {
-      for (const formKey of ALL_FORM_KEYS) {
-        const isVisible = DEFAULT_VISIBILITY[formKey]?.includes(usertype) ? 1 : 0;
-        await pool
-          .request()
-          .input("usertype", mssql.NVarChar, usertype)
-          .input("form_key", mssql.NVarChar, formKey)
-          .input("is_visible", mssql.Bit, isVisible)
-          .query(`
+  // Check and add missing keys for each usertype
+  for (const usertype of ALL_USER_TYPES) {
+    for (const formKey of ALL_FORM_KEYS) {
+      const isVisible = DEFAULT_VISIBILITY[formKey]?.includes(usertype) ? 1 : 0;
+      await pool
+        .request()
+        .input("usertype", mssql.NVarChar, usertype)
+        .input("form_key", mssql.NVarChar, formKey)
+        .input("is_visible", mssql.Bit, isVisible)
+        .query(`
+          IF NOT EXISTS (
+            SELECT 1 FROM FORM_VISIBILITY 
+            WHERE usertype = @usertype AND form_key = @form_key
+          )
+          BEGIN
             INSERT INTO FORM_VISIBILITY (usertype, form_key, is_visible)
             VALUES (@usertype, @form_key, @is_visible)
-          `);
-      }
+          END
+        `);
     }
-    console.log("✅ FORM_VISIBILITY table seeded with defaults.");
   }
 };
 

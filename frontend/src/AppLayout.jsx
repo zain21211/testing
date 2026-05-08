@@ -24,6 +24,7 @@ import QRCodeGenerator from './pages/QRCodeGenerator';
 import MechanicSignupMain from './forCustomerRewars/machenicSignup/components/main';
 import SalesHistory from "./SaleHistory.jsx";
 import AdminVisibilityPage from "./pages/AdminVisibilityPage.jsx";
+import ImageViewer from "./ImageViewer.jsx";
 
 const AppLayout = () => {
     // const theme = useTheme(); // (Still need useTheme if using styled/sx)
@@ -57,6 +58,7 @@ const AppLayout = () => {
                     <Route path="/qr-generator" element={<QRCodeGenerator />} />
                     <Route path="/Signup" element={<MechanicSignupMain />} />
                     <Route path="/admin/visibility" element={<AdminVisibilityPage />} />
+                    <Route path="/image-viewer" element={<ImageViewer />} />
                 </Routes>
             </Box>
 

@@ -235,26 +235,8 @@ const DataTable = ({
   };
 
   const getRowStyles = (row) => {
-    const rowDate = new Date(row.date);
-    const today = new Date();
-    rowDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const dayDiff = (today - rowDate) / (24 * 60 * 60 * 1000);
-    const delayed = dayDiff >= 1;
-
-    const shouldHighlightRow =
-      Object.entries(row).some(([key, val]) => {
-        const isEstimateOrPending =
-          typeof val === "string" &&
-          isLedgerTable &&
-          (val.toLowerCase() === "estimate" ||
-            val.toLowerCase().includes("pending"));
-        const isFullDiscount =
-          key.toLowerCase().includes("dis") &&
-          typeof val === "number" &&
-          val === 100;
-        return isEstimateOrPending || isFullDiscount;
-      }) || delayed;
+    const isPendingStatus = isLedgerTable && row.Narration && row.Narration.toLowerCase().includes("pending");
+    const shouldHighlightRow = isPendingStatus;
 
     const rowSx = {
       display: usage?.includes("coa") ? "flex" : "table-row",

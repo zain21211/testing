@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
 import { useDispatch } from "react-redux";
 import DataTable from "./table"; // Assuming DataTable is in a sibling file
@@ -249,46 +249,7 @@ const Ledger = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const ledgerColumns = useResponsiveLedgerColumns();
-
-  // --- FULLSCREEN LOGIC FOR LANDSCAPE ---
-  useEffect(() => {
-    const triggerFullscreen = () => {
-      const isLandscape = window.matchMedia("(orientation: landscape)").matches;
-      const elem = document.documentElement;
-
-      if (isLandscape && !document.fullscreenElement) {
-        const requestFS = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
-        if (requestFS) {
-          requestFS.call(elem).catch(() => {});
-        }
-      } else if (!isLandscape && document.fullscreenElement) {
-        const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-        if (exitFS) exitFS.call(document).catch(() => {});
-      }
-    };
-
-    // Listen for orientation/resize
-    window.addEventListener("resize", triggerFullscreen);
-    // Fallback: request on first click in landscape because browsers require user gesture
-    window.addEventListener("click", triggerFullscreen);
-    
-    return () => {
-      window.removeEventListener("resize", triggerFullscreen);
-      window.removeEventListener("click", triggerFullscreen);
-    };
-  }, []);
-
-  const [userData] = useState(() => {
-    try {
-      const user = localStorage.getItem("user");
-      return user ? JSON.parse(user) : {};
-    } catch (e) {
-      console.error("Failed to parse user from localStorage:", e);
-      return {};
-    }
-  });
-
-  const isCustomer = userData?.userType?.toLowerCase().includes("customer");
+  const location = useLocation();
 
   // --- DATA FETCHING ---
   const handleFetchData = useCallback(async (params) => {
@@ -363,6 +324,89 @@ const Ledger = () => {
     }
   }, []);
 
+  const fetchRef = React.useRef(handleFetchData);
+  useEffect(() => {
+    fetchRef.current = handleFetchData;
+  }, [handleFetchData]);
+
+  // --- FULLSCREEN & REFRESH LOGIC ---
+  useEffect(() => {
+    const triggerFullscreen = () => {
+      const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+      const elem = document.documentElement;
+
+      if (isLandscape && !document.fullscreenElement) {
+        const requestFS = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+        if (requestFS) {
+          requestFS.call(elem).catch(() => {});
+        }
+      } else if (!isLandscape && document.fullscreenElement) {
+        const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+        if (exitFS) exitFS.call(document).catch(() => {});
+      }
+    };
+
+    // Unbreakable Auto-Refresh Logic (Bypasses BFCache entirely)
+    const checkRefresh = () => {
+      if (localStorage.getItem("ledgerNeedsRefresh") === "true") {
+        localStorage.removeItem("ledgerNeedsRefresh"); // Clear flag immediately
+        const urlParams = new URLSearchParams(window.location.search);
+        const acid = urlParams.get("acid");
+        if (acid) {
+          localStorage.removeItem("ledgerRows");
+          localStorage.removeItem("ledgerSummary");
+          localStorage.removeItem("ledgerSearchAttempted");
+
+          const params = {
+            acid,
+            startDate: urlParams.get("startDate"),
+            endDate: urlParams.get("endDate"),
+            name: urlParams.get("name") || customerName,
+          };
+          
+          if (fetchRef.current) {
+            fetchRef.current(params);
+          }
+        }
+      }
+    };
+
+    // Poll every 500ms: Even if the page is completely frozen by Safari BFCache, 
+    // the interval will fire almost immediately upon resume.
+    const refreshInterval = setInterval(checkRefresh, 500);
+
+    // Fallbacks
+    window.addEventListener("pageshow", checkRefresh);
+    window.addEventListener("focus", checkRefresh);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') checkRefresh();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("resize", triggerFullscreen);
+    window.addEventListener("click", triggerFullscreen);
+    
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener("pageshow", checkRefresh);
+      window.removeEventListener("focus", checkRefresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("resize", triggerFullscreen);
+      window.removeEventListener("click", triggerFullscreen);
+    };
+  }, [customerName]);
+
+  const [userData] = useState(() => {
+    try {
+      const user = localStorage.getItem("user");
+      return user ? JSON.parse(user) : {};
+    } catch (e) {
+      console.error("Failed to parse user from localStorage:", e);
+      return {};
+    }
+  });
+
+  const isCustomer = userData?.userType?.toLowerCase().includes("customer");
+
   // --- EFFECTS ---
 
   // Effect for non-customer user types
@@ -383,8 +427,11 @@ const Ledger = () => {
   }, [isCustomer, userData.userType, handleFetchData]);
 
 
-  // Effect to load data from localStorage on initial mount
+  // Effect to load data from localStorage on initial mount (only if no search params)
   useEffect(() => {
+    const acidInUrl = searchParams.get("acid");
+    if (acidInUrl) return; // Skip cache loading if we are performing a real search
+
     const savedAttempted = localStorage.getItem("ledgerSearchAttempted") === "true";
     setSearchAttempted(savedAttempted);
 
@@ -400,25 +447,33 @@ const Ledger = () => {
         localStorage.removeItem("ledgerSummary");
       }
     }
-  }, []);
+  }, [searchParams]);
 
   // Effect to trigger fetch based on URL search parameters
   useEffect(() => {
     const acid = searchParams.get("acid");
     if (acid) {
-      dispatch(clearSelection({ key: USAGE_KEY }));
-      setTimeout(() => dispatch(setIDWithKey({ key: USAGE_KEY, value: acid })), 0);
-
+      // CLEAR CACHE IMMEDIATELY
+      localStorage.removeItem("ledgerRows");
+      localStorage.removeItem("ledgerSummary");
+      localStorage.removeItem("ledgerSearchAttempted");
+      
       const params = {
         acid,
         startDate: searchParams.get("startDate"),
         endDate: searchParams.get("endDate"),
-        name: searchParams.get("name"),
+        name: searchParams.get("name") || customerName,
       };
+
+      // Ensure the search component state is synced
+      dispatch(clearSelection({ key: USAGE_KEY }));
+      setTimeout(() => dispatch(setIDWithKey({ key: USAGE_KEY, value: acid })), 0);
       setID(acid);
+      
+      // TRIGGER FRESH FETCH
       handleFetchData(params);
     }
-  }, [searchParams, handleFetchData, dispatch, setID]);
+  }, [searchParams, handleFetchData, dispatch, setID]); 
 
   const handleLongPress = useCallback(async (doc, type) => {
     const isAdmin = userData?.userType?.toLowerCase() === "admin";

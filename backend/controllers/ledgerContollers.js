@@ -51,7 +51,8 @@ const ledgerControllers = {
             ISNULL(Narration, '') AS Narration,
             ISNULL(Debit, 0) AS Debit,
             ISNULL(Credit, 0) AS Credit,
-            ISNULL(Status, 0) AS Status
+            ISNULL(Status, 0) AS Status,
+            ReceiptStatus
           FROM ledgers l
           WHERE acid = @acid
             AND narration LIKE '%' + @narration + '%'
@@ -77,7 +78,8 @@ const ledgerControllers = {
                 AND date < @startDate
             ) AS Debit,
             0 AS Credit,
-            0 AS Status
+            0 AS Status,
+            NULL AS ReceiptStatus
         ) x
       `;
 

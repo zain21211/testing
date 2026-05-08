@@ -155,6 +155,114 @@ const imageViewerController = {
       console.error("deleteImage error:", error);
       res.status(500).json({ error: "Internal server error", details: error.message });
     }
+  },
+  
+  getLedgerDetails: async (req, res) => {
+    const { type, doc, acid } = req.query;
+    if (!type || !doc) {
+      return res.status(400).json({ error: "Type and Doc are required" });
+    }
+
+    try {
+      const pool = await dbConnection();
+      const request = pool.request();
+      request.input("type", mssql.VarChar, type);
+      request.input("doc", mssql.Int, parseInt(doc));
+      
+      let query = `
+          SELECT TOP 1 
+            ReceiptStatus, 
+            Narration, 
+            CASE 
+              WHEN UPPER(type) = 'SALE' THEN Debit 
+              WHEN UPPER(type) IN ('BRV', 'CRV') THEN Credit 
+              ELSE (Debit + Credit) 
+            END as Amount
+          FROM ledgers
+          WHERE type = @type AND doc = @doc
+      `;
+
+      if (acid) {
+        request.input("acid", mssql.Int, parseInt(acid));
+        query += " AND acid = @acid";
+      }
+
+      const result = await request.query(query);
+
+      if (result.recordset.length === 0) {
+        return res.status(404).json({ error: "No ledger entry found" });
+      }
+
+      res.json(result.recordset[0]);
+    } catch (error) {
+      console.error("getLedgerDetails error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
+  toggleReceiptStatus: async (req, res) => {
+    const { type, doc, acid } = req.body;
+    const { userType } = req.user;
+
+    if (userType?.toLowerCase() !== "admin") {
+      return res.status(403).json({ error: "Only admins can change status." });
+    }
+
+    try {
+      const pool = await dbConnection();
+      const request = pool.request();
+      request.input("type", mssql.VarChar, type);
+      request.input("doc", mssql.Int, doc);
+      
+      let baseQuery = "SELECT ReceiptStatus, Narration FROM ledgers WHERE type = @type AND doc = @doc";
+      if (acid) {
+        request.input("acid", mssql.Int, acid);
+        baseQuery += " AND acid = @acid";
+      }
+
+      const current = await request.query(baseQuery);
+
+      if (current.recordset.length === 0) {
+        return res.status(404).json({ error: "Record not found" });
+      }
+
+      const { ReceiptStatus, Narration } = current.recordset[0];
+      const isVerified = ReceiptStatus !== null;
+      
+      let newStatus = isVerified ? null : "RECEIVED";
+      let newNarration = Narration || "";
+
+      if (!isVerified) {
+        // Switching to VERIFIED (Status: RECEIVED)
+        // Remove "PENDING - " from start
+        newNarration = newNarration.replace(/^PENDING\s*-\s*/i, "").trim();
+      } else {
+        // Switching to PENDING (Status: NULL)
+        // Prepend "PENDING - "
+        if (!newNarration.toUpperCase().startsWith("PENDING -")) {
+          newNarration = "PENDING - " + newNarration;
+        }
+      }
+
+      const updateRequest = pool.request();
+      updateRequest.input("type", mssql.VarChar, type);
+      updateRequest.input("doc", mssql.Int, doc);
+      updateRequest.input("status", mssql.VarChar, newStatus);
+      updateRequest.input("narration", mssql.VarChar, newNarration);
+      
+      let updateQuery = "UPDATE ledgers SET ReceiptStatus = @status, Narration = @narration WHERE type = @type AND doc = @doc";
+      if (acid) {
+        updateRequest.input("acid", mssql.Int, acid);
+        updateQuery += " AND acid = @acid";
+      }
+
+      await updateRequest.query(updateQuery);
+
+      res.json({ success: true, newStatus, newNarration });
+    } catch (error) {
+      console.error("toggleReceiptStatus error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 };
 

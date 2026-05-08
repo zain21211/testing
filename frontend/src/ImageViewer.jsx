@@ -52,6 +52,10 @@ const ImageViewer = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.userType?.toLowerCase() === "admin";
 
+  const [receiptStatus, setReceiptStatus] = useState(null);
+  const [ledgerAmount, setLedgerAmount] = useState("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
   const fetchImage = async () => {
     if (!doc) {
       setError("Please enter a document number");
@@ -62,21 +66,67 @@ const ImageViewer = () => {
     setImage(null);
     setCustomerName("");
     setMetadata(null);
+    setReceiptStatus(null);
+    setLedgerAmount("");
+    
     try {
       const token = localStorage.getItem("authToken");
-      const res = await axios.get(`${url}/image-viewer/get-image`, {
+      
+      // 1. Fetch Image and Customer Details first to get the ACID
+      const imageRes = await axios.get(`${url}/image-viewer/get-image`, {
         params: { type, doc },
         headers: { Authorization: `Bearer ${token}` },
       });
-      setImage(res.data.image);
-      setCustomerName(res.data.customerName);
-      setMetadata(res.data.metadata);
-      setRotation(res.data.orientation || 0);
-      setInitialRotation(res.data.orientation || 0);
+
+      setImage(imageRes.data.image);
+      setCustomerName(imageRes.data.customerName);
+      setMetadata(imageRes.data.metadata);
+      setRotation(imageRes.data.orientation || 0);
+      setInitialRotation(imageRes.data.orientation || 0);
+
+      // 2. Fetch Ledger Details using the retrieved ACID
+      if (imageRes.data.acid) {
+        const ledgerRes = await axios.get(`${url}/image-viewer/get-ledger-details`, {
+          params: { type, doc, acid: imageRes.data.acid },
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(err => ({ data: { Amount: 0, ReceiptStatus: "N/A" } }));
+
+        if (ledgerRes.data) {
+          setLedgerAmount(ledgerRes.data.Amount);
+          setReceiptStatus(ledgerRes.data.ReceiptStatus);
+        }
+      }
     } catch (err) {
       setError(err.response?.data?.error || "Failed to fetch image");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!isAdmin) {
+      alert("Only admins can change the transaction status.");
+      return;
+    }
+    if (updatingStatus) return;
+    setUpdatingStatus(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      // Find the acid from state if available
+      const currentAcid = metadata?.acid || null; 
+      
+      const res = await axios.post(
+        `${url}/image-viewer/toggle-status`,
+        { type, doc, acid: currentAcid },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setReceiptStatus(res.data.newStatus);
+      setError(`Status updated. Narration: ${res.data.newNarration}`);
+      localStorage.setItem("ledgerNeedsRefresh", "true");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update status");
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -214,15 +264,27 @@ const ImageViewer = () => {
           setError(null);
           try {
             const token = localStorage.getItem("authToken");
-            const res = await axios.get(`${url}/image-viewer/get-image`, {
-              params: { type: qType, doc: qDoc },
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            setImage(res.data.image);
-            setCustomerName(res.data.customerName);
-            setMetadata(res.data.metadata);
-            setRotation(res.data.orientation || 0);
-            setInitialRotation(res.data.orientation || 0);
+            const [imageRes, ledgerRes] = await Promise.all([
+              axios.get(`${url}/image-viewer/get-image`, {
+                params: { type: qType, doc: qDoc },
+                headers: { Authorization: `Bearer ${token}` },
+              }),
+              axios.get(`${url}/image-viewer/get-ledger-details`, {
+                params: { type: qType, doc: qDoc },
+                headers: { Authorization: `Bearer ${token}` },
+              }).catch(err => ({ data: { Amount: "N/A", ReceiptStatus: "N/A" } }))
+            ]);
+
+            setImage(imageRes.data.image);
+            setCustomerName(imageRes.data.customerName);
+            setMetadata(imageRes.data.metadata);
+            setRotation(imageRes.data.orientation || 0);
+            setInitialRotation(imageRes.data.orientation || 0);
+            
+            if (ledgerRes.data) {
+              setLedgerAmount(ledgerRes.data.Amount);
+              setReceiptStatus(ledgerRes.data.ReceiptStatus);
+            }
           } catch (err) {
             setError(err.response?.data?.error || "Failed to fetch image");
           } finally {
@@ -246,7 +308,7 @@ const ImageViewer = () => {
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: "20px", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(10px)" }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-          <IconButton onClick={() => navigate("/")} sx={{ mr: 2, bgcolor: "rgba(0,0,0,0.05)" }}>
+          <IconButton onClick={() => navigate(-1)} sx={{ mr: 2, bgcolor: "rgba(0,0,0,0.05)" }}>
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h5" fontWeight="900" color="primary">
@@ -281,10 +343,40 @@ const ImageViewer = () => {
             variant="contained"
             onClick={fetchImage}
             disabled={loading}
-            sx={{ height: "56px", px: 4, borderRadius: "12px", fontWeight: "bold", boxShadow: "0 4px 14px 0 rgba(0,118,255,0.39)" }}
+            sx={{ 
+              height: "56px", 
+              px: 4, 
+              borderRadius: "12px", 
+              fontWeight: "bold", 
+              minWidth: "180px",
+              boxShadow: "0 4px 14px 0 rgba(0,118,255,0.39)" 
+            }}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : "Retrieve Image"}
           </Button>
+
+          {image && (
+            <Button
+              variant="contained"
+              onClick={handleToggleStatus}
+              disabled={updatingStatus}
+              sx={{ 
+                height: "56px", 
+                px: 3, 
+                borderRadius: "12px", 
+                fontWeight: "bold",
+                minWidth: "180px",
+                bgcolor: (receiptStatus === null) ? '#d32f2f' : '#2e7d32',
+                '&:hover': {
+                  bgcolor: (receiptStatus === null) ? '#b71c1c' : '#1b5e20',
+                },
+                boxShadow: "0 4px 14px 0 rgba(0,0,0,0.2)"
+              }}
+            >
+              {updatingStatus ? <CircularProgress size={24} color="inherit" /> : 
+               (receiptStatus === null ? 'Pending' : 'Verified')}
+            </Button>
+          )}
         </Box>
 
         {error && (
@@ -299,7 +391,7 @@ const ImageViewer = () => {
               variant="h6"
               textAlign="center"
               sx={{
-                mb: 1,
+                mb: 2,
                 fontWeight: "bold",
                 color: "white",
                 background: "linear-gradient(90deg, #1976d2, #64b5f6)",
@@ -312,18 +404,43 @@ const ImageViewer = () => {
             </Typography>
 
             {metadata && (
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px", display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 2, bgcolor: "rgba(0,0,0,0.02)" }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <PersonIcon color="action" fontSize="small" />
-                  <Typography variant="body2"><strong>Saved By:</strong> {metadata.savedBy}</Typography>
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px", bgcolor: "rgba(0,0,0,0.02)" }}>
+                {/* Line 1: Date and Time */}
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, px: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <EventIcon color="action" fontSize="small" />
+                    <Typography variant="body1"><strong>Date:</strong> {metadata.date}</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <AccessTimeIcon color="action" fontSize="small" />
+                    <Typography variant="body1"><strong>Time:</strong> {metadata.time}</Typography>
+                  </Box>
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <EventIcon color="action" fontSize="small" />
-                  <Typography variant="body2"><strong>Date:</strong> {metadata.date}</Typography>
-                </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AccessTimeIcon color="action" fontSize="small" />
-                  <Typography variant="body2"><strong>Time:</strong> {metadata.time}</Typography>
+                
+                <Divider sx={{ mb: 2 }} />
+
+                {/* Line 2: Saved By and Amount */}
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <PersonIcon color="action" fontSize="small" />
+                    <Typography variant="body1"><strong>Saved By:</strong> {metadata.savedBy}</Typography>
+                  </Box>
+                  
+                  <TextField
+                    label="Ledger Amount"
+                    value={ledgerAmount ? new Intl.NumberFormat('en-US').format(ledgerAmount) : "0"}
+                    variant="outlined"
+                    size="small"
+                    InputProps={{ 
+                      readOnly: true,
+                      sx: { fontWeight: "900", color: "primary.main", fontSize: "1.3rem" },
+                      inputProps: { style: { textAlign: 'right' } }
+                    }}
+                    sx={{ 
+                      width: "180px",
+                      "& .MuiOutlinedInput-root": { borderRadius: "10px", bgcolor: "white" }
+                    }}
+                  />
                 </Box>
               </Paper>
             )}

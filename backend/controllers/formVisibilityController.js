@@ -18,6 +18,7 @@ const ALL_FORM_KEYS = [
   "routes",
   "delivery",
   "imageviewer",
+  "ledger",
 ];
 
 const ALL_USER_TYPES = [
@@ -45,6 +46,7 @@ const DEFAULT_VISIBILITY = {
   routes:         ["admin", "sm"],
   delivery:       ["admin", "sm", "bilty"],
   imageviewer:    ["admin", "sm", "operator"],
+  ledger:         ["admin", "sm", "operator"],
 };
 
 // Ensure the FORM_VISIBILITY table exists and seed defaults if empty or missing keys

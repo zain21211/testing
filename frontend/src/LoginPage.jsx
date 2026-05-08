@@ -37,6 +37,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ImageIcon from '@mui/icons-material/Image';
+import BookIcon from '@mui/icons-material/Book';
 
 // Fallback defaults (used if API fetch fails)
 const FALLBACK_VISIBILITY = {
@@ -53,6 +54,7 @@ const FALLBACK_VISIBILITY = {
   routes: ["admin", "sm"],
   delivery: ["admin", "sm", "bilty"],
   imageviewer: ["admin", "sm", "operator"],
+  ledger: ["admin", "sm", "operator"],
 };
 
 
@@ -574,6 +576,12 @@ const Login = () => {
               <ActionCard
                 title="Images" subtitle="Viewer"
                 icon={ImageIcon} color="#0288d1" path="/image-viewer"
+              />
+            )}
+            {canSee("ledger") && (
+              <ActionCard
+                title="Ledger" subtitle="Statement"
+                icon={BookIcon} color="#7b1fa2" path="/ledger"
               />
             )}
             {userType === "admin" && (

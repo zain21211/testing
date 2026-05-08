@@ -4,6 +4,7 @@ import { Box, Typography } from '@mui/material';
 function Footer() {
     return (
         <Box
+            id="app-footer"
             component="footer"
             sx={{
                 backgroundColor: (theme) =>

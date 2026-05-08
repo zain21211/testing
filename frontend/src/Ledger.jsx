@@ -4,6 +4,8 @@ import {
   Container,
   Typography,
   Paper,
+  TextField,
+  Button,
   CircularProgress,
   Alert,
   Box,
@@ -48,12 +50,44 @@ const formatDate = (value) => {
 };
 
 const BASE_LEDGER_COLUMNS = [
-  { id: "Date", label: "Date", align: "center", render: (value) => (value ? formatDate(value) : "N/A"), width: 100, minWidth: 80 },
-  { id: "Doc", label: "Doc", align: "left", render: (value) => (value ? value : "N/A"), width: 80, minWidth: 60 },
-  { id: "Narration", label: "Narration", align: "left", width: 300, minWidth: 150 },
-  { id: "Debit", label: "Debit", align: "right", render: (value) => formatCurrency(value), width: 120, minWidth: 80 },
-  { id: "Credit", label: "Credit", align: "right", render: (value) => formatCurrency(value), width: 120, minWidth: 80 },
-  { id: "Total", label: "Balance", align: "right", render: (value) => formatCurrency(value), width: 120, minWidth: 80 },
+  { id: "Date", label: "Date", align: "center", render: (value) => (value ? formatDate(value) : "N/A"), width: 80, minWidth: 70 },
+  { id: "Doc", label: "Doc", align: "left", render: (value) => (value ? value : "N/A"), width: 60, minWidth: 50 },
+  { id: "Narration", label: "Narration", align: "left", width: 350, minWidth: 200 },
+  { id: "Debit", label: "Debit", align: "right", render: (value) => formatCurrency(value), width: 90, minWidth: 70 },
+  { id: "Credit", label: "Credit", align: "right", render: (value) => formatCurrency(value), width: 90, minWidth: 70 },
+  { id: "Total", label: "Balance", align: "right", render: (value) => formatCurrency(value), width: 100, minWidth: 80 },
+  { 
+    id: "hasImage", 
+    label: "Image", 
+    align: "center", 
+    width: 60, 
+    render: (value, row) => {
+      if (value > 0) {
+        return (
+          <Button
+            size="small"
+            variant="contained"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = `/image-viewer?type=${row.Type}&doc=${row.Doc}`;
+            }}
+            sx={{ 
+              borderRadius: "8px", 
+              textTransform: "none", 
+              fontSize: "0.75rem",
+              fontWeight: "bold",
+              px: 2,
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+            }}
+          >
+            View
+          </Button>
+        );
+      }
+      return null;
+    }
+  },
 ];
 
 
@@ -148,7 +182,7 @@ const LedgerMessages = React.memo(({ loading, error, searchAttempted, rowCount }
 /**
  * Renders the main data table for the ledger.
  */
-const LedgerTable = React.memo(({ rows, columns }) => {
+const LedgerTable = React.memo(({ rows, columns, onLongPress }) => {
   return (
     <Card elevation={2} sx={{ width: "100%" }}>
       <Box sx={{ width: "100%", margin: "auto", textAlign: "center" }}>
@@ -159,6 +193,7 @@ const LedgerTable = React.memo(({ rows, columns }) => {
           isLedgerTable={true}
           showPagination={true}
           rowsPerPageOptions={[10, 25, 50, 100]}
+          handleLongPress={onLongPress}
         />
       </Box>
     </Card>
@@ -214,6 +249,34 @@ const Ledger = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const ledgerColumns = useResponsiveLedgerColumns();
+
+  // --- FULLSCREEN LOGIC FOR LANDSCAPE ---
+  useEffect(() => {
+    const triggerFullscreen = () => {
+      const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+      const elem = document.documentElement;
+
+      if (isLandscape && !document.fullscreenElement) {
+        const requestFS = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+        if (requestFS) {
+          requestFS.call(elem).catch(() => {});
+        }
+      } else if (!isLandscape && document.fullscreenElement) {
+        const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+        if (exitFS) exitFS.call(document).catch(() => {});
+      }
+    };
+
+    // Listen for orientation/resize
+    window.addEventListener("resize", triggerFullscreen);
+    // Fallback: request on first click in landscape because browsers require user gesture
+    window.addEventListener("click", triggerFullscreen);
+    
+    return () => {
+      window.removeEventListener("resize", triggerFullscreen);
+      window.removeEventListener("click", triggerFullscreen);
+    };
+  }, []);
 
   const [userData] = useState(() => {
     try {
@@ -357,14 +420,42 @@ const Ledger = () => {
     }
   }, [searchParams, handleFetchData, dispatch, setID]);
 
-  // --- RENDER ---
+  const handleLongPress = useCallback(async (doc, type) => {
+    const isAdmin = userData?.userType?.toLowerCase() === "admin";
+    if (!isAdmin) return;
+
+    if (window.confirm(`ADMIN ACTION: Are you sure you want to PERMANENTLY DELETE transaction ${type} #${doc} from ALL records (Ledgers, Invoices, and Images)?`)) {
+      try {
+        const token = localStorage.getItem("authToken");
+        await axios.post(`${import.meta.env.VITE_API_URL}/ledger/delete-transaction`, 
+          { type, doc },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert("Transaction deleted successfully.");
+        // Re-fetch data using existing params stored in searchParams or ID
+        const acid = searchParams.get("acid") || ID;
+        if (acid) {
+           handleFetchData({
+             acid,
+             startDate: searchParams.get("startDate"),
+             endDate: searchParams.get("endDate"),
+             name: customerName
+           });
+        }
+      } catch (err) {
+        console.error("Deletion failed:", err);
+        alert(`Deletion failed: ${err.response?.data?.message || err.message}`);
+      }
+    }
+  }, [userData, handleFetchData, searchParams, ID, customerName]);
+
   return (
     <Container maxWidth={false} sx={{ py: 2, px: { xs: 0, sm: 1, md: 1 }, width: "100%" }}>
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 3, // Replaces Grid spacing
+          gap: 3, 
           m: 0,
           width: '100%',
         }}
@@ -394,7 +485,7 @@ const Ledger = () => {
           {!loading && !error && rows.length > 0 && (
             <Box sx={{ width: "100%" }}>
               <LedgerSummary summary={summary} balanceInc={balanceInc} />
-              <LedgerTable rows={rows} columns={ledgerColumns} />
+              <LedgerTable rows={rows} columns={ledgerColumns} onLongPress={(doc, row) => handleLongPress(doc, row.Type)} />
             </Box>
           )}
         </Box>

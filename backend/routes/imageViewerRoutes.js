@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.get("/get-image", authMiddleware, imageViewerController.getImageAndCustomer);
 router.post("/update-orientation", authMiddleware, imageViewerController.updateImageOrientation);
+router.post("/delete-image", authMiddleware, imageViewerController.deleteImage);
 
 module.exports = router;

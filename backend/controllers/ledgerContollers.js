@@ -40,7 +40,8 @@ const ledgerControllers = {
       const sql = `
         SELECT *,
           SUM(ISNULL(x.Debit, 0)) OVER (ORDER BY Date, ID) 
-          - SUM(ISNULL(x.Credit, 0)) OVER (ORDER BY Date, ID) AS Total
+          - SUM(ISNULL(x.Credit, 0)) OVER (ORDER BY Date, ID) AS Total,
+          (SELECT COUNT(*) FROM images.dbo.name_reciepts nr WHERE nr.type = x.Type AND nr.doc = x.Doc) as hasImage
         FROM (
           SELECT 
             id,
@@ -104,6 +105,53 @@ const ledgerControllers = {
     } catch (err) {
       console.error('Error retrieving ledger data:', err.message, err.stack);
       res.status(500).send('Error retrieving data: ' + err.message);
+    }
+  },
+  
+  deleteTransaction: async (req, res) => {
+    const { type, doc } = req.body;
+    const user = req.user;
+
+    if (user.userType.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: "Only administrators can delete transactions." });
+    }
+
+    if (!type || !doc) {
+      return res.status(400).json({ message: "Missing transaction type or document number." });
+    }
+
+    try {
+      const pool = await dbConnection();
+      const transaction = new mssql.Transaction(pool);
+      await transaction.begin();
+
+      try {
+        const request = new mssql.Request(transaction);
+        request.input('type', mssql.NVarChar, type);
+        request.input('doc', mssql.Int, parseInt(doc));
+
+        // 1. Delete from Ledgers
+        await request.query("DELETE FROM ledgers WHERE type = @type AND doc = @doc");
+
+        // 2. Delete from PSDetail
+        await request.query("DELETE FROM psdetail WHERE type = @type AND doc = @doc");
+
+        // 3. Delete from PSProduct
+        await request.query("DELETE FROM psproduct WHERE type = @type AND doc = @doc");
+
+        // 4. Delete from Images database
+        await request.query("DELETE FROM images.dbo.name_reciepts WHERE type = @type AND doc = @doc");
+
+        await transaction.commit();
+        console.log(`Successfully deleted transaction: ${type} - ${doc}`);
+        res.status(200).json({ message: "Transaction deleted successfully from all records." });
+      } catch (err) {
+        await transaction.rollback();
+        throw err;
+      }
+    } catch (err) {
+      console.error('Error deleting transaction:', err);
+      res.status(500).json({ message: "Failed to delete transaction", error: err.message });
     }
   },
 };

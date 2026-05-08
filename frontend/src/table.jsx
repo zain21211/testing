@@ -77,7 +77,7 @@ const DataTable = ({
   handleLongPress,
 }) => {
   const navigate = useNavigate();
-  const getLongPressProps = useLongPress(1600);
+  const getLongPressProps = useLongPress(600);
   const currentBreakpoint = useWidth(); // Get the current breakpoint ('xs', 'sm', etc.)
   const tableData = Array.isArray(data) ? data : [];
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -172,25 +172,27 @@ const DataTable = ({
           align={column.align || "left"}
           sx={{
             border: "2px solid #000",
-            backgroundColor: column.label === "Rate" || column.label === "B.Q" ? 'lightGrey' : 'transparent',
+            backgroundColor: column.id === "hasImage" 
+              ? "white !important" 
+              : (column.label === "Rate" || column.label === "B.Q" ? 'lightGrey' : 'transparent'),
             height: 'auto',
-            // lineHeight: "1.4",         // better spacing
             verticalAlign: "top",
-            color: shouldHighlightRow ? "white !important" : "black",
+            color: column.id === "hasImage" 
+              ? "black !important" 
+              : (shouldHighlightRow ? "white !important" : "black"),
             fontWeight: "bold",
             padding: isLedgerTable ? "5px" : "10px 1.1rem ",
             letterSpacing: "normal",
             textTransform: "uppercase",
-            wordBreak: "break-word",   // ✅ breaks long words onto next line
-            whiteSpace: "normal",      // ✅ allows wrapping
+            wordBreak: "break-word",
+            whiteSpace: "normal",
             boxSizing: "border-box",
             fontSize: (column.label.includes("ust") || column.label.includes("rod"))
-              ? { xs: "2.5rem", sm: "2.5 rem" }
-              : { xs: "1.1rem", sm: "1.5rem" },
+              ? { xs: "1.3rem", sm: "1.5rem" }
+              : { xs: "1rem", sm: "1.1rem" },
             fontFamily: "Jameel Noori Nastaleeq, serif !important",
             ...(usage?.includes("coa")
               ? {
-                // **VIRTUALIZED STYLES**
                 flex: `0 0 ${resolvedCellWidth}px`,
                 width: `${resolvedCellWidth}px`,
                 display: "flex",
@@ -204,8 +206,7 @@ const DataTable = ({
                 maxWidth: resolvedCellWidth,
               }
               : {
-                // **STANDARD RESPONSIVE STYLES**
-                minWidth: column.minWidth, // Pass the responsive object {xs:.., md:..} directly to MUI
+                minWidth: column.minWidth,
                 width: column.width,
               }),
           }}
@@ -400,7 +401,7 @@ const DataTable = ({
                     sx={rowSx}
                     {...getLongPressProps(() => {
                       if (isAllowed)
-                        handleLongPress(row.Doc || row.doc)
+                        handleLongPress(row.Doc || row.doc, row)
                     })}
                     onClick={
                       row.Type?.toLowerCase().includes("sale")

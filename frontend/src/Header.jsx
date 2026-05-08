@@ -24,6 +24,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import ImageIcon from '@mui/icons-material/Image';
 
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 
@@ -80,6 +81,11 @@ let drawerMenuItems = [
     label: "Sales",
     icon: TrendingUpIcon,
     path: "/sales",
+  },
+  {
+    label: "Image Viewer",
+    icon: ImageIcon,
+    path: "/image-viewer",
   },
 ];
 
@@ -253,6 +259,7 @@ const Header = () => {
   return (
     <Box sx={{ flexGrow: 1, '@media print': { display: 'none', } }}>
       <AppBar
+        id="app-header"
         position="fixed"
         sx={{
           backgroundColor: "white",

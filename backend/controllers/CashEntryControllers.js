@@ -260,7 +260,8 @@ const insertLedgerEntries = async (
   location,
   creditID,
   debitID,
-  systemTimestamp
+  systemTimestamp,
+  ledgerStatus
 ) => {
   const { latitude, longitude, address } = location;
   const dateOnly = effectiveDate.split("T")[0];
@@ -280,16 +281,17 @@ const insertLedgerEntries = async (
     .input("address", sql.VarChar, address)
     .input("systemTimestamp", sql.VarChar, systemTimestamp)
     .input("creditID", sql.VarChar, creditID)
-    .input("debitID", sql.VarChar, debitID).query(`
+    .input("debitID", sql.VarChar, debitID)
+    .input("ledgerStatus", sql.VarChar, ledgerStatus || "").query(`
       INSERT INTO ledgers 
-      (address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID)
+      (address, latitude, longitude, date, type, doc, acid, credit, NARRATION, EntryBy, EntryDateTime, transactionID, LedgerStatus)
       VALUES 
-      (@address, @latitude, @longitude, @effDate, @type, @doc, @custId, @amount, @narration, @userName, @systemTimestamp, @creditID);
+      (@address, @latitude, @longitude, @effDate, @type, @doc, @custId, @amount, @narration, @userName, @systemTimestamp, @creditID, @ledgerStatus);
       
       INSERT INTO ledgers 
-      (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID)
+      (address, latitude, longitude, date, type, doc, acid, debit, NARRATION, EntryBy, EntryDateTime, transactionID, LedgerStatus)
       VALUES 
-      (@address, @latitude, @longitude, @effDate, @type, @doc, @debitAcid, @amount, @narration, @userName, @systemTimestamp, @debitID);
+      (@address, @latitude, @longitude, @effDate, @type, @doc, @debitAcid, @amount, @narration, @userName, @systemTimestamp, @debitID, @ledgerStatus);
     `);
 };
 
@@ -312,7 +314,7 @@ const toBuffer = (data) => {
   return Buffer.from(base64, "base64");
 };
 
-const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName, imageStatus) => {
+const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) => {
   if (!image) return;
   try {
     const pool = await imageDb();
@@ -327,7 +329,7 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName, i
       .input("acid", sql.Int, acid)
       .input("img", sql.VarBinary, toBuffer(image))
       .input("type", sql.VarChar, ptype)
-      .input("status", sql.VarChar, imageStatus || "")
+      .input("status", sql.VarChar, "")
       .input("userName", sql.VarChar, userName || "")
       .query(query);
     console.log(`✅ Image saved to name_reciepts for doc ${doc}`);
@@ -404,7 +406,8 @@ const CashEntryController = {
         location,
         creditID,
         debitID,
-        systemTimestamp
+        systemTimestamp,
+        imageStatus
       );
 
       // Commit transaction
@@ -425,7 +428,7 @@ const CashEntryController = {
       if (paymentImage) {
         // Cash method uses 'crv', others use 'brv'
         const docType = paymentMethod?.toLowerCase() === 'cash' ? 'crv' : 'brv';
-        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType, userName, imageStatus);
+        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType, userName);
         console.log(`📸 Receipt image processed for ${paymentMethod} (doc: ${nextDoc})`);
       }
 

@@ -297,7 +297,7 @@ const CustomerSearchUI = forwardRef(
               <InputLabel id="date-range-select-label">Date Range</InputLabel>
               <Select
                 labelId="date-range-select-label"
-                value={dateRangeType}
+                value={dateRangeType ?? ""}
                 label="Date Range"
                 onChange={(e) => setDateRangeType(e.target.value)}
                 disabled={disabled}

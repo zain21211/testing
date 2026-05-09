@@ -255,7 +255,7 @@ class LoggingInterceptor {
           referrer: document.referrer,
         },
         {
-          timeout: 5000,
+          timeout: 15000,
           headers: {
             "Content-Type": "application/json",
           },

@@ -122,16 +122,25 @@ const DataTable = ({
     [enableDelete, onDelete, apiEndpoint]
   );
 
-  const handleDocumentClick = (row) => {
-    const doc = row.Doc || row.doc;
+  const [isClicking, setIsClicking] = React.useState(false);
 
-    if (row && isLedgerTable) {
-      const url = `/invoice/${doc}`;
-      navigate(url);
-      return;
+  const handleDocumentClick = async (row) => {
+    if (isClicking) return;
+    setIsClicking(true);
+    
+    // Ensure doc is a clean string/number without commas or decimals
+    const doc = String(row.Doc || row.doc || "").replace(/,/g, "").split(".")[0];
+
+    try {
+      if (handleClick) {
+        await handleClick(doc, row);
+      } else if (row && isLedgerTable && doc) {
+        const url = `/invoice/${doc}`;
+        navigate(url);
+      }
+    } finally {
+      setTimeout(() => setIsClicking(false), 1000); // Prevent clicks for 1 second
     }
-    // for packing
-    handleClick(doc);
   };
 
   const renderRowCells = (row, shouldHighlightRow) => {
@@ -188,7 +197,7 @@ const DataTable = ({
             whiteSpace: "normal",
             boxSizing: "border-box",
             fontSize: (column.label.includes("ust") || column.label.includes("rod"))
-              ? { xs: "1.3rem", sm: "1.5rem" }
+              ? { xs: "1.7rem", sm: "2.0rem" }
               : { xs: "1rem", sm: "1.1rem" },
             fontFamily: "Jameel Noori Nastaleeq, serif !important",
             ...(usage?.includes("coa")
@@ -381,9 +390,9 @@ const DataTable = ({
                   <TableRow
                     hover
                     sx={rowSx}
-                    {...getLongPressProps(() => {
+                    {...getLongPressProps((e) => {
                       if (isAllowed)
-                        handleLongPress(row.Doc || row.doc, row)
+                        handleLongPress(e, row.Doc || row.doc, row)
                     })}
                     onClick={
                       row.Type?.toLowerCase().includes("sale")

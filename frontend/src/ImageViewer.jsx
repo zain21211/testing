@@ -355,7 +355,7 @@ const ImageViewer = () => {
             {loading ? <CircularProgress size={24} color="inherit" /> : "Retrieve Image"}
           </Button>
 
-          {image && (
+          {image && type?.toLowerCase() !== 'sale' && (
             <Button
               variant="contained"
               onClick={handleToggleStatus}

@@ -256,124 +256,130 @@ WHERE
     const inv = req.params.id;
     const user = req.query.user;
     const type = req.query.type;
-    const page = req.query.page || ""; // Default to page 1 if not provided
     const isAdmin = type && type.toLowerCase() === "admin";
 
-    const queryCustomer = `
-  SELECT 
-  P.Doc AS InvoiceNumber,
-  SUM(P.discount) AS Extra,
-  AC.Urduname AS CustomerName,
-  Ac.OCell AS Number,
-  ac.id as id,
-  ac.subsidary as subname,
-  d.type as type,
-  AC.CreditLimit,
-  AC.Terms,
-  AC.CreditDays,
-  D.Date AS InvoiceDate,
-  D.Freight,
-  D.ExtraDiscount,
-  D.Amount AS InvoiceAmount,
-  D.SalesMan AS Spo,
-  D.Vehicle AS Vehical,
-  D.shopper as nug,
-  D.Description
-FROM PSProduct P 
-JOIN PSDetail D ON P.DOC = D.DOC AND P.TYPE = D.TYPE 
-JOIN COA AC ON D.ACID = AC.ID 
-WHERE P.Doc = @DocNumber
-  AND P.Type = 'Sale' 
-  AND D.Type = 'Sale'
-GROUP BY P.Doc, AC.Urduname,Ac.OCell, AC.CreditLimit, AC.Terms, AC.CreditDays, 
-         D.Date, D.Freight, D.ExtraDiscount, D.Amount, D.SalesMan,D.Shopper, 
-         D.Vehicle, D.Description,  ac.id ,
-  ac.subsidary ,
-  d.type;
-
-`;
-    let queryProducts = `
-SELECT 
-p.id AS psid,
-p.prid AS prid,
-  PR.Urduname AS Product,
-  PR.Company AS Company,
-  PR.Category AS Category,
-  pr.size AS Size,
-  p.isclaim as claimStatus,
-  P.QTY AS BQ,
-  P.SchPc AS FOC,
-  (ISNULL(P.QTY, 0) + ISNULL(P.SchPc, 0)) AS TQ,
-  P.Rate AS Price,
-  P.suggestedRate AS suggestedRate,
-  ISNULL(P.Discp, 0) AS Disc1,
-  --ISNULL(P.Discp2, 0) AS Disc2,
-  ROUND(
-    CASE 
-      WHEN ISNULL(P.QTY, 0) * ISNULL(P.Rate, 0) = 0 THEN 0
-      ELSE (ISNULL(P.Discount2, 0) * 100.0) / (ISNULL(P.QTY, 0) * ISNULL(P.Rate, 0))
-    END
-  , 2) AS Disc2,
-p.vist AS Amount
-		,Isnull((select top 1 Schon from SchQTYSlabs where Prid=pr.ID order by Schon),0) SchOn
-		,isnull((select top 1 SchPcs from SchQTYSlabs where Prid=pr.ID order by Schon),0) SchPcs
-,isnull((select sum(case when type in ('purchase','sale return') then qty+isnull(schpc,0) when type in ('sale','purchase return') then (qty+isnull(schpc,0))*-1 end) from PSProduct where prid=p.prid and isclaim=0  and date>=(select stockdate from Products where ID=p.prid) and date<=dateadd(d,2,GETDATE()) 
-),0) StockQTY
-FROM PSProduct P 
-JOIN Products PR ON PR.ID = P.Prid
-WHERE P.Doc = @DocNumber
-  AND P.Type = 'Sale'  
-  and p.qty<>0
-`;
-
-    if (page.includes("pack")) {
-      queryProducts += ` 
-     and p.tallyby is null
-     `;
-    }
-
-    queryProducts += ` ORDER BY pr.batch, pr.company`; // ✅ fix weird space in `pr.company`
+    // Comprehensive query based on User's Crystal Report SQL
+    const mainQuery = `
+      SELECT 
+        ROW_NUMBER() OVER (ORDER BY p.id) AS rn,
+        p.id AS rec,
+        (
+          SELECT SUM(debit) - SUM(credit) 
+          FROM ledgers l 
+          WHERE acid = (SELECT acid FROM psdetail WHERE type = 'sale' AND doc = @DocNumber) 
+            AND l.date <= (SELECT date FROM PSDetail WHERE type = 'sale' AND doc = @DocNumber) 
+            AND l.doc <> @DocNumber
+        ) AS PreBal,
+        Ac.id AS ACID,
+        Ac.ROUTE,
+        Ac.Subsidary,
+        Ac.CreditLimit,
+        Ac.Terms,
+        Ac.CreditDays,
+        Ac.Urduname AS UrduParty,
+        Ac.ledgerno,
+        ISNULL(pr.runs, 0) AS Runs,
+        Ac.OAddress,
+        Ac.Area,
+        Ac.City,
+        Ac.OCell AS Number,
+        Ac.SPO,
+        Pr.company,
+        Pr.Name,
+        Pr.Urduname AS UrduProductName,
+        Pr.Size,
+        Pr.Packing,
+        Pr.category,
+        Pr.code AS ProductCode,
+        Pr.Batch,
+        P.SchPc,
+        P.id AS PSProductID,
+        ISNULL(P.Packet, 0) AS PACKET,
+        P.Qty,
+        P.Rate,
+        P.VEST,
+        P.Discp,
+        P.Discount,
+        P.DiscP2,
+        P.Discount2,
+        P.VIST,
+        P.DOC AS InvoiceNumber,
+        D.Date AS InvoiceDate,
+        D.Discount AS TotalDisc,
+        D.ExtraDiscount,
+        D.Freight,
+        ROUND(D.Amount, 2) AS InvoiceAmount,
+        D.PBalance,
+        D.Term,
+        D.Description,
+        D.Vehicle AS Vehical,
+        D.SalesMan,
+        D.Goods,
+        D.Builty,
+        D.CreditDays AS BillCreditDays,
+        D.Received,
+        D.REMARKS
+      FROM PSProduct P 
+      JOIN PSDetail D ON P.DOC = D.DOC AND P.TYPE = D.TYPE 
+      JOIN COA AC ON D.ACID = AC.ID 
+      JOIN Products PR ON PR.ID = P.Prid
+      WHERE P.Doc = @DocNumber 
+        AND P.Type = 'Sale' 
+        AND D.Type = 'Sale'
+      ORDER BY p.id;
+    `;
 
     try {
       const pool = await dbConnection();
       const request = pool.request();
       request.input("DocNumber", sql.VarChar, inv);
 
-      const customerRequest = pool.request();
-      customerRequest.input("DocNumber", sql.VarChar, inv);
-      const customerResult = await customerRequest.query(queryCustomer);
+      const result = await request.query(mainQuery);
+      
+      if (result.recordset.length === 0) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
 
-      const productRequest = pool.request();
-      productRequest.input("DocNumber", sql.VarChar, inv);
-      const productResult = await productRequest.query(queryProducts);
-
+      // Map first row to Customer object, and entire set to Products array
+      const firstRow = result.recordset[0];
       const response = {
-        Customer: customerResult.recordset[0] || {},
-        Products: productResult.recordset || [],
+        Customer: {
+          InvoiceNumber: firstRow.InvoiceNumber,
+          InvoiceDate: firstRow.InvoiceDate,
+          CustomerName: firstRow.Subsidary,
+          UrduName: firstRow.UrduParty, // Explicit Urdu Name
+          ACID: firstRow.ACID,
+          Number: firstRow.Number,
+          Address: `${firstRow.Area || ""} ${firstRow.City || ""}`.trim(),
+          Route: firstRow.ROUTE,
+          CreditLimit: firstRow.CreditLimit,
+          Terms: firstRow.Terms,
+          CreditDays: firstRow.BillCreditDays || firstRow.CreditDays,
+          Freight: firstRow.Freight,
+          ExtraDiscount: firstRow.ExtraDiscount,
+          InvoiceAmount: firstRow.InvoiceAmount,
+          PreBal: firstRow.PreBal,
+          Received: firstRow.Received,
+          Description: firstRow.Description,
+          Vehical: firstRow.Vehical,
+          SPO: firstRow.SalesMan || firstRow.SPO
+        },
+        Products: result.recordset.map(row => ({
+          ...row,
+          Product: row.Name,
+          UrduProductName: row.UrduProductName, // Explicit Urdu Product Name
+          Price: row.Rate,
+          BQ: row.Qty,
+          FOC: row.SchPc,
+          DiscP: row.DiscP2,
+          Amount: row.VIST
+        }))
       };
 
-      const isZainOrAdmin = user?.toLowerCase() === "zain" || isAdmin === true;
-
-      //   if (!isZainOrAdmin) {
-      //   if(response.Customer.SPO === user){
-      //     res.status(200).json(response);
-      //   } else {
-      //     console.log("restricted for", type)
-      //     console.log("restricted for", user)
-      //     res.status(403).json({massege: "restricted" })
-      //   }
-      // }else{
-      //   res.status(200).json(response);
-
-      // }
       res.status(200).json(response);
     } catch (err) {
       console.error("Error fetching invoice:", err);
-      res
-        .status(500)
-        .json({ message: "Error fetching invoice", error: err.message });
-    } finally {
-      // sql.close(); // Always close the connection
+      res.status(500).json({ message: "Error fetching invoice", error: err.message });
     }
   },
 

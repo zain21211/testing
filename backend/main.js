@@ -1,35 +1,37 @@
-// Initialize logging system first
-const { connectMongoDB } = require("./logging/config/mongodb");
-const { initializeErrorHandlers } = require("./logging/middleware/errorLogger");
+'use strict';
 
-// Initialize error handlers
+// ── Error handlers first (sync, safe to call immediately) ─────────────────────
+const { initializeErrorHandlers } = require("./logging/middleware/errorLogger");
 initializeErrorHandlers();
 
-const http = require("http");
-const { Server } = require("socket.io"); // Import socket.io server
-const cors = require("cors");
-const express = require("express");
-const dbConnection = require("./database/connection"); // Import your database connection
-const bodyParser = require("body-parser");
-const orderRoutes = require("./routes/orderRoutes"); // Import your invoice route
-const loginRouter = require("./routes/loginRoutes"); // Import your login rout
-const ledgerRoutes = require("./routes/ledgerRoutes"); // Import your ledger route
-const invoiceRoutes = require("./routes/invoiceRoutes"); // Import your invoice route
-const customerRoutes = require("./routes/customerRoutes"); // Import your customer route
-const productRoutes = require("./routes/productRoutes"); // Import your customer route
-const discountRoutes = require("./routes/discountRoutes"); // Import your customer route
-const schemeRoutes = require("./routes/schemeRoutes"); // Import your customer route
-const balanceRoutes = require("./routes/balanceRoutes"); // Import your customer route
-const CashEntryRoutes = require("./routes/CashEntryRoutes"); // Import your customer route
-const reportRoutes = require("./routes/reportRoutes"); // Import your customer route
-const saleRoutes = require("./routes/salesRoutes"); // Import your customer route
-const authMiddleware = require("./middleware/tokenAuthentication"); // Import your auth middleware
-const coaRoutes = require("./routes/coaRoutes");
-const turnoverReport = require("./routes/turnOverReport");
-const formVisibilityRoutes = require("./routes/formVisibilityRoutes");
-const imageViewerRoutes = require("./routes/imageViewerRoutes");
+const http        = require("http");
+const { Server }  = require("socket.io");
+const cors        = require("cors");
+const express     = require("express");
+const bodyParser  = require("body-parser");
 
-// Import logging middleware
+const { connectMongoDB }      = require("./logging/config/mongodb");
+const dbConnection            = require("./database/connection");
+
+const orderRoutes             = require("./routes/orderRoutes");
+const loginRouter             = require("./routes/loginRoutes");
+const ledgerRoutes            = require("./routes/ledgerRoutes");
+const invoiceRoutes           = require("./routes/invoiceRoutes");
+const customerRoutes          = require("./routes/customerRoutes");
+const productRoutes           = require("./routes/productRoutes");
+const discountRoutes          = require("./routes/discountRoutes");
+const schemeRoutes            = require("./routes/schemeRoutes");
+const balanceRoutes           = require("./routes/balanceRoutes");
+const CashEntryRoutes         = require("./routes/CashEntryRoutes");
+const reportRoutes            = require("./routes/reportRoutes");
+const saleRoutes              = require("./routes/salesRoutes");
+const coaRoutes               = require("./routes/coaRoutes");
+const turnoverReport          = require("./routes/turnOverReport");
+const formVisibilityRoutes    = require("./routes/formVisibilityRoutes");
+const imageViewerRoutes       = require("./routes/imageViewerRoutes");
+const logsRoutes              = require("./logging/routes/logsRoutes");
+const frontendLogsRoutes      = require("./logging/routes/frontendLogsRoutes");
+
 const { createRequestLogger } = require("./logging/middleware/requestLogger");
 const {
   errorLogger,
@@ -39,114 +41,116 @@ const {
   databaseErrorHandler,
   jwtErrorHandler,
 } = require("./logging/middleware/errorLogger");
-const logsRoutes = require("./logging/routes/logsRoutes");
-const frontendLogsRoutes = require("./logging/routes/frontendLogsRoutes");
 
-const app = express();
+const ledgerControllers = require("./controllers/ledgerContollers");
 
-// Connect to MongoDB for logging
-connectMongoDB().catch(console.error);
-
-setInterval(async () => {
+// ── Main async startup ─────────────────────────────────────────────────────────
+const startServer = async () => {
   try {
-    const pool = await dbConnection();
-    await pool.request().query("SELECT top 1 id from coa"); // lightweight query
-    console.log("🔄 Keep-alive ping sent");
-  } catch (err) {
-    console.error("❌ Keep-alive failed:", err.message);
-  }
-}, 30000); // every 45 seconds
+    // 1. MongoDB FIRST — logs can't work without it, but we won't crash if it's missing
+    try {
+      await connectMongoDB();
+      console.log("✅ MongoDB (logging) connected");
+    } catch (mongoErr) {
+      console.error("⚠️ MongoDB connection failed, proceeding without logging database:", mongoErr.message);
+    }
 
-const server = http.createServer(app); // create HTTP server
+    // 2. Build Express app
+    const app = express();
+    const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-  },
-});
+    // 3. Socket.io
+    const io = new Server(server, {
+      cors: { origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] },
+    });
+    app.set("io", io);
+    io.on("connection", (socket) => {
+      console.log("🔌 Client connected:", socket.id);
+    });
 
-// store io inside express app
-app.set("io", io);
+    // 4. Core middleware
+    app.use(cors());
+    app.set("trust proxy", true);
 
-// listen for socket connections
-io.on("connection", (socket) => {
-  console.log("🔌 Client connected:", socket.id);
-});
+    // 5. Request logger — decodes JWT from header without requiring req.user
+    app.use(
+      createRequestLogger((req) => ({
+        ...(() => {
+          try {
+            const auth = req.headers?.authorization;
+            if (auth?.startsWith("Bearer ")) {
+              const parts = auth.slice(7).split(".");
+              if (parts.length >= 2) {
+                const payload = JSON.parse(
+                  Buffer.from(parts[1], "base64").toString("utf8")
+                );
+                return {
+                  username: payload?.username ?? payload?.sub,
+                  userType: payload?.userType ?? payload?.role,
+                };
+              }
+            }
+          } catch (_) {}
+          return {};
+        })(),
+        sessionId: req.headers["x-session-id"],
+      }))
+    );
 
-app.use(cors());
+    app.use(express.static(__dirname));
+    app.use(express.json({ limit: "100mb" }));
+    app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
-// Trust proxy for accurate IP addresses
-app.set("trust proxy", true);
+    // 6. Routes
+    app.post("/api/ledger/download-pdf", ledgerControllers.downloadPdf); // direct — must stay above ledgerRoutes
+    app.use("/api/ledger",          ledgerRoutes);
+    app.use("/api/invoices",        invoiceRoutes);
+    app.use("/api/customers",       customerRoutes);
+    app.use("/api/login",           loginRouter);
+    app.use("/api/create-order",    orderRoutes);
+    app.use("/api/products",        productRoutes);
+    app.use("/api/discount",        discountRoutes);
+    app.use("/api/scheme",          schemeRoutes);
+    app.use("/api/balance",         balanceRoutes);
+    app.use("/api/cash-entry",      CashEntryRoutes);
+    app.use("/api",                 reportRoutes);
+    app.use("/api",                 saleRoutes);
+    app.use("/api/coa",             coaRoutes);
+    app.use("/api/turnover",        turnoverReport);
+    app.use("/api/form-visibility", formVisibilityRoutes);
+    app.use("/api/image-viewer",    imageViewerRoutes);
+    app.use("/api/logs",            logsRoutes);
+    app.use("/api/logs",            frontendLogsRoutes);
 
-// app.use(authMiddleware);
-// Logging middleware (should be early in the middleware stack)
-app.use(
-  createRequestLogger((req) => ({
-    // Derive user from JWT Authorization header (no req.user needed)
-    ...(() => {
+    // 7. Error handlers (must be last)
+    app.use(validationErrorHandler);
+    app.use(databaseErrorHandler);
+    app.use(jwtErrorHandler);
+    app.use(notFoundHandler);
+    app.use(globalErrorHandler);
+
+    // 8. Start listening AFTER everything is ready
+    server.listen(3001, "0.0.0.0", () => {
+      console.log("✅ HTTP server running on http://100.72.169.90:3001");
+    });
+
+    // 9. SQL keep-alive — start AFTER server is up
+    setInterval(async () => {
       try {
-        const auth = req.headers && req.headers.authorization;
-        if (auth && auth.startsWith("Bearer ")) {
-          const token = auth.slice(7);
-          const parts = token.split(".");
-          if (parts.length >= 2) {
-            const payloadJson = Buffer.from(parts[1], "base64").toString(
-              "utf8"
-            );
-            const payload = JSON.parse(payloadJson);
-            return {
-              username: payload?.username || payload?.sub,
-              userType: payload?.userType || payload?.role,
-            };
-          }
-        }
-      } catch (_) {}
-      return {};
-    })(),
-    sessionId: req.headers["x-session-id"],
-  }))
-);
+        const pool = await dbConnection();
+        await pool.request().query("SELECT top 1 id from coa");
+        console.log("🔄 Keep-alive ping sent");
+      } catch (err) {
+        console.error("❌ Keep-alive failed:", err.message);
+      }
+    }, 30000);
 
-app.use(express.static(__dirname)); // For serving frontend
-app.use(express.json({ limit: "100mb" })); // or more, if needed
-app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+    module.exports = { io };
 
-// Login route
-app.use("/api/login", loginRouter);
+  } catch (err) {
+    console.error("❌ Server failed to start:", err);
+    process.exit(1); // crash loudly so PM2 / nodemon can restart cleanly
+  }
+};
 
-// GET route to fetch customers for Autocomplete - with SPO restriction
-app.use("/api/customers", customerRoutes);
-
-app.use("/api/invoices", invoiceRoutes); // Invoice route);
-app.use("/api/create-order", orderRoutes); // Invoice route);
-app.use("/api/products", productRoutes); // Invoice route);
-app.use("/api/discount", discountRoutes); // Invoice route);
-app.use("/api/scheme", schemeRoutes); // Invoice route);
-app.use("/api/balance", balanceRoutes); // Invoice route);
-app.use("/api/cash-entry", CashEntryRoutes); // Invoice route);
-app.use("/api", reportRoutes);
-app.use("/api", saleRoutes);
-// Ledger route with SPO restriction
-app.use("/api/ledger", ledgerRoutes);
-app.use("/api/coa", coaRoutes);
-app.use("/api/turnover", turnoverReport);
-app.use("/api/form-visibility", formVisibilityRoutes);
-app.use("/api/image-viewer", imageViewerRoutes);
-
-// Logs management routes
-app.use("/api/logs", logsRoutes);
-app.use("/api/logs", frontendLogsRoutes);
-
-// Error handling middleware (should be last)
-app.use(validationErrorHandler);
-app.use(databaseErrorHandler);
-app.use(jwtErrorHandler);
-app.use(notFoundHandler);
-app.use(globalErrorHandler);
-
-server.listen(3001, "0.0.0.0", () => {
-  console.log("✅ HTTP server running on http://100.68.6.110:3001");
-});
-
-module.exports = { io };
+startServer();

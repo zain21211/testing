@@ -101,6 +101,7 @@ export const useEntries = () => {
               longitude: coordinates.longitude,
               address,
             },
+            imageStatus: entry.imageStatus,
           };
 
           try {

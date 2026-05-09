@@ -20,6 +20,8 @@ export const CustomerSearchSection = ({
     setDescription,
     showMore,
     setShowMore,
+    imageStatus,
+    onImageStatusChange,
 }) => {
     return (
         <Box>
@@ -130,6 +132,37 @@ export const CustomerSearchSection = ({
                         }}
                     >
                         {showMore ? "LESS" : "MORE"}
+                    </Button>
+
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            if (!imageStatus) onImageStatusChange('Tally');
+                            else if (imageStatus === 'Tally') onImageStatusChange('Difference');
+                            else onImageStatusChange(null);
+                        }}
+                        sx={{
+                            gridColumn: { xs: 'span 4', sm: 'span 4' },
+                            height: '56px',
+                            background: imageStatus === 'Tally' 
+                                ? 'linear-gradient(45deg, #1b5e20 30%, #4caf50 90%)' 
+                                : imageStatus === 'Difference'
+                                ? 'linear-gradient(45deg, #b71c1c 30%, #f44336 90%)'
+                                : 'linear-gradient(45deg, #757575 30%, #9e9e9e 90%)',
+                            color: 'white',
+                            fontSize: imageStatus ? '2.2rem' : '1.2rem',
+                            fontFamily: imageStatus ? '"Jameel Noori Nastaleeq", "Jameel Noori Nastaleeq Kasheeda", Arial, sans-serif' : 'inherit',
+                            py: imageStatus ? 0.5 : 1.5, 
+                            fontWeight: 'bold',
+                            boxShadow: '0 3px 5px 2px rgba(0,0,0, .3)',
+                            textTransform: 'none',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                                transform: 'scale(1.02)'
+                            }
+                        }}
+                    >
+                        {imageStatus === 'Tally' ? 'بیلنس ٹیلی' : imageStatus === 'Difference' ? 'بیلنس فرق' : 'Select Status'}
                     </Button>
 
                     {balance !== null && balance !== '' && selectedCustomer && (

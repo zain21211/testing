@@ -69,6 +69,7 @@ const RecoveryPaper = () => {
   const [showMore, setShowMore] = useState(false);
   const [description, setDescription] = useState('');
   const [capturing, setCapturing] = useState(false);
+  const [imageStatus, setImageStatus] = useState('Tally');
   const [errorToast, setErrorToast] = useState({ open: false, message: '' });
   const targetRef = useRef(null);
   const cashInputRef = useRef(null);
@@ -200,6 +201,15 @@ const RecoveryPaper = () => {
   }, [isOnline, entries, handleSyncOneEntry, coordinates, address]);
 
   useEffect(() => {
+    if (!selectedCustomer) {
+      resetPaymentInputs();
+      setDescription('');
+    }
+    // Always reset to null (Grey) when customer selection changes or is cleared
+    setImageStatus(null);
+  }, [selectedCustomer, resetPaymentInputs]);
+
+  useEffect(() => {
     if (selectedCustomer) {
       cashInputRef.current?.focus();
     }
@@ -285,6 +295,7 @@ const RecoveryPaper = () => {
       entryTotal: currentEntryTotal,
       timestamp: new Date().toISOString(),
       status: false,
+      imageStatus: imageStatus,
     };
     console.log(selectedCustomer)
 
@@ -297,6 +308,7 @@ const RecoveryPaper = () => {
 
     resetPaymentInputs();
     setDescription('');
+    setImageStatus(null);
     dispatch(clearSelection({ key: 'recovery' }));
 
     searchInputRef.current?.focus();
@@ -427,7 +439,8 @@ const RecoveryPaper = () => {
       isLoading ||
       currentEntryTotal <= 0 ||
       missingRequiredImage ||
-      hasImageWithoutAmount
+      hasImageWithoutAmount ||
+      !imageStatus
     );
   }, [
     selectedCustomer,
@@ -443,6 +456,7 @@ const RecoveryPaper = () => {
     harrAmount,
     crownFitAmount,
     paymentImages, // changed
+    imageStatus,
   ]);
 
   return (
@@ -510,6 +524,8 @@ const RecoveryPaper = () => {
           setDescription={setDescription}
           showMore={showMore}
           setShowMore={setShowMore}
+          imageStatus={imageStatus}
+          onImageStatusChange={setImageStatus}
         />
 
         <PaymentInputsSection

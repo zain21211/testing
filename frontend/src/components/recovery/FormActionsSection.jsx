@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@mui/material';
+import { Button, FormControl, RadioGroup, FormControlLabel, Radio, Box, Typography } from '@mui/material';
 
 export const FormActionsSection = ({
     onAddEntry,
@@ -8,23 +8,26 @@ export const FormActionsSection = ({
     isLoading,
     submitButtonDisabled,
     form = 'recovery',
+    imageStatus,
+    onImageStatusChange,
 }) => {
-    console.log("Submit Button Disabled:", submitButtonDisabled);
     return (
         <>
             {form === 'recovery' && (
-                <Button
-                    variant="contained"
-                    fullWidth
-                    onClick={onAddEntry}
-                    disabled={isAddEntryDisabled}
-                    sx={{
-                        fontSize: '1.5rem',
-                        padding: '10px 0',
-                    }}
-                >
-                    Add Entry
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 1, mt: 1 }}>
+                        <Button
+                            variant="contained"
+                            fullWidth
+                            onClick={onAddEntry}
+                            disabled={isAddEntryDisabled}
+                            sx={{
+                                fontSize: '1.5rem',
+                                padding: '10px 0',
+                            }}
+                        >
+                            Add Entry
+                        </Button>
+                </Box>
             )}
             <Button
                 variant="contained"
@@ -41,5 +44,6 @@ export const FormActionsSection = ({
 };
 
 export default FormActionsSection;
+
 
 

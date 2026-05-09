@@ -312,7 +312,7 @@ const toBuffer = (data) => {
   return Buffer.from(base64, "base64");
 };
 
-const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) => {
+const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName, imageStatus) => {
   if (!image) return;
   try {
     const pool = await imageDb();
@@ -327,7 +327,7 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) =
       .input("acid", sql.Int, acid)
       .input("img", sql.VarBinary, toBuffer(image))
       .input("type", sql.VarChar, ptype)
-      .input("status", sql.VarChar, "")
+      .input("status", sql.VarChar, imageStatus || "")
       .input("userName", sql.VarChar, userName || "")
       .query(query);
     console.log(`✅ Image saved to name_reciepts for doc ${doc}`);
@@ -359,6 +359,7 @@ const CashEntryController = {
         desc = "",
         time,
         location,
+        imageStatus,
       } = req.body;
 
       const effectiveDate = getPakistanISODateString(time);
@@ -424,7 +425,7 @@ const CashEntryController = {
       if (paymentImage) {
         // Cash method uses 'crv', others use 'brv'
         const docType = paymentMethod?.toLowerCase() === 'cash' ? 'crv' : 'brv';
-        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType, userName);
+        await insertNameReceiptImage(nextDoc, custId, paymentImage, time, docType, userName, imageStatus);
         console.log(`📸 Receipt image processed for ${paymentMethod} (doc: ${nextDoc})`);
       }
 

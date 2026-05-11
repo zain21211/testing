@@ -342,12 +342,12 @@ Date: ${new Date().toLocaleString()}
                     padding: "0 20px",
 
                     fontSize: "3rem",
-                    fontFamily: 'Jameel Noori Nastaleeq, serif',
+                    fontFamily: 'Poppins, Arial, sans-serif',
                     fontWeight: "bold",
                   }}>
-                    {customer?.CustomerName}
+                    {customer?.subname || customer?.CustomerName}
                   </span>
-                  {!customer?.CustomerName && (
+                  {!customer?.subname && !customer?.CustomerName && (
                     <Skeleton height={30} width="90%" />
                   )}
                 </Typography>

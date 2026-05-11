@@ -125,7 +125,7 @@ app.use("/api/discount", discountRoutes); // Invoice route);
 app.use("/api/scheme", schemeRoutes); // Invoice route);
 app.use("/api/balance", balanceRoutes); // Invoice route);
 app.use("/api/cash-entry", CashEntryRoutes); // Invoice route);
-app.use("/api", reportRoutes);
+app.use("/api/report", reportRoutes);
 app.use("/api", saleRoutes);
 // Ledger route with SPO restriction
 app.use("/api/ledger", ledgerRoutes);

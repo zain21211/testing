@@ -16,13 +16,14 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import useLocalStorageState from "use-local-storage-state";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import DataTable from "./table"; // Assuming DataTable is in a sibling file
 import LedgerSearchForm from "./CustomerSearch"; // Assuming CustomerSearch is in a sibling file
 import {
   clearSelection,
   setIDWithKey
 } from "./store/slices/CustomerSearch"; // Adjust path as needed
+import { fetchMasterCustomerList } from "./store/slices/CustomerData";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -330,6 +331,7 @@ const Ledger = () => {
   const storageKey = `accountID-/ledger`;
   const [ID, setID] = useLocalStorageState(storageKey, null);
   const dispatch = useDispatch();
+  const masterCustomerList = useSelector((state) => state.customerData?.masterCustomerList || []);
   const [searchParams] = useSearchParams();
   const ledgerColumns = useResponsiveLedgerColumns();
   const location = useLocation();
@@ -343,6 +345,12 @@ const Ledger = () => {
       return {};
     }
   });
+
+  useEffect(() => {
+    if (masterCustomerList.length === 0) {
+      dispatch(fetchMasterCustomerList());
+    }
+  }, [dispatch, masterCustomerList.length]);
 
   const isCustomer = userData?.userType?.toLowerCase().includes("customer");
 
@@ -358,7 +366,8 @@ const Ledger = () => {
     
     // Get ACID and Name
     const acid = searchParams.get("acid") || ID || "N/A";
-    const nameToUse = customerName || searchParams.get("name") || "Valued Customer";
+    const foundCustomer = masterCustomerList.find(c => String(c.acid) === String(acid));
+    const nameToUse = foundCustomer ? foundCustomer.name : (customerName || searchParams.get("name") || "Valued Customer");
     const fileName = `${acid}_${nameToUse.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
 
     // Extract Balances
@@ -387,23 +396,23 @@ const Ledger = () => {
     doc.setFontSize(11);
     doc.setTextColor(0);
     doc.setFont("helvetica", "bold");
-    doc.text(`Customer Name:`, 14, 45);
+    doc.text(`Customer:`, 14, 45);
     doc.setFont("helvetica", "normal");
-    doc.text(`${nameToUse}`, 50, 45);
-
-    doc.setFont("helvetica", "bold");
-    doc.text(`Account ID:`, 14, 52);
-    doc.setFont("helvetica", "normal");
-    doc.text(`${acid}`, 50, 52);
+    doc.text(`${acid} - ${nameToUse}`, 35, 45);
     
     // Period Calculation
     let startDateStr = searchParams.get("startDate") ? formatDate(searchParams.get("startDate")) : formatDate(rows[0].Date);
     let endDateStr = searchParams.get("endDate") ? formatDate(searchParams.get("endDate")) : formatDate(rows[rows.length - 1].Date);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Period:`, 14, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${startDateStr} to ${endDateStr}`, 35, 52);
     
     doc.setFont("helvetica", "bold");
-    doc.text(`Period:`, 130, 45);
+    doc.text(`Print Date:`, 130, 45);
     doc.setFont("helvetica", "normal");
-    doc.text(`${startDateStr} to ${endDateStr}`, 150, 45);
+    doc.text(`${timestamp}`, 155, 45);
 
     doc.setFont("helvetica", "bold");
     doc.text(`Printed By:`, 130, 52);
@@ -749,40 +758,214 @@ const Ledger = () => {
   }, [userData, handleFetchData, searchParams, ID, customerName]);
 
   const handleSaleDownload = useCallback(async (row) => {
-    if (!row.Doc) return;
+    const docNum = row.Doc || row.doc;
+    if (!docNum) {
+      alert("Invalid Document Number.\nPls try again.");
+      return;
+    }
     
-    const acid = searchParams.get("acid") || ID || "N/A";
-    const nameToUse = customerName || "Valued_Customer";
-    const timestamp = new Date().getTime();
-    const fileName = `${acid}_${nameToUse.replace(/\s+/g, '_')}_${row.Doc}_${timestamp}.pdf`;
+    const acid = searchParams.get("acid") || ID;
+    const foundCustomer = masterCustomerList.find(c => String(c.acid) === String(acid));
+    const nameToUse = foundCustomer ? foundCustomer.name : (customerName || searchParams.get("name") || "Valued_Customer");
+    
+    // Validation for required values
+    if (!acid || acid === "N/A") {
+      alert("failed to download invoice pdf\npls try again\nverify all required values before generating invoice pdf");
+      return;
+    }
+
+    const timestamp = new Date().toLocaleString("en-GB", { 
+      day: "2-digit", month: "short", year: "2-digit", 
+      hour: "2-digit", minute: "2-digit", second: "2-digit" 
+    });
+    const fileName = `${acid}_${nameToUse.replace(/\s+/g, '_')}_${docNum}_${new Date().getTime()}.pdf`;
 
     setLoading(true);
     try {
+      // Use our new native invoice data route!
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/report/generate-report`, {
-        reportName: 'invoiceReport',
-        parameters: {
-          acid: acid,
-          type: 'SALE',
-          doc: row.Doc
-        }
-      }, {
-        responseType: 'blob'
+        reportName: 'invoiceReportData',
+        parameters: { DocNumber: docNum }
       });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const invoiceData = response.data;
+      if (!invoiceData || invoiceData.length === 0) {
+        throw new Error("No data found for this invoice.");
+      }
+
+      // Generate PDF
+      const doc = new jsPDF();
+      
+      const firstRow = invoiceData[0];
+      
+      // Header - Business Info
+      doc.setFontSize(24);
+      doc.setTextColor(26, 35, 126); 
+      doc.setFont("helvetica", "bold");
+      doc.text("Ahmad International", 105, 20, { align: "center" });
+      
+      doc.setFontSize(14);
+      doc.setTextColor(100);
+      doc.setFont("helvetica", "normal");
+      doc.text("Sales Invoice", 105, 28, { align: "center" });
+
+      // Customer Info Box
+      doc.setDrawColor(26, 35, 126);
+      doc.setLineWidth(0.5);
+      doc.line(14, 35, 196, 35);
+
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.setFont("helvetica", "bold");
+      
+      // Left Column
+      doc.text(`Customer:`, 14, 45);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.id} - ${firstRow.Subsidary || nameToUse}`, 35, 45);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`Address:`, 14, 52);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.OAddress || "N/A"}`, 35, 52);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`Phone:`, 14, 59);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.OCell || "N/A"}`, 35, 59);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`Route:`, 14, 66);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.ROUTE || "N/A"}`, 35, 66);
+
+      // Right Column
+      doc.setFont("helvetica", "bold");
+      doc.text(`Invoice No:`, 120, 45);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.DoC || docNum}`, 145, 45);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`Date:`, 120, 52);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.Date ? formatDate(firstRow.Date) : "N/A"}`, 145, 52);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`SPO:`, 120, 59);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${firstRow.SPO || "N/A"}`, 145, 59);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`Print Date:`, 120, 66);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${timestamp}`, 145, 66);
+
+      // Table Data
+      let totalGross = 0;
+      
+      const tableColumn = ["S.No", "Code", "Product Name", "Batch", "Qty", "Rate", "Discp", "Amount"];
+      const tableRows = invoiceData.map((item, index) => {
+        const qty = item.Qty || 0;
+        const rate = item.Rate || 0;
+        const amount = item.VIST || 0;
+        totalGross += amount;
+
+        return [
+          index + 1,
+          item.ProductCode || "",
+          `${item.company || ""} ${item.category || ""} ${item.Name || ""}`.trim(),
+          item.Batch || "",
+          qty,
+          formatCurrency(rate),
+          formatCurrency(item.Discp || 0),
+          formatCurrency(amount)
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 75,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [26, 35, 126], 
+          textColor: 255, 
+          fontSize: 9,
+          halign: 'center',
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 12 },
+          1: { halign: 'center', cellWidth: 15 },
+          2: { halign: 'left' },
+          3: { halign: 'center', cellWidth: 20 },
+          4: { halign: 'center', cellWidth: 15 },
+          5: { halign: 'right', cellWidth: 20 },
+          6: { halign: 'right', cellWidth: 15 },
+          7: { halign: 'right', cellWidth: 25 },
+        },
+        styles: { fontSize: 8, cellPadding: 2 },
+        alternateRowStyles: { fillColor: [245, 248, 255] },
+        margin: { bottom: 20 },
+        didDrawPage: (data) => {
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          doc.text(`Generated on ${timestamp} | Printed by ${userData?.username || "System"} | Page ${data.pageNumber}`, 105, 285, { align: "center" });
+        }
+      });
+
+      // Footer Calculations
+      const finalY = doc.lastAutoTable.finalY + 10;
+      const summaryWidth = 80;
+      const startX = 200 - summaryWidth - 14;
+
+      const preBal = firstRow.PreBal || 0;
+      const totalDisc = firstRow.TotalDisc || 0;
+      const extraDisc = firstRow.ExtraDiscount || 0;
+      const freight = firstRow.Freight || 0;
+      const netAmount = firstRow.amount || 0;
+      const totalPayable = preBal + netAmount;
+
+      doc.setFillColor(248, 249, 250);
+      doc.rect(startX - 5, finalY - 5, summaryWidth + 10, 55, 'F');
+      doc.setDrawColor(200);
+      doc.rect(startX - 5, finalY - 5, summaryWidth + 10, 55, 'S');
+
+      doc.setFontSize(10);
+      doc.setTextColor(26, 35, 126);
+      doc.setFont("helvetica", "bold");
+      doc.text("INVOICE SUMMARY", startX, finalY + 2);
+      
+      doc.setDrawColor(26, 35, 126);
+      doc.setLineWidth(0.3);
+      doc.line(startX, finalY + 4, startX + summaryWidth, finalY + 4);
+
+      const drawSummaryRow = (label, value, y, color = [0, 0, 0], isBold = false) => {
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.setFont("helvetica", "normal");
+        doc.text(label, startX, y);
+        
+        doc.setTextColor(color[0], color[1], color[2]);
+        if (isBold) doc.setFont("helvetica", "bold");
+        doc.text(formatCurrency(value), startX + summaryWidth, y, { align: "right" });
+      };
+
+      drawSummaryRow("Gross Amount:", totalGross, finalY + 11);
+      drawSummaryRow("Total Discount:", totalDisc, finalY + 17, [211, 47, 47]);
+      drawSummaryRow("Extra Discount:", extraDisc, finalY + 23, [211, 47, 47]);
+      drawSummaryRow("Freight:", freight, finalY + 29);
+      drawSummaryRow("Net Amount:", netAmount, finalY + 35, [26, 35, 126], true);
+      drawSummaryRow("Previous Balance:", preBal, finalY + 41);
+      drawSummaryRow("Total Payable:", totalPayable, finalY + 47, [26, 35, 126], true);
+
+      doc.save(fileName);
     } catch (err) {
       console.error("Sale PDF download failed:", err);
-      alert("Failed to download invoice PDF. Please try again.");
+      alert(`Failed to download invoice pdf. ${err.message || 'Please try again.'}`);
     } finally {
       setLoading(false);
     }
-  }, [ID, customerName, searchParams]);
+  }, [ID, customerName, searchParams, masterCustomerList, userData]);
 
   return (
     <Container maxWidth={false} sx={{ py: 4, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>

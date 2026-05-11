@@ -119,11 +119,7 @@ const frontendLogSchema = new mongoose.Schema(
       default: Date.now,
       index: true,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      index: true,
-    },
+
   },
   {
     timestamps: true,

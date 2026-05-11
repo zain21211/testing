@@ -3,7 +3,7 @@ import axios from "axios";
 
 // API base URL from .env, fallback to localhost
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_URL || "http://localhost:5175/api";
 
 // Create axios instance
 const client = axios.create({

@@ -89,15 +89,7 @@ const apiLogSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      index: true,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
+
   },
   {
     timestamps: true,
@@ -117,11 +109,7 @@ const apiLogSchema = new mongoose.Schema(
 // TTL index for automatic log cleanup (90 days by default)
 // apiLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
-// Pre-save middleware to update updatedAt
-apiLogSchema.pre("save", function (next) {
-  this.updatedAt = new Date();
-  next();
-});
+
 
 // Static methods for common queries
 apiLogSchema.statics.findByUsername = function (username, limit = 100) {

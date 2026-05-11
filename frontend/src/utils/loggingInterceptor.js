@@ -241,7 +241,7 @@ class LoggingInterceptor {
   async sendLogsToBackend(logs) {
     try {
       const API_BASE_URL =
-        import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        import.meta.env.VITE_API_URL || "http://localhost:5175/api";
 
       await axios.post(
         `${API_BASE_URL}/logs/frontend`,

@@ -29,7 +29,7 @@ class LogFormatter {
    */
   extractUserInfo(req) {
     try {
-      const authHeader = req.headers.authorization;
+      const authHeader = req?.headers?.authorization;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return { username: null, userType: null };
       }
@@ -78,9 +78,9 @@ class LogFormatter {
   formatApiLog(req, res, responseTime, sanitizer) {
     const userInfo = this.extractUserInfo(req);
     const requestId =
-      req.headers[this.requestIdHeader] || this.generateRequestId();
+      req?.headers?.[this.requestIdHeader] || this.generateRequestId();
     const sessionId =
-      req.headers[this.sessionIdHeader] || this.generateSessionId();
+      req?.headers?.[this.sessionIdHeader] || this.generateSessionId();
 
     return {
       sessionId,
@@ -88,18 +88,18 @@ class LogFormatter {
       userType: userInfo.userType,
       requestId,
       timestamp: new Date(),
-      method: req.method,
-      endpoint: req.route?.path || req.path,
-      url: req.originalUrl || req.url,
+      method: req?.method,
+      endpoint: req?.route?.path || req?.path,
+      url: req?.originalUrl || req?.url,
       userAgent: sanitizer.sanitizeUserAgent(
-        req.headers?.["User-Agent"] || "unknown"
+        req?.headers?.["User-Agent"] || "unknown"
       ),
-      ipAddress: sanitizer.sanitizeIP(req.ip || req.connection.remoteAddress),
-      requestHeaders: sanitizer.sanitizeHeaders(req.headers),
+      ipAddress: sanitizer.sanitizeIP(this.getClientIP(req)),
+      requestHeaders: sanitizer.sanitizeHeaders(req?.headers),
       requestPayload: sanitizer.sanitizeRequestPayload({
-        body: req.body,
-        query: req.query,
-        params: req.params,
+        body: req?.body,
+        query: req?.query,
+        params: req?.params,
       }),
       responseStatus: res.statusCode,
       responseHeaders: sanitizer.sanitizeHeaders(res.getHeaders()),
@@ -123,9 +123,9 @@ class LogFormatter {
   formatErrorLog(error, req, additionalContext = {}, sanitizer) {
     const userInfo = this.extractUserInfo(req);
     const requestId =
-      req.headers[this.requestIdHeader] || this.generateRequestId();
+      req?.headers?.[this.requestIdHeader] || this.generateRequestId();
     const sessionId =
-      req.headers[this.sessionIdHeader] || this.generateSessionId();
+      req?.headers?.[this.sessionIdHeader] || this.generateSessionId();
 
     return {
       sessionId,
@@ -136,11 +136,11 @@ class LogFormatter {
       errorCode: error.code || error.statusCode || "UNKNOWN_ERROR",
       errorMessage: error.message || "Unknown error occurred",
       stackTrace: error.stack,
-      endpoint: req.route?.path || req.path,
+      endpoint: req?.route?.path || req?.path,
       requestPayload: sanitizer.sanitizeRequestPayload({
-        body: req.body,
-        query: req.query,
-        params: req.params,
+        body: req?.body,
+        query: req?.query,
+        params: req?.params,
       }),
       severity: this.determineErrorSeverity(error, req),
       resolved: false,
@@ -148,9 +148,9 @@ class LogFormatter {
       additionalContext: {
         ...additionalContext,
         userAgent: sanitizer.sanitizeUserAgent(
-          req.headers?.["User-Agent"] || "unknown"
+          req?.headers?.["User-Agent"] || "unknown"
         ),
-        ipAddress: sanitizer.sanitizeIP(req.ip || req.connection.remoteAddress),
+        ipAddress: sanitizer.sanitizeIP(this.getClientIP(req)),
       },
     };
   }
@@ -167,7 +167,7 @@ class LogFormatter {
   formatUserActivity(activity, description, req, metadata = {}, sanitizer) {
     const userInfo = this.extractUserInfo(req);
     const sessionId =
-      req.headers[this.sessionIdHeader] || this.generateSessionId();
+      req?.headers?.[this.sessionIdHeader] || this.generateSessionId();
 
     return {
       sessionId,
@@ -177,12 +177,14 @@ class LogFormatter {
       description,
       metadata: sanitizer.sanitizeData(metadata),
       timestamp: new Date(),
-      ipAddress: sanitizer.sanitizeIP(req.ip || req.connection.remoteAddress),
-      userAgent: sanitizer.sanitizeUserAgent(req.get("User-Agent")),
+      ipAddress: sanitizer.sanitizeIP(this.getClientIP(req)),
+      userAgent: sanitizer.sanitizeUserAgent(
+        req?.get?.("User-Agent") || req?.headers?.["User-Agent"] || "unknown"
+      ),
       success: true,
       additionalContext: {
-        endpoint: req.route?.path || req.path,
-        method: req.method,
+        endpoint: req?.route?.path || req?.path,
+        method: req?.method,
       },
     };
   }
@@ -231,12 +233,13 @@ class LogFormatter {
    * @returns {string} Client IP address
    */
   getClientIP(req) {
+    if (!req) return "unknown";
     return (
       req.ip ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
-      (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-      req.headers["x-forwarded-for"]?.split(",")[0] ||
+      req.connection?.remoteAddress ||
+      req.socket?.remoteAddress ||
+      req.connection?.socket?.remoteAddress ||
+      req.headers?.["x-forwarded-for"]?.split(",")[0] ||
       "unknown"
     );
   }

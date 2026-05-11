@@ -104,11 +104,7 @@ const userActivitySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       required: false,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      index: true,
-    },
+
   },
   {
     timestamps: true,

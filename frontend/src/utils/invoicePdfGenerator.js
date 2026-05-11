@@ -322,9 +322,12 @@ export const generateInvoicePdf = async (invoiceData, acid, userType, apiUrl) =>
     // Build PDF data BEFORE touching the DOM — if this throws, catch handles it
     const pdfData = doc.output("datauristring");
 
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+
     const form = document.createElement("form");
     form.method = "POST";
-    form.action = `${apiUrl}/ledger/download-pdf`;
+    form.action = `${protocol}//${hostname}:3001/api/ledger/download-pdf`;
     form.target = "_blank";
     form.style.display = "none";
 

@@ -115,7 +115,9 @@ export const generateLedgerPdf = (rows, summary, customerName, dateRange, acid, 
     
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `${apiUrl}/ledger/download-pdf`;
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    form.action = `${protocol}//${hostname}:3001/api/ledger/download-pdf`;
     form.target = '_blank';
     form.style.display = 'none';
 

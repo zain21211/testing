@@ -23,12 +23,15 @@ import {
   clearSelection,
   setIDWithKey
 } from "./store/slices/CustomerSearch"; // Adjust path as needed
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
 //================================================================================
 // 1. UTILITIES & CONSTANTS
 //================================================================================
 
-const API_URL = `${import.meta.env.VITE_API_URL}/ledger`;
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/ledger`;
 const USAGE_KEY = "ledger";
 const UNIQUE_ROW_KEY = "_id"; // Key for React list items
 
@@ -44,14 +47,15 @@ const formatCurrency = (value) => {
 const formatDate = (value) => {
   const date = new Date(value);
   const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
   const year = date.getFullYear().toString().slice(-2);
-  return `${day}/${month}/${year}`;
+  return `${day}-${month}-${year}`;
 };
 
 const BASE_LEDGER_COLUMNS = [
-  { id: "Date", label: "Date", align: "center", render: (value) => (value ? formatDate(value) : "N/A"), width: 80, minWidth: 70 },
-  { id: "Doc", label: "Doc", align: "left", render: (value) => (value ? value : "N/A"), width: 60, minWidth: 50 },
+  { id: "Date", label: "Date", align: "center", render: (value) => (value ? formatDate(value) : "N/A"), width: 100, minWidth: 90 },
+  { id: "Doc", label: "Type/Doc", align: "left", render: (value, row) => (row.Type && row.Doc ? `${row.Type} ${row.Doc}` : row.Doc || "N/A"), width: 110, minWidth: 100 },
   { id: "Narration", label: "Narration", align: "left", width: 350, minWidth: 200 },
   { id: "Debit", label: "Debit", align: "right", render: (value) => formatCurrency(value), width: 90, minWidth: 70 },
   { id: "Credit", label: "Credit", align: "right", render: (value) => formatCurrency(value), width: 90, minWidth: 70 },
@@ -98,41 +102,119 @@ const BASE_LEDGER_COLUMNS = [
 /**
  * Displays the summary of total debit, credit, and net balance.
  */
-const LedgerSummary = React.memo(({ summary, balanceInc }) => {
-  const { totalDebit, totalCredit, netBalance } = summary;
+/**
+ * Displays the summary of total debit, credit, opening and closing balance.
+ */
+const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
+  const { totalDebit, totalCredit } = summary;
+  
+  // Extract Opening Balance from first row
+  const firstRow = rows[0];
+  const openingBalance = firstRow?.Narration?.toLowerCase().includes("opening balance") ? firstRow.Total : 0;
+  
+  // Closing Balance from last row
+  const closingBalance = rows[rows.length - 1]?.Total || 0;
+  
+  const balanceDifference = closingBalance - openingBalance;
+  const isIncreased = balanceDifference > 0;
+
   return (
-    <Card elevation={2} sx={{ mb: 3 }}>
-      <CardContent>
+    <Card elevation={4} sx={{ 
+      mb: 3, 
+      borderRadius: '20px',
+      background: 'linear-gradient(135deg, #ffffff 0%, #f1f4f8 100%)',
+      boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+      border: '1px solid rgba(255,255,255,0.8)'
+    }}>
+      <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
         <Box
           display="grid"
-          justifyItems="space-between"
-          gap={2}
+          gap={3}
           alignItems="center"
-          textAlign="center"
           gridTemplateColumns={{
-            xs: "repeat(3, 1fr)",
-            sm: "repeat(3, 1fr)",
+            xs: "1fr",
+            sm: "1fr 1fr"
           }}
         >
-          <Typography variant="subtitle1">
-            <b>Total Debit:</b> {formatCurrency(totalDebit)}
-          </Typography>
-          <Typography variant="subtitle1">
-            <b>Total Credit:</b> {formatCurrency(totalCredit)}
-          </Typography>
-          <Typography
-            variant="subtitle1"
+          {/* Row 1: Opening Balance and Total Debits */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
+                Opening Balance
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: '900', color: '#1a237e' }}>
+                {formatCurrency(openingBalance)}
+              </Typography>
+            </Box>
+            <Box textAlign="right">
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
+                Total Debits
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: '900', color: '#d32f2f' }}>
+                {formatCurrency(totalDebit)}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Row 2: Closing Balance and Total Credits */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
+                Closing Balance
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: '900', color: '#1a237e' }}>
+                {formatCurrency(closingBalance)}
+              </Typography>
+            </Box>
+            <Box textAlign="right">
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
+                Total Credits
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: '900', color: '#2e7d32' }}>
+                {formatCurrency(totalCredit)}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Optional Net Increase Row */}
+        {isIncreased && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: '#fff5f5', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px dashed #feb2b2' }}>
+            <Typography variant="body1" sx={{ fontWeight: '800', color: '#d32f2f', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Increased Balance:
+            </Typography>
+            <Typography variant="h5" sx={{ color: '#d32f2f', fontWeight: '900' }}>
+              {formatCurrency(balanceDifference)}
+            </Typography>
+          </Box>
+        )}
+
+        {/* PDF Download Button - Now at the bottom */}
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            disabled={loading}
+            onClick={onDownload}
+            startIcon={<PictureAsPdfIcon />}
+            fullWidth
             sx={{
-              backgroundColor: balanceInc ? "red" : "green",
-              p: 1,
-              color: "white",
-              fontWeight: "bold",
-              borderRadius: 1,
+              background: 'linear-gradient(45deg, #1a237e 30%, #3949ab 90%)',
+              color: 'white',
+              py: 2,
+              borderRadius: '16px',
+              textTransform: 'none',
+              fontWeight: '800',
+              fontSize: '1.1rem',
+              boxShadow: '0 8px 20px rgba(26, 35, 126, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #3949ab 30%, #5c6bc0 90%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 25px rgba(26, 35, 126, 0.4)',
+              }
             }}
           >
-            <b>Balance {balanceInc ? "Increase" : "Decrease"}:</b>{" "}
-            {formatCurrency(netBalance)}
-          </Typography>
+            Download Full Ledger PDF
+          </Button>
         </Box>
       </CardContent>
     </Card>
@@ -182,9 +264,9 @@ const LedgerMessages = React.memo(({ loading, error, searchAttempted, rowCount }
 /**
  * Renders the main data table for the ledger.
  */
-const LedgerTable = React.memo(({ rows, columns, onLongPress }) => {
+const LedgerTable = React.memo(({ rows, columns, onLongPress, onRowClick }) => {
   return (
-    <Card elevation={2} sx={{ width: "100%" }}>
+    <Card elevation={0} sx={{ width: "100%", borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
       <Box sx={{ width: "100%", margin: "auto", textAlign: "center" }}>
         <DataTable
           data={rows}
@@ -194,6 +276,7 @@ const LedgerTable = React.memo(({ rows, columns, onLongPress }) => {
           showPagination={true}
           rowsPerPageOptions={[10, 25, 50, 100]}
           handleLongPress={onLongPress}
+          onRowClick={onRowClick}
         />
       </Box>
     </Card>
@@ -251,6 +334,176 @@ const Ledger = () => {
   const ledgerColumns = useResponsiveLedgerColumns();
   const location = useLocation();
 
+  const [userData] = useState(() => {
+    try {
+      const user = localStorage.getItem("user");
+      return user ? JSON.parse(user) : {};
+    } catch (e) {
+      console.error("Failed to parse user from localStorage:", e);
+      return {};
+    }
+  });
+
+  const isCustomer = userData?.userType?.toLowerCase().includes("customer");
+
+  // --- PDF GENERATION ---
+  const generatePDF = useCallback(() => {
+    if (!rows.length) return;
+
+    const doc = new jsPDF();
+    const timestamp = new Date().toLocaleString("en-GB", { 
+      day: "2-digit", month: "short", year: "2-digit", 
+      hour: "2-digit", minute: "2-digit", second: "2-digit" 
+    });
+    
+    // Get ACID and Name
+    const acid = searchParams.get("acid") || ID || "N/A";
+    const nameToUse = customerName || searchParams.get("name") || "Valued Customer";
+    const fileName = `${acid}_${nameToUse.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+
+    // Extract Balances
+    const firstRow = rows[0];
+    const openingBalance = firstRow?.Narration?.toLowerCase().includes("opening balance") ? firstRow.Total : 0;
+    const closingBalance = rows[rows.length - 1].Total;
+    const balanceDifference = closingBalance - openingBalance;
+    const isIncreased = balanceDifference > 0;
+
+    // Header - Business Info
+    doc.setFontSize(24);
+    doc.setTextColor(26, 35, 126); // #1a237e
+    doc.setFont("helvetica", "bold");
+    doc.text("Ahmad International", 105, 20, { align: "center" });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(100);
+    doc.setFont("helvetica", "normal");
+    doc.text("Ledger Statement", 105, 28, { align: "center" });
+
+    // Customer Info Box
+    doc.setDrawColor(26, 35, 126);
+    doc.setLineWidth(0.5);
+    doc.line(14, 35, 196, 35);
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Customer Name:`, 14, 45);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${nameToUse}`, 50, 45);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Account ID:`, 14, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${acid}`, 50, 52);
+    
+    // Period Calculation
+    let startDateStr = searchParams.get("startDate") ? formatDate(searchParams.get("startDate")) : formatDate(rows[0].Date);
+    let endDateStr = searchParams.get("endDate") ? formatDate(searchParams.get("endDate")) : formatDate(rows[rows.length - 1].Date);
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(`Period:`, 130, 45);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${startDateStr} to ${endDateStr}`, 150, 45);
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Printed By:`, 130, 52);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${userData?.username || "System"}`, 155, 52);
+
+    // Table
+    const tableColumn = ["Date", "Type/Doc", "Narration", "Debit", "Credit", "Balance"];
+    const tableRows = rows.map(row => [
+      formatDate(row.Date),
+      row.Type && row.Doc ? `${row.Type} ${row.Doc}` : row.Doc || "N/A",
+      row.Narration || "",
+      formatCurrency(row.Debit),
+      formatCurrency(row.Credit),
+      formatCurrency(row.Total)
+    ]);
+
+    autoTable(doc, {
+      startY: 60,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [26, 35, 126], 
+        textColor: 255, 
+        fontSize: 10,
+        halign: 'center',
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 25 },
+        1: { halign: 'left', cellWidth: 35 },
+        2: { halign: 'left' },
+        3: { halign: 'right', cellWidth: 22 },
+        4: { halign: 'right', cellWidth: 22 },
+        5: { halign: 'right', cellWidth: 25 },
+      },
+      styles: { fontSize: 8.5, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: [245, 248, 255] },
+      margin: { top: 60, bottom: 20 },
+      didDrawPage: (data) => {
+        // Footer
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Generated on ${timestamp} | Printed by ${userData?.username || "System"} | Page ${data.pageNumber}`, 105, 285, { align: "center" });
+      }
+    });
+
+    // Totalling Section
+    const finalY = doc.lastAutoTable.finalY + 10;
+    const summaryWidth = 85;
+    const startX = 200 - summaryWidth - 14;
+
+    // Background for summary
+    doc.setFillColor(248, 249, 250);
+    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, (isIncreased ? 60 : 48), 'F'); // Increased height
+    doc.setDrawColor(200);
+    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, (isIncreased ? 60 : 48), 'S'); // Increased height
+
+    doc.setFontSize(11);
+    doc.setTextColor(26, 35, 126);
+    doc.setFont("helvetica", "bold");
+    doc.text("SUMMARY STATEMENT", startX, finalY + 5);
+    
+    doc.setDrawColor(26, 35, 126);
+    doc.setLineWidth(0.3);
+    doc.line(startX, finalY + 7, startX + summaryWidth, finalY + 7);
+
+    const drawSummaryRow = (label, value, y, color = [0, 0, 0], isBold = false) => {
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.setFont("helvetica", "normal");
+      doc.text(label, startX, y);
+      
+      doc.setTextColor(color[0], color[1], color[2]);
+      if (isBold) doc.setFont("helvetica", "bold");
+      doc.text(formatCurrency(value), startX + summaryWidth, y, { align: "right" });
+    };
+
+    drawSummaryRow("Opening Balance:", openingBalance, finalY + 15);
+    drawSummaryRow("Total Debits:", summary.totalDebit, finalY + 23, [211, 47, 47]); // Changed to RED
+    drawSummaryRow("Total Credits:", summary.totalCredit, finalY + 31, [46, 125, 50]); // Changed to GREEN
+    
+    // Closing Balance
+    doc.setFontSize(11);
+    drawSummaryRow("Closing Balance:", closingBalance, finalY + 41, [26, 35, 126], true);
+
+    if (isIncreased) {
+        doc.setFillColor(255, 235, 235);
+        doc.rect(startX, finalY + 45, summaryWidth, 9, 'F'); // Increased height to 9
+        doc.setTextColor(211, 47, 47);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("Increased Balance:", startX + 2, finalY + 51);
+        doc.text(formatCurrency(balanceDifference), startX + summaryWidth - 2, finalY + 51, { align: "right" });
+    }
+
+    doc.save(fileName);
+  }, [rows, summary, customerName, searchParams, ID, userData]);
+
   // --- DATA FETCHING ---
   const handleFetchData = useCallback(async (params) => {
     if (!params || !params.acid) {
@@ -267,6 +520,7 @@ const Ledger = () => {
     const { acid, startDate, endDate, name } = params;
     setLoading(true);
     setError(null);
+    setID(acid); // Ensure ID is persisted for PDF generation
     setCustomerName(name || "");
     setSearchAttempted(true);
     setRows([]);
@@ -395,17 +649,7 @@ const Ledger = () => {
     };
   }, [customerName]);
 
-  const [userData] = useState(() => {
-    try {
-      const user = localStorage.getItem("user");
-      return user ? JSON.parse(user) : {};
-    } catch (e) {
-      console.error("Failed to parse user from localStorage:", e);
-      return {};
-    }
-  });
 
-  const isCustomer = userData?.userType?.toLowerCase().includes("customer");
 
   // --- EFFECTS ---
 
@@ -504,21 +748,66 @@ const Ledger = () => {
     }
   }, [userData, handleFetchData, searchParams, ID, customerName]);
 
+  const handleSaleDownload = useCallback(async (row) => {
+    if (!row.Doc) return;
+    
+    const acid = searchParams.get("acid") || ID || "N/A";
+    const nameToUse = customerName || "Valued_Customer";
+    const timestamp = new Date().getTime();
+    const fileName = `${acid}_${nameToUse.replace(/\s+/g, '_')}_${row.Doc}_${timestamp}.pdf`;
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/report/generate-report`, {
+        reportName: 'invoiceReport',
+        parameters: {
+          acid: acid,
+          type: 'SALE',
+          doc: row.Doc
+        }
+      }, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Sale PDF download failed:", err);
+      alert("Failed to download invoice PDF. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [ID, customerName, searchParams]);
+
   return (
-    <Container maxWidth={false} sx={{ py: 2, px: { xs: 0, sm: 1, md: 1 }, width: "100%" }}>
+    <Container maxWidth={false} sx={{ py: 4, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>
+      <Box sx={{ mb: 4, px: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 900, color: '#1a237e', mb: 0.5, letterSpacing: '-0.5px' }}>
+          Customer Ledger
+        </Typography>
+        <Typography variant="body1" sx={{ color: '#64748b', fontWeight: 500 }}>
+          Manage and review customer accounts with real-time transaction tracking.
+        </Typography>
+      </Box>
+
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 3, 
+          gap: 4, 
           m: 0,
           width: '100%',
         }}
       >
         {/* Search Form Section */}
         <Box>
-          <Card elevation={2}>
-            <CardContent>
+          <Card elevation={0} sx={{ borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <LedgerSearchForm
                 usage={USAGE_KEY}
                 onFetch={handleFetchData}
@@ -539,8 +828,18 @@ const Ledger = () => {
           />
           {!loading && !error && rows.length > 0 && (
             <Box sx={{ width: "100%" }}>
-              <LedgerSummary summary={summary} balanceInc={balanceInc} />
-              <LedgerTable rows={rows} columns={ledgerColumns} onLongPress={(doc, row) => handleLongPress(doc, row.Type)} />
+              <LedgerSummary 
+                summary={summary} 
+                onDownload={generatePDF} 
+                loading={loading}
+                rows={rows}
+              />
+              <LedgerTable 
+                rows={rows} 
+                columns={ledgerColumns} 
+                onLongPress={(doc, row) => handleLongPress(doc, row.Type)} 
+                onRowClick={handleSaleDownload}
+              />
             </Box>
           )}
         </Box>

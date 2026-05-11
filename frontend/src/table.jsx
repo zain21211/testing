@@ -75,6 +75,7 @@ const DataTable = ({
   handleClick,
   tableHeight = 500,
   handleLongPress,
+  onRowClick,
 }) => {
   const navigate = useNavigate();
   const getLongPressProps = useLongPress(600);
@@ -123,6 +124,11 @@ const DataTable = ({
   );
 
   const handleDocumentClick = (row) => {
+    if (onRowClick) {
+      onRowClick(row);
+      return;
+    }
+
     const doc = row.Doc || row.doc;
 
     if (row && isLedgerTable) {
@@ -131,7 +137,7 @@ const DataTable = ({
       return;
     }
     // for packing
-    handleClick(doc);
+    if (handleClick) handleClick(doc);
   };
 
   const renderRowCells = (row, shouldHighlightRow) => {

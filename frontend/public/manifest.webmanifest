@@ -1,0 +1,21 @@
+{
+  "name": "Ahmad International",
+  "short_name": "Ahmad SMS",
+  "description": "Ahmad International SMS Application",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icons/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/cash.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

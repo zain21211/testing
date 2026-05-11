@@ -1,11 +1,3 @@
-@font-face {
-  font-family: 'Jameel Noori Nastaleeq';
-  src: url('/JameelNooriNastaleeq.woff') format('woff');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 body {
   margin: 0;
   padding: 0;

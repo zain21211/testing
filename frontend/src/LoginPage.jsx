@@ -437,18 +437,13 @@ const Login = () => {
       {isLoggedIn ? (
         <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 4 }, width: '100%' }}>
           <Box sx={{
-            mb: { xs: 1.5, md: 4 },
+            mb: { xs: 2, md: 4 },
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'flex-start',
             gap: { xs: 2, md: 6 },
-            textAlign: 'left',
-            // Specific overrides for mobile landscape to save vertical space
-            '@media (orientation: landscape) and (max-height: 500px)': {
-              mb: 1,
-              gap: 2
-            }
+            textAlign: 'left'
           }}>
             <Box sx={{ position: 'relative', flexShrink: 0 }}>
               <input
@@ -467,11 +462,7 @@ const Login = () => {
                     bgcolor: 'primary.main', fontSize: { xs: '2.5rem', md: '4rem' },
                     boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
                     cursor: 'pointer',
-                    '&:hover': { opacity: 0.8 },
-                    '@media (orientation: landscape) and (max-height: 500px)': {
-                      width: 60, height: 60,
-                      fontSize: '1.5rem'
-                    }
+                    '&:hover': { opacity: 0.8 }
                   }}
                 >
                   {!avatar && (userData?.username?.charAt(0).toUpperCase() || <PersonIcon />)}
@@ -486,21 +477,12 @@ const Login = () => {
                   color: '#1a1a1a', mb: { xs: 0.5, md: 1 },
                   fontSize: { xs: '1.8rem', sm: '1.75rem', md: '4rem' },
                   letterSpacing: '-1px',
-                  lineHeight: 1.1,
-                  '@media (orientation: landscape) and (max-height: 500px)': {
-                    fontSize: '1.2rem'
-                  }
+                  lineHeight: 1.1
                 }}
               >
                 Welcome back, {userData?.username || "Admin"}
               </Typography>
-              <Typography variant="h5" sx={{ 
-                color: '#555', fontWeight: 500, 
-                fontSize: { xs: '1.05rem', sm: '1rem', md: '1.5rem' },
-                '@media (orientation: landscape) and (max-height: 500px)': {
-                  fontSize: '0.85rem'
-                }
-              }}>
+              <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '1.05rem', sm: '1rem', md: '1.5rem' } }}>
                 What would you like to manage today?
               </Typography>
             </Box>
@@ -509,7 +491,7 @@ const Login = () => {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(6, 1fr)' },
+              gridTemplateColumns: 'repeat(3, 1fr)',
               gridAutoRows: '1fr', // Ensure all rows have same height
               gap: { xs: '6px', sm: '12px', md: '20px' },
               width: '100%',

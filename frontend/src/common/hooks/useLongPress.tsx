@@ -22,7 +22,7 @@ export function useLongPress(delay: number = 800) {
   }, []);
 
   const start = useCallback(
-    (callback: (e: React.MouseEvent | React.TouchEvent) => void) =>
+    (callback: () => void) =>
       (e: React.MouseEvent | React.TouchEvent) => {
         if (!mountedRef.current) return;
 
@@ -31,7 +31,7 @@ export function useLongPress(delay: number = 800) {
 
         // Start the timer for long press
         timeoutRef.current = setTimeout(() => {
-          if (mountedRef.current) callback(e);
+          if (mountedRef.current) callback();
         }, delay);
       },
     [delay]
@@ -48,7 +48,7 @@ export function useLongPress(delay: number = 800) {
    * Returns event handlers to spread into your component
    */
   const getLongPressProps = useCallback(
-    (callback: (e: React.MouseEvent | React.TouchEvent) => void) => ({
+    (callback: () => void) => ({
       onMouseDown: start(callback),
       onTouchStart: start(callback),
       onMouseUp: stop,

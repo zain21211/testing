@@ -551,7 +551,6 @@ const TraderDetailsCard = ({ trader, fields, doneEntries = [] }) => {
                     fontWeight: isUrdu ? "bold" : "normal",
                     color: isOverdue || isDateOld ? "red" : flag ? 'white' : "text.secondary",
                     fontFamily: isUrdu ? "Jameel Noori Nastaleeq, serif" : "poppins, sans-serif",
-                    fontSize: isUrdu ? "3.4rem" : undefined, // Increased from default h3
                 }}
             >
                 {/* main INFO */}

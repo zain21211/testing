@@ -133,10 +133,6 @@ class LoggingService {
    */
   async saveApiLog(logData) {
     try {
-      const { getConnectionStatus } = require("../config/mongodb");
-      if (!getConnectionStatus()) {
-        return; // Skip if no DB
-      }
       const apiLog = new ApiLog(logData);
       await apiLog.save();
     } catch (error) {
@@ -150,9 +146,6 @@ class LoggingService {
    */
   async saveErrorLog(logData) {
     try {
-      const { getConnectionStatus } = require("../config/mongodb");
-      if (!getConnectionStatus()) return;
-
       const errorLog = new ErrorLog(logData);
       await errorLog.save();
     } catch (error) {
@@ -166,9 +159,6 @@ class LoggingService {
    */
   async saveUserActivity(logData) {
     try {
-      const { getConnectionStatus } = require("../config/mongodb");
-      if (!getConnectionStatus()) return;
-
       const userActivity = new UserActivity(logData);
       await userActivity.save();
     } catch (error) {

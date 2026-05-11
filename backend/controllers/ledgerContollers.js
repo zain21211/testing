@@ -156,30 +156,6 @@ const ledgerControllers = {
       res.status(500).json({ message: "Failed to delete transaction", error: err.message });
     }
   },
-
-  downloadPdf: (req, res) => {
-    console.log("📥 Received PDF download request:", req.body.filename);
-    try {
-      const { pdfData, filename } = req.body;
-      if (!pdfData) {
-        console.error("❌ No PDF data provided");
-        return res.status(400).send("No PDF data provided");
-      }
-      
-      const base64Data = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
-      console.log("📦 PDF Data size:", Math.round(base64Data.length / 1024), "KB");
-      
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(buffer);
-      console.log("✅ PDF sent successfully:", filename);
-    } catch (err) {
-      console.error("❌ Download Error:", err);
-      res.status(500).send("Error generating download");
-    }
-  },
 };
 
 module.exports = ledgerControllers;

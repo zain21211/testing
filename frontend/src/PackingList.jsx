@@ -303,7 +303,7 @@ const FilterSection = ({ filters, routes, statuses, onFilterChange, onSubmit, is
 };
 
 // Summary Section Component
-const SummarySection = ({ tableData, amount, isAllowed, profit }) => {
+const SummarySection = ({ tableData, amount, isAdmin, profit }) => {
     if (tableData.length === 0) return null;
 
     return (
@@ -322,7 +322,7 @@ const SummarySection = ({ tableData, amount, isAllowed, profit }) => {
                 BILLS: {tableData.length}
             </Typography>
 
-            {isAllowed && (
+            {isAdmin && (
                 <>
                     <hr />
                     <Typography variant="h6" component="h2"
@@ -392,6 +392,7 @@ const PackingList = () => {
     const userTypes = ['operator', 'admin'];
     const userType = user?.userType?.toLowerCase();
     const isAllowed = userTypes.includes(userType);
+    const isAdmin = userType === 'admin';
     const [customerName] = useLocalStorageState('customerName', { defaultValue: '' });
 
     // Use custom hooks
@@ -423,16 +424,20 @@ const PackingList = () => {
             { label: "Customer", id: "UrduName", minWidth: 250, align: "right" },
             { label: "DOC #", id: "doc", minWidth: 100, align: 'center' },
             { label: "#", id: "rn", minWidth: 60, align: 'center' },
-            ...(isAllowed
+            ...(isAdmin
                 ? [
                     { label: "AMOUNT", id: "amount", minWidth: 125, align: "right" },
                     { label: "PROFIT", id: "grossprofit", minWidth: 100, align: "right" },
+                ]
+                : []),
+            ...(isAllowed
+                ? [
                     { label: "USER", id: "UserName", minWidth: 180, align: 'center' },
                 ]
                 : []),
             { label: "DATE", id: "date", minWidth: 150, align: 'center' },
         ];
-    }, [isAllowed]);
+    }, [isAllowed, isAdmin]);
 
     // Memoized data
     const memoizedData = useMemo(() => tableData, [tableData]);
@@ -497,7 +502,7 @@ const PackingList = () => {
                         tableData={tableData}
                         amount={amount}
                         profit={profit}
-                        isAllowed={isAllowed}
+                        isAdmin={isAdmin}
                     />
 
                     <ResultsTable

@@ -108,8 +108,7 @@ const DataTable = ({
       }
       if (window.confirm("Are you sure you want to delete this item?")) {
         try {
-          const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5175/api";
-          const deleteUrl = `${baseUrl}/${apiEndpoint}/${id}`;
+          const deleteUrl = `http://localhost:3001/${apiEndpoint}/${id}`;
           await axios.delete(deleteUrl);
           onDelete(id);
         } catch (error) {

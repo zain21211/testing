@@ -130,9 +130,8 @@ const startServer = async () => {
     app.use(globalErrorHandler);
 
     // 8. Start listening AFTER everything is ready
-    const PORT = process.env.PORT || 3001;
-    server.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ HTTP server running on http://100.122.80.93:${PORT}`);
+    server.listen(3001, "0.0.0.0", () => {
+      console.log("✅ HTTP server running on http://100.72.169.90:3001");
     });
 
     // 9. SQL keep-alive — start AFTER server is up

@@ -1,6 +1,6 @@
-const CACHE_NAME_PAGES = 'pages-v2';
-const CACHE_NAME_ASSETS = 'assets-v2';
-const CACHE_NAME_IMAGES = 'images-v2';
+const CACHE_NAME_PAGES = 'pages-v1';
+const CACHE_NAME_ASSETS = 'assets-v1';
+const CACHE_NAME_IMAGES = 'images-v1';
 
 const PRECACHE_URLS = [
   '/',          

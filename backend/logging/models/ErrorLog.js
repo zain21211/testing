@@ -94,7 +94,15 @@ const errorLogSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       required: false,
     },
-
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,

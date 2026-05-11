@@ -55,7 +55,7 @@ const compressImage = (file, maxWidth, maxHeight, quality) => {
     });
 };
 
-const CustomerListItem = ({ customer, nug, setNug, user, fetchList }) => {
+const CustomerListItem = ({ customer, nug, setNug, user, fetchList, onSuccess }) => {
     const [selectedImage, setSelectedImage] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -115,11 +115,14 @@ const CustomerListItem = ({ customer, nug, setNug, user, fetchList }) => {
         if (!selectedImage) return;
         setIsSubmitting(true);
         try {
+            const timestamp = new Date().toISOString();
+
             // 1. Update the invoice status and vehicle in psdetail
             await axios.put(`${url}/invoices/operator/delivery`, {
                 doc: customer.doc,
                 username: user.username,
-                status: 'delivered'
+                status: 'delivered',
+                timestamp // Auditing
             });
 
             // 2. Upload the image
@@ -129,11 +132,13 @@ const CustomerListItem = ({ customer, nug, setNug, user, fetchList }) => {
                 doc: customer.doc,
                 type: 'sale',
                 status: 'tally', // default to tally for this direct flow
-                date: new Date().toISOString(),
+                date: timestamp, // Auditing
+                username: user.username, // Auditing
             });
 
             // 3. Clear state and refresh list
             setSelectedImage(null);
+            if (onSuccess) onSuccess(customer.doc);
             if (fetchList) fetchList();
         } catch (error) {
             console.error("Operator submission failed:", error);

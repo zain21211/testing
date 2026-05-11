@@ -5,7 +5,7 @@ import axios from 'axios';
 const url = `${import.meta.env.VITE_API_URL}`;
 import useLocalStorageState from 'use-local-storage-state';
 
-const CustomerList = ({ customers, fetchList, to, setTo, deliver, user }) => {
+const CustomerList = ({ customers, fetchList, to, setTo, deliver, user, onSuccess }) => {
     const [loadingCustomerId, setLoadingCustomerId] = useState(null);
     const [nug, setNug] = useLocalStorageState('loadNugs', {});
     const [loading, setLoading] = useState(false)
@@ -26,12 +26,19 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver, user }) => {
         try {
             setLoading(true)
             const res = await axios.put(`${url}/invoices/loadList/update`, {
-                nug, status: 'loaded', to, username: user?.username
+                nug, 
+                status: 'loaded', 
+                to, 
+                username: user?.username,
+                timestamp: new Date().toISOString() // Auditing
             })
-            const doc = res.data.updated;
-            deleteItem(doc);
-            fetchList();
-            // Handle successful load if needed
+            const docs = res.data.updated; // This is usually an array
+            deleteItem(docs);
+            if (onSuccess) onSuccess(docs);
+            // We don't necessarily need fetchList() here if we do local removal, 
+            // but keeping it as a fallback might be okay. 
+            // However, the user said "without refreshing data from table".
+            // fetchList(); 
         } catch (error) {
             console.error(error);
         } finally {
@@ -56,6 +63,7 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver, user }) => {
                     loading={loadingCustomerId === customer.acid}
                     user={user}
                     fetchList={fetchList}
+                    onSuccess={onSuccess}
                 />
             ))}
             <Box
@@ -94,4 +102,4 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver, user }) => {
     );
 };
 
-export default CustomerList;
+export default CustomerList;

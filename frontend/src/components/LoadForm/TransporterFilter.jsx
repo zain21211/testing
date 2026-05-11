@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Autocomplete, TextField, Box, Button } from '@mui/material';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Autocomplete, TextField, Box, MenuItem } from '@mui/material';
 import debounce from 'lodash.debounce';
 
-const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disableAutoSearch }) => {
+const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disableAutoSearch, resetDocTrigger }) => {
   const [filters, setFilters] = useState({
     route: '',
     acid: '',
     doc: '',
-    dateSort: 'DESC',
-    docSort: ''
+    dateFilter: 'all',
   });
+
+  useEffect(() => {
+    if (resetDocTrigger) {
+      setFilters(prev => ({ ...prev, doc: '' }));
+    }
+  }, [resetDocTrigger]);
 
   const handleInputChange = (field, value) => {
     const newFilters = { ...filters, [field]: value };
@@ -46,13 +51,12 @@ const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disabl
       mb: 2,
       boxShadow: 1
     }}>
-      {/* Filters Row */}
+      {/* Row 1: Route (left), Date (right) */}
       <Box sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: 'repeat(3, 1fr)', md: 'repeat(3, 1fr)', lg: '250px 150px 150px' },
-        gap: 1,
+        gridTemplateColumns: '1fr 1fr',
+        gap: 2,
         width: '100%',
-        justifyContent: 'center'
       }}>
         <Autocomplete
           freeSolo
@@ -68,6 +72,25 @@ const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disabl
         />
 
         <TextField
+          select
+          label="Date"
+          size="small"
+          value={filters.dateFilter}
+          onChange={(e) => handleInputChange('dateFilter', e.target.value)}
+        >
+          <MenuItem value="all">All</MenuItem>
+          <MenuItem value="today">Today</MenuItem>
+        </TextField>
+      </Box>
+
+      {/* Row 2: ACID (left), Doc # (right) */}
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 2,
+        width: '100%',
+      }}>
+        <TextField
           label="ACID"
           size="small"
           type="number"
@@ -82,34 +105,9 @@ const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disabl
           value={filters.doc}
           onChange={(e) => handleInputChange('doc', e.target.value)}
         />
-
-        <TextField
-          select
-          label="Sort Date"
-          size="small"
-          value={filters.dateSort || 'DESC'}
-          onChange={(e) => handleInputChange('dateSort', e.target.value)}
-          SelectProps={{ native: true }}
-        >
-          <option value="DESC">Newest First</option>
-          <option value="ASC">Oldest First</option>
-        </TextField>
-
-        <TextField
-          select
-          label="Sort Doc #"
-          size="small"
-          value={filters.docSort || ''}
-          onChange={(e) => handleInputChange('docSort', e.target.value)}
-          SelectProps={{ native: true }}
-        >
-          <option value="None"></option>
-          <option value="DESC">Highest First</option>
-          <option value="ASC">Lowest First</option>
-        </TextField>
       </Box>
     </Box>
   );
 };
 
-export default TransporterFilter;
+export default TransporterFilter;

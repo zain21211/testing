@@ -26,7 +26,7 @@ const loginController = async (req, res) => {
     const result = await pool
       .request()
       .input("password", mssql.NVarChar, password)
-      .query("SELECT username, USERTYPE FROM USERS WHERE PASSWORD = @password");
+      .query("SELECT id, username, USERTYPE FROM USERS WHERE PASSWORD = @password");
 
     // Check if user exists
     const user = result.recordset[0];

@@ -187,12 +187,13 @@ const Login = () => {
     if (!isLoggedIn) return;
     axios.get(`${url}/form-visibility`)
       .then(res => {
-        // Convert array to map: { "admin|packing": true, ... }
-        const map = {};
-        res.data.forEach(({ usertype, form_key, is_visible }) => {
-          map[`${usertype}|${form_key}`] = !!is_visible;
-        });
-        setVisibilityConfig(map);
+        if (Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach(({ usertype, form_key, is_visible }) => {
+            map[`${usertype}|${form_key}`] = !!is_visible;
+          });
+          setVisibilityConfig(map);
+        }
       })
       .catch(() => {
         // Server unavailable — fall back to hardcoded defaults silently
@@ -204,19 +205,19 @@ const Login = () => {
       const fetchTotals = () => {
         axios.get(`${url}/cash-entry/today-total`)
           .then(res => {
-            setTodayRecovery(res.data.total);
+            setTodayRecovery(res.data?.total ?? 0);
           })
           .catch(err => console.error("Error fetching today recovery:", err));
 
         axios.get(`${url}/invoices/today-total-sales`)
           .then(res => {
-            setTodaySales(res.data.total);
+            setTodaySales(res.data?.total ?? 0);
           })
           .catch(err => console.error("Error fetching today sales:", err));
 
         axios.get(`${url}/create-order/today-total-pending`)
           .then(res => {
-            setTodayPendingOrders(res.data.total);
+            setTodayPendingOrders(res.data?.total ?? 0);
           })
           .catch(err => console.error("Error fetching today pending orders:", err));
       };

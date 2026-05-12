@@ -127,90 +127,93 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
       boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
       border: '1px solid rgba(255,255,255,0.8)'
     }}>
-      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-        <Box
-          display="grid"
-          gap={3}
-          alignItems="center"
-          gridTemplateColumns={{
-            xs: "1fr",
-            sm: "1fr 1fr"
-          }}
-        >
-          {/* Row 1: Total Debits and Opening Balance */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
+      <CardContent sx={{ p: 1.5 }}>
+        {/* Section Heading */}
+        <Typography variant="subtitle2" sx={{ fontWeight: '900', color: '#1a237e', textTransform: 'uppercase', mb: 1, ml: 0.5, letterSpacing: '1px' }}>
+          Financial Summary
+        </Typography>
+
+        {/* Single Unified Summary Element */}
+        <Box sx={{ 
+          bgcolor: 'rgba(26, 35, 126, 0.04)', 
+          borderRadius: '16px', 
+          overflow: 'hidden',
+          border: '1px solid rgba(26, 35, 126, 0.1)'
+        }}>
+          {/* Header Row: Total Debits & Opening Balance */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+              <Typography variant="caption" sx={{ fontWeight: '800', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                 Total Debits
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: '900', color: '#d32f2f' }}>
+              <Typography variant="h4" sx={{ fontWeight: '900', color: '#d32f2f', fontSize: '1.75rem' }}>
                 {formatCurrency(totalDebit)}
               </Typography>
             </Box>
             <Box textAlign="right">
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+              <Typography variant="caption" sx={{ fontWeight: '800', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                 Opening Balance
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: '900', color: '#1a237e' }}>
+              <Typography variant="h4" sx={{ fontWeight: '900', color: '#1a237e', fontSize: '1.75rem' }}>
                 {formatCurrency(openingBalance)}
               </Typography>
             </Box>
           </Box>
 
-          {/* Row 2: Total Credits and Closing Balance */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
+          {/* Middle Row: Total Credits & Closing Balance */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, borderBottom: isIncreased ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+              <Typography variant="caption" sx={{ fontWeight: '800', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                 Total Credits
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: '900', color: '#2e7d32' }}>
+              <Typography variant="h4" sx={{ fontWeight: '900', color: '#2e7d32', fontSize: '1.75rem' }}>
                 {formatCurrency(totalCredit)}
               </Typography>
             </Box>
             <Box textAlign="right">
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+              <Typography variant="caption" sx={{ fontWeight: '800', color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                 Closing Balance
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: '900', color: '#1a237e' }}>
+              <Typography variant="h4" sx={{ fontWeight: '900', color: '#1a237e', fontSize: '1.75rem' }}>
                 {formatCurrency(closingBalance)}
               </Typography>
             </Box>
           </Box>
+
+          {/* Bottom Row: Net Increase (if applicable) */}
+          {isIncreased && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, bgcolor: 'rgba(211, 47, 47, 0.05)' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: '900', color: '#d32f2f', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Increased Balance:
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: '900', color: '#d32f2f', fontSize: '1.75rem' }}>
+                {formatCurrency(balanceDifference)}
+              </Typography>
+            </Box>
+          )}
         </Box>
 
-        {/* Optional Net Increase Row */}
-        {isIncreased && (
-          <Box sx={{ mt: 1, p: 1.5, bgcolor: '#fff5f5', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px dashed #feb2b2' }}>
-            <Typography variant="body2" sx={{ fontWeight: '800', color: '#d32f2f', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Increased Balance:
-            </Typography>
-            <Typography variant="h6" sx={{ color: '#d32f2f', fontWeight: '900' }}>
-              {formatCurrency(balanceDifference)}
-            </Typography>
-          </Box>
-        )}
-
-        {/* PDF Download Button - Now at the bottom */}
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+        {/* PDF Download Button - Enhanced Size and Prominence */}
+        <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'center' }}>
           <Button
             variant="contained"
             disabled={loading}
             onClick={onDownload}
-            startIcon={<PictureAsPdfIcon />}
+            startIcon={<PictureAsPdfIcon sx={{ fontSize: '1.5rem !important' }} />}
             fullWidth
             sx={{
               background: 'linear-gradient(45deg, #1a237e 30%, #3949ab 90%)',
               color: 'white',
-              py: 1.5,
+              py: 2,
               borderRadius: '16px',
               textTransform: 'none',
-              fontWeight: '800',
-              fontSize: '1rem',
-              boxShadow: '0 8px 20px rgba(26, 35, 126, 0.3)',
+              fontWeight: '900',
+              fontSize: '1.2rem',
+              boxShadow: '0 6px 16px rgba(26, 35, 126, 0.25)',
               '&:hover': {
                 background: 'linear-gradient(45deg, #3949ab 30%, #5c6bc0 90%)',
                 transform: 'translateY(-2px)',
-                boxShadow: '0 12px 25px rgba(26, 35, 126, 0.4)',
+                boxShadow: '0 10px 20px rgba(26, 35, 126, 0.35)',
               }
             }}
           >
@@ -228,8 +231,8 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
 const LedgerMessages = React.memo(({ loading, error, searchAttempted, rowCount }) => {
   if (loading) {
     return (
-      <Paper sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8 }}>
-        <CircularProgress size={40} />
+      <Paper sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 4 }}>
+        <CircularProgress size={30} />
         <Typography sx={{ ml: 2 }}>Loading ledger data...</Typography>
       </Paper>
     );
@@ -237,7 +240,7 @@ const LedgerMessages = React.memo(({ loading, error, searchAttempted, rowCount }
 
   if (error) {
     return (
-      <Alert severity="error" variant="filled" sx={{ mb: 3 }}>
+      <Alert severity="error" variant="filled" sx={{ mb: 1.5 }}>
         {error}
       </Alert>
     );
@@ -245,7 +248,7 @@ const LedgerMessages = React.memo(({ loading, error, searchAttempted, rowCount }
 
   if (searchAttempted && rowCount === 0) {
     return (
-      <Paper sx={{ textAlign: "center", py: 8 }}>
+      <Paper sx={{ textAlign: "center", py: 4 }}>
         <Typography color="text.secondary">No records found for the selected criteria.</Typography>
       </Paper>
     );
@@ -253,7 +256,7 @@ const LedgerMessages = React.memo(({ loading, error, searchAttempted, rowCount }
 
   if (!searchAttempted && rowCount === 0) {
     return (
-      <Paper sx={{ textAlign: "center", py: 8 }}>
+      <Paper sx={{ textAlign: "center", py: 4 }}>
         <Typography color="text.secondary">Enter customer details and date range to view ledger.</Typography>
       </Paper>
     );
@@ -1020,13 +1023,13 @@ const Ledger = () => {
   }, [ID, customerName, searchParams, masterCustomerList, userData]);
 
   return (
-    <Container maxWidth={false} sx={{ py: 2, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>
-      <Box sx={{ mb: 2, px: 1 }}>
-        <Typography variant="h4" sx={{ fontWeight: 900, color: '#1a237e', mb: 0.5, letterSpacing: '-0.5px' }}>
+    <Container maxWidth={false} sx={{ py: 1, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>
+      <Box sx={{ mb: 1, px: 1 }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, color: '#1a237e', mb: 0, letterSpacing: '-0.5px' }}>
           Customer Ledger
         </Typography>
-        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
-          Manage and review customer accounts with real-time transaction tracking.
+        <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
+          Manage and review customer accounts with real-time tracking.
         </Typography>
       </Box>
 
@@ -1034,15 +1037,15 @@ const Ledger = () => {
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 2, 
+          gap: 1, 
           m: 0,
           width: '100%',
         }}
       >
         {/* Search Form Section */}
         <Box>
-          <Card elevation={0} sx={{ borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Card elevation={0} sx={{ borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <CardContent sx={{ p: 1.5 }}>
               <LedgerSearchForm
                 usage={USAGE_KEY}
                 onFetch={handleFetchData}

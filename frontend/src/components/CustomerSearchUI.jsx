@@ -24,6 +24,7 @@ import { FixedSizeList } from "react-window";
 
 const ITEM_SIZE = 70;
 const allowedDateRangeOptions = [
+  { label: "Last 30 Days", value: "last30Days" },
   { label: "3-Months", value: "3-Months" },
   { label: "This Week", value: "thisWeek" },
   { label: "Last Week", value: "lastWeek" },

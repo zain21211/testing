@@ -12,11 +12,11 @@ const formatDateForInput = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-export const useDateRange = (initialRange = "3-Months") => {
+export const useDateRange = (initialRange = "last30Days") => {
     const initialDates = useMemo(() => {
         const today = new Date();
         const start = new Date(today);
-        start.setMonth(today.getMonth() - 3);
+        start.setDate(today.getDate() - 30);
         return {
             startDate: formatDateForInput(start),
             endDate: formatDateForInput(today),
@@ -30,6 +30,11 @@ export const useDateRange = (initialRange = "3-Months") => {
         const today = new Date();
         let start, end;
         switch (dateRangeType) {
+            case "last30Days":
+                start = new Date(today);
+                start.setDate(today.getDate() - 30);
+                end = new Date(today);
+                break;
             case "thisWeek":
                 start = new Date(today);
                 start.setDate(today.getDate() - today.getDay());
@@ -40,7 +45,6 @@ export const useDateRange = (initialRange = "3-Months") => {
                 start = new Date(today);
                 start.setDate(today.getDate() - today.getDay() - 7);
                 end = new Date(today);
-                end.setDate(today.getDate() - today.getDay() - 1);
                 break;
             case "thisMonth":
                 start = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -60,9 +64,14 @@ export const useDateRange = (initialRange = "3-Months") => {
                 break;
             case "custom":
                 return; // Do nothing, manual date entry
-            default: // "3-Months"
+            case "3-Months":
                 start = new Date(today);
                 start.setMonth(today.getMonth() - 3);
+                end = new Date(today);
+                break;
+            default: // "last30Days"
+                start = new Date(today);
+                start.setDate(today.getDate() - 30);
                 end = new Date(today);
         }
         setDates({

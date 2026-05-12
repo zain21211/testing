@@ -16,7 +16,7 @@ const CustomerSearch = ({
 }) => {
 
   // 1. Call the date hook
-  const dateHookData = useDateRange("3-Months");
+  const dateHookData = useDateRange("last30Days");
 
   // const handleAcidInputChange
   // 2. Call the main logic hook, passing it dependencies

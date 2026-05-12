@@ -13,15 +13,15 @@ import 'cropperjs/dist/cropper.css';
 // ─────────────────────────────────────────────────────────────
 
 /** Longest side (px) fed INTO CropperJS — keeps its internal clone small */
-const PRE_CROP_MAX_PX = 1200;
-const PRE_CROP_QUALITY = 0.55;
+const PRE_CROP_MAX_PX = 800;
+const PRE_CROP_QUALITY = 0.45;
 
 /** Longest side (px) of the final thumbnail stored in state / sent to parent */
-const FINAL_MAX_PX = 900;
-const FINAL_QUALITY = 0.55;
+const FINAL_MAX_PX = 600;
+const FINAL_QUALITY = 0.45;
 
-/** Max base64 chars (~160 KB unencoded) — quality loop falls back to this */
-const TARGET_B64_CHARS = 220_000;
+/** Max base64 chars (~75 KB unencoded) — quality loop falls back to this */
+const TARGET_B64_CHARS = 100_000;
 
 // ─────────────────────────────────────────────────────────────
 // Pure helper — no hooks, no closures over component state.
@@ -267,10 +267,8 @@ export const PaymentInputsSection = ({
             setCropSrc(null);
             setCropMethodKey(null);
 
-            // Now safe to push the thumbnail upward and show preview
+            // Now safe to push the thumbnail upward
             onPaymentImageChange(savedMethodKey, dataUrl);
-            setPreviewImageSrc(dataUrl);
-            setPreviewOpen(true);
 
         } catch (err) {
             console.error('Crop/compress failed:', err);

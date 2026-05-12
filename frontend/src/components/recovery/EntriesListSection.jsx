@@ -4,7 +4,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import ClearIcon from '@mui/icons-material/Clear';
 import CloseIcon from '@mui/icons-material/Close';
 
-export const EntriesListSection = ({ entries = [], onSyncOneEntry, onRemove }) => {
+export const EntriesListSection = ({ entries = [], onSyncOneEntry }) => {
     const [previewImage, setPreviewImage] = useState(null);
 
     if (entries.length === 0) {
@@ -93,17 +93,7 @@ export const EntriesListSection = ({ entries = [], onSyncOneEntry, onRemove }) =
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    {entry.status !== true && (
-                                        <Button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onRemove(entry.creditID);
-                                            }}
-                                            sx={{ color: 'red', minWidth: '40px' }}
-                                        >
-                                            <ClearIcon />
-                                        </Button>
-                                    )}
+                                    {/* Entry removal button removed to ensure all entries are synced */}
 
                                     {entry.paymentImage && (
                                         <img

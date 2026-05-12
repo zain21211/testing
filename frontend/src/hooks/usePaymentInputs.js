@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useLocalStorageState } from "./LocalStorage";
+import { useIndexedDBState } from "./indexDBHook";
 import { formatCurrency } from "../utils/formatCurrency";
 
 export const usePaymentInputs = () => {
@@ -41,7 +42,7 @@ export const usePaymentInputs = () => {
     ""
   );
 
-  const [paymentImages, setPaymentImages] = useLocalStorageState(
+  const [paymentImages, setPaymentImages] = useIndexedDBState(
     "recoveryPaperPaymentImages",
     {}
   );

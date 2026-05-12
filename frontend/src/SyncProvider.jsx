@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { offlineService } from './services/offlineService';
+import { backgroundSyncService } from './services/backgroundSyncService';
 import { useRealOnlineStatus } from './hooks/IsOnlineHook';
 
 const SyncContext = createContext();
@@ -17,7 +18,9 @@ export const SyncProvider = ({ children }) => {
       await Promise.all([
         offlineService.syncCustomers(token),
         offlineService.syncProducts(token),
-        offlineService.syncSchemes(token)
+        offlineService.syncSchemes(token),
+        backgroundSyncService.syncInvoices(),
+        backgroundSyncService.syncRecoveries()
       ]);
       console.log("✅ Background Sync Complete");
     } catch (e) {

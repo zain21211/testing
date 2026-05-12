@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { useLocalStorageState } from "./LocalStorage";
+import { useIndexedDBState } from "./indexDBHook";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-export const useEntries = () => {
-  const [entries, setEntries] = useLocalStorageState(
+export const useEntries = (initialData = []) => {
+  const [entries, setEntries] = useIndexedDBState(
     "recoveryPaperEntries",
     []
   );
@@ -166,40 +166,34 @@ export const useEntries = () => {
 
   const addEntry = useCallback(
     async (newEntry, coordinates, address) => {
-      setIsLoading(true);
-      
+      // 1. Prepare entry with IDs
       const creditID = uuidv4();
       const debitID = uuidv4();
       newEntry.creditID = creditID;
       newEntry.debitID = debitID;
       newEntry.subEntryStatus = {};
       newEntry.retryCount = 0;
-      
-      let outErrors = [];
-      let outDocs = [];
-      try {
-        const { allSuccess, newSubEntryStatus, errors, generatedDocs } = await makeCashEntry(
-          newEntry,
-          coordinates,
-          address
-        );
-        newEntry.status = allSuccess;
-        newEntry.subEntryStatus = newSubEntryStatus;
-        if (!allSuccess) {
-            newEntry.retryCount = 1;
-        }
-        outErrors = errors || [];
-        outDocs = generatedDocs || [];
-      } catch (err) {
-        newEntry.status = false;
-        newEntry.retryCount = 1;
-        outErrors = [err.message];
+      newEntry.status = false;
+
+      // 2. Save locally IMMEDIATELY (This is what makes it feel fast)
+      setEntries((prevEntries) => [...prevEntries, newEntry]);
+
+      // 3. Attempt background sync IF online
+      if (navigator.onLine) {
+        // We do NOT await this in a way that blocks the UI
+        makeCashEntry(newEntry, coordinates, address).then(({ allSuccess, newSubEntryStatus }) => {
+          if (allSuccess) {
+            setEntries((prev) => 
+              prev.map(e => e.creditID === creditID ? { ...e, status: true, subEntryStatus: newSubEntryStatus } : e)
+            );
+          }
+        }).catch(err => {
+          console.warn("Background sync for new entry failed:", err);
+        });
       }
 
-      setEntries((prevEntries) => [...prevEntries, newEntry]);
-      setIsLoading(false);
-
-      return { success: newEntry.status, errors: outErrors, generatedDocs: outDocs };
+      // 4. Return success immediately because it is successfully saved to local queue
+      return { success: true, errors: [], generatedDocs: [] };
     },
     [makeCashEntry, setEntries]
   );

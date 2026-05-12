@@ -320,7 +320,7 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) =
     const pool = await imageDb();
     const query = `
       INSERT INTO name_reciepts (doc, acid, image, type, status, datetime, UserName)
-      VALUES (@doc, @acid, @img, @type, @status, GETDATE(), @userName)
+      VALUES (@doc, @acid, @img, @type, @status, @time, @userName)
     `;
 
     await pool
@@ -330,6 +330,7 @@ const insertNameReceiptImage = async (doc, acid, image, time, ptype, userName) =
       .input("img", sql.VarBinary, toBuffer(image))
       .input("type", sql.VarChar, ptype)
       .input("status", sql.VarChar, "")
+      .input("time", sql.DateTime, time ? new Date(time) : new Date())
       .input("userName", sql.VarChar, userName || "")
       .query(query);
     console.log(`✅ Image saved to name_reciepts for doc ${doc}`);
@@ -365,7 +366,7 @@ const CashEntryController = {
       } = req.body;
 
       const effectiveDate = getPakistanISODateString(time);
-      const systemTimestamp = getPakistanISODateString();
+      const systemTimestamp = getPakistanISODateString(time);
 
       // Get method configuration
       const methodConfig = getMethodConfig(

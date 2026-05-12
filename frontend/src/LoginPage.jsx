@@ -468,7 +468,7 @@ const Login = () => {
             </FormControl>
             <FormControlLabel control={<Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)} />} label="Keep me signed in" sx={{ mb: 4, ml: 0.5 }} />
             {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>{error}</Alert>}
-            <Button type="submit" fullWidth variant="contained" disabled={isLoading} sx={{ py: 2, borderRadius: '16px', fontSize: '1.1rem', fontWeight: 700, textTransform: 'none', boxShadow: '0 10px 20px -10px #1976d2' }}>{isLoading ? <CircularProgress size(24) color="inherit" /> : "Sign In"}</Button>
+            <Button type="submit" fullWidth variant="contained" disabled={isLoading} sx={{ py: 2, borderRadius: '16px', fontSize: '1.1rem', fontWeight: 700, textTransform: 'none', boxShadow: '0 10px 20px -10px #1976d2' }}>{isLoading ? <CircularProgress size={24} color="inherit" /> : "Sign In"}</Button>
           </Box>
         </Paper>
       )}

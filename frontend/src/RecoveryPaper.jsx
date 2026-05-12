@@ -274,6 +274,22 @@ const RecoveryPaper = () => {
       return;
     }
 
+    // Validation for images (compulsory for non-cash)
+    const missingImages = [];
+    if (parsedJazzcash > 0 && !paymentImages.jazzcash) missingImages.push("JazzCash");
+    if (parsedEasypaisa > 0 && !paymentImages.easypaisa) missingImages.push("EasyPaisa");
+    if (parsedCrownWallet > 0 && !paymentImages.crownWallet) missingImages.push("Crown Wallet");
+    if (parsedMeezanBank > 0 && !paymentImages.meezanBank) missingImages.push("Meezan Bank");
+    if (parsedOnline > 0 && !paymentImages.online) missingImages.push("Online");
+    if (parsedTc > 0 && !paymentImages.tc) missingImages.push("TC");
+    if (parsedHarr > 0 && !paymentImages.harr) missingImages.push("Harr");
+    if (parsedCrownFit > 0 && !paymentImages.crownfit) missingImages.push("Crown Fit");
+
+    if (missingImages.length > 0) {
+      alert(`Please upload payment proof (screenshot/photo) for: ${missingImages.join(", ")}`);
+      return;
+    }
+
     const newEntry = {
       id: selectedCustomer?.acid,
       name: selectedCustomer.name,
@@ -583,7 +599,6 @@ const RecoveryPaper = () => {
 
         <EntriesListSection
           entries={entries}
-          onRemove={handleRemoveEntry}
           onSyncOneEntry={(entry) => handleSyncOneEntry(entry, coordinates, address)}
         />
 

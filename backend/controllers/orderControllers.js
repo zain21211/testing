@@ -264,7 +264,7 @@ const orderControllers = {
           .input("userType", sql.VarChar(50), safeUserType)
           .input("orderDate", sql.DateTime, new Date(orderDate)).query(`
           INSERT INTO psproductHistory (Doc, UserName, UserLevel, Date, EntryDate, EntryStatus)
-          VALUES (@doc, @username, @userType, @orderDate, SYSDATETIME(), 'SAVE')
+          VALUES (@doc, @username, @userType, @orderDate, @orderDate, 'SAVE')
         `);
       } catch (e) {
         throw new Error(`Step 3 (History) failed: ${e.message}`);
@@ -339,7 +339,7 @@ const orderControllers = {
         ISNULL((SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc), 0),
         @dueDate,
         @PBALANCE,
-        @entryDate,
+        @orderDate,
         @username
       )
   `);
@@ -364,16 +364,16 @@ const orderControllers = {
         await ledgerReq.query(`
         INSERT INTO ledgers (Acid,Date,Type,Doc,NarrationS,narration,Debit,Credit,EntryBy,EntryDateTime,transactionId)
         VALUES
-          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@description,@totalAmount,NULL,@username,SYSDATETIME(),@transactionID + '-DR'),
-          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,@description,NULL,@totalAmount,@username,SYSDATETIME(),@transactionID + '-CR');
+          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@description,@totalAmount,NULL,@username,@orderDate,@transactionID + '-DR'),
+          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,@description,NULL,@totalAmount,@username,@orderDate,@transactionID + '-CR');
 
         INSERT INTO ledgersHistory (Acid,Date,Doc,Type,Narration,Invoice,Debit,Credit,remainingamount,status,
           UserName,UserLevel,EntryDate,EntryStatus)
         VALUES
           (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,
-            @username,@userType,SYSDATETIME(),'SAVE'),
+            @username,@userType,@orderDate,'SAVE'),
           (@salesRevenueAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,NULL,@totalAmount,0,0,
-            @username,@userType,SYSDATETIME(),'SAVE');
+            @username,@userType,@orderDate,'SAVE');
       `);
       } catch (e) {
         throw new Error(`Step 5 (Ledgers) failed: ${e.message}`);

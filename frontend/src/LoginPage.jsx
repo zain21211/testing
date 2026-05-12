@@ -14,6 +14,7 @@ import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import imageCompression from "browser-image-compression";
 import localforage from "localforage";
+import { offlineService } from "./services/offlineService";
 
 const avatarStore = localforage.createInstance({ name: "avatarDB" });
 
@@ -57,7 +58,6 @@ const ALL_DASHBOARD_CARDS = [
   { key: "visibility", title: "Visibility", subtitle: "Manager", icon: AdminPanelSettingsIcon, color: "#6c63ff", path: "/admin/visibility", adminOnly: true },
 ];
 
-// Fallback defaults (used if API fetch fails)
 const FALLBACK_VISIBILITY = {
   packing: ["admin", "pack", "operator"],
   load: ["admin", "pack", "operator"],
@@ -75,10 +75,8 @@ const FALLBACK_VISIBILITY = {
   ledger: ["admin", "sm", "operator"],
 };
 
-
 const url = import.meta.env.VITE_API_URL;
 
-// --- Sub-component: Action Card ---
 const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick, value }) => {
   const navigate = useNavigate();
   return (
@@ -157,16 +155,13 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick, value }
   );
 };
 
-
 const Login = () => {
-  // Helper to get initial state - strictly checking localStorage
   const getInitialAuthState = () => {
     try {
       const token = localStorage.getItem("authToken");
       const user = localStorage.getItem("user");
       if (token && user) {
         const decoded = jwtDecode(token);
-        // If no exp exists, assume it's a permanent token; otherwise check against now
         const isValid = !decoded.exp || (decoded.exp * 1000 > Date.now());
         if (isValid) {
           return { isLoggedIn: true, userData: JSON.parse(user) };
@@ -174,7 +169,7 @@ const Login = () => {
       }
     } catch (e) {
       console.error("Auth initialization error:", e);
-      localStorage.clear(); // Clear potentially corrupt data
+      localStorage.clear();
     }
     return { isLoggedIn: false, userData: null };
   };
@@ -190,7 +185,6 @@ const Login = () => {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(true);
   const [isCustomer, setIsCustomer] = useState(false);
-  // ── Visibility config (fetched from server or local cache) ─────────────────────────────
   const [visibilityConfig, setVisibilityConfig] = useState(() => {
     try {
       const cached = localStorage.getItem(`visibilityConfig_${userData?.username}`);
@@ -198,7 +192,7 @@ const Login = () => {
     } catch (e) {
       return null;
     }
-  }); // null = not yet fetched nor cached
+  });
 
   const [todayRecovery, setTodayRecovery] = useState(null);
   const [todaySales, setTodaySales] = useState(null);
@@ -206,10 +200,8 @@ const Login = () => {
 
   const userType = userData?.userType?.toLowerCase() || "";
   const isAdmin = userType.includes('admin');
-  const isBilty = userType.includes("bilty");
 
   useEffect(() => {
-    // Load from cache immediately when user changes (e.g. on login)
     if (userData?.username) {
       try {
         const cached = localStorage.getItem(`visibilityConfig_${userData.username}`);
@@ -223,7 +215,6 @@ const Login = () => {
   }, [userData?.username]);
 
   useEffect(() => {
-    // Fetch visibility config whenever user logs in
     if (!isLoggedIn) return;
     axios.get(`${url}/form-visibility`)
       .then(res => {
@@ -233,84 +224,50 @@ const Login = () => {
             map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
           });
           setVisibilityConfig(map);
-          // Cache locally for offline use and zero flickering
           localStorage.setItem(`visibilityConfig_${userData?.username}`, JSON.stringify(map));
         }
       })
-      .catch(() => {
-        // Server unavailable — fallback is already set by initial state from localStorage
-      });
+      .catch(() => {});
 
-    // Fetch today's recovery and sales if admin
     if (isAdmin) {
       const fetchTotals = () => {
         axios.get(`${url}/cash-entry/today-total`)
-          .then(res => {
-            setTodayRecovery(res.data?.total ?? 0);
-          })
+          .then(res => setTodayRecovery(res.data?.total ?? 0))
           .catch(err => console.error("Error fetching today recovery:", err));
 
         axios.get(`${url}/invoices/today-total-sales`)
-          .then(res => {
-            setTodaySales(res.data?.total ?? 0);
-          })
+          .then(res => setTodaySales(res.data?.total ?? 0))
           .catch(err => console.error("Error fetching today sales:", err));
 
         axios.get(`${url}/create-order/today-total-pending`)
-          .then(res => {
-            setTodayPendingOrders(res.data?.total ?? 0);
-          })
+          .then(res => setTodayPendingOrders(res.data?.total ?? 0))
           .catch(err => console.error("Error fetching today pending orders:", err));
       };
 
-      fetchTotals(); // Initial fetch
-      const intervalId = setInterval(fetchTotals, 5000); // Poll every 5 seconds for external app changes
-
+      fetchTotals();
+      const intervalId = setInterval(fetchTotals, 5000);
       return () => clearInterval(intervalId);
     }
   }, [isLoggedIn, isAdmin]);
 
-  // --- Socket.io for Live Updates ---
   useEffect(() => {
     if (!isLoggedIn || !isAdmin) return;
-
-    // Derived socket URL (strip /api if present)
     const socketUrl = url.endsWith('/api') ? url.replace('/api', '') : url;
     const socket = io(socketUrl);
+    socket.on("recoveryUpdated", (data) => setTodayRecovery(data.total));
+    socket.on("salesUpdated", (data) => setTodaySales(data.total));
+    socket.on("pendingOrdersUpdated", (data) => setTodayPendingOrders(data.total));
+    return () => socket.disconnect();
+  }, [isLoggedIn, isAdmin]);
 
-    socket.on("recoveryUpdated", (data) => {
-      console.log("📡 Live recovery update received:", data.total);
-      setTodayRecovery(data.total);
-    });
-
-    socket.on("salesUpdated", (data) => {
-      console.log("📡 Live sales update received:", data.total);
-      setTodaySales(data.total);
-    });
-
-    socket.on("pendingOrdersUpdated", (data) => {
-      console.log("📡 Live pending orders update received:", data.total);
-      setTodayPendingOrders(data.total);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [isLoggedIn, userData?.userType]);
-
-  // Helper: can the current userType see this card?
   const canSee = (formKey) => {
-    // Extract base type: e.g. "sm-kr" -> "sm", "operator-1" -> "operator"
     const baseType = userType.split('-')[0];
     if (userType === "admin" && formKey === "visibility") return true;
-
     if (visibilityConfig) {
       const config = visibilityConfig[`${baseType}|${formKey}`];
       if (config && typeof config === 'object') return config.isVisible;
-      if (config === true || config === false) return config; // Backward compatibility check
+      if (config === true || config === false) return config;
     }
-
-    // Fallback logic
     return FALLBACK_VISIBILITY[formKey]?.includes(baseType) ?? false;
   };
 
@@ -323,22 +280,10 @@ const Login = () => {
     return 999;
   };
 
-
-  // Crop State
   const [tempImage, setTempImage] = useState(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
   const cropperRef = React.useRef(null);
 
-  // Sync state if localStorage changes (optional but good for multi-tab)
-  useEffect(() => {
-    const auth = getInitialAuthState();
-    if (auth.isLoggedIn !== isLoggedIn) {
-      setIsLoggedIn(auth.isLoggedIn);
-      setUserData(auth.userData);
-    }
-  }, []);
-
-  // Still keep this for customer/SPO redirection
   useEffect(() => {
     if (userData?.userType) {
       const isCust = userData.userType.toLowerCase().includes("cust");
@@ -354,17 +299,37 @@ const Login = () => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+    const isOnline = navigator.onLine;
+
     try {
       const res = await axios.post(`${url}/login`, { password, checked });
       const token = res.data.token;
-      const user = jwtDecode(token);
+      const decoded = jwtDecode(token);
       localStorage.setItem("authToken", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      setUserData(user);
+      localStorage.setItem("user", JSON.stringify(decoded));
+      await offlineService.saveCredentials(decoded.username, password);
+      setUserData(decoded);
       setIsLoggedIn(true);
       setPassword("");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      const isNetworkError = !err.response || err.code === 'ECONNABORTED';
+      if (isNetworkError || !isOnline) {
+        const lastUser = await localforage.createInstance({ name: "offlineDB", storeName: "auth" }).getItem("lastUser");
+        if (lastUser) {
+          const isValid = await offlineService.verifyCredentials(lastUser.username, password);
+          if (isValid) {
+            const cachedUser = localStorage.getItem("user");
+            const cachedToken = localStorage.getItem("authToken");
+            if (cachedUser && cachedToken) {
+              setIsLoggedIn(true);
+              setUserData(JSON.parse(cachedUser));
+              setPassword("");
+              return;
+            }
+          }
+        }
+      }
+      setError(err.response?.data?.message || (isNetworkError ? "Network error. Offline login failed." : "Login failed"));
       setPassword("");
     } finally {
       setIsLoading(false);
@@ -376,14 +341,12 @@ const Login = () => {
     setIsLoggedIn(false);
     setUserData(null);
     setIsCustomer(false);
-    setAvatar(null);   // clear avatar so previous user's pic never shows
+    setAvatar(null);
     navigate("/");
   };
 
   const [avatar, setAvatar] = useState(null);
 
-  // Load avatar from IndexedDB whenever the logged-in user changes.
-  // Always reset to null first so a previous user's image never persists.
   useEffect(() => {
     setAvatar(null);
     if (userData?.username) {
@@ -391,28 +354,18 @@ const Login = () => {
         if (saved) setAvatar(saved);
       });
     }
-  }, [userData?.username]); // key on username, not the whole object
+  }, [userData?.username]);
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = "";
-
     try {
-      // PRE-COMPRESS before the cropper ever touches it.
-      // A 12MP camera photo needs ~48MB RAM as a canvas. Downscale it first.
-      const preCompressed = await imageCompression(file, {
-        maxWidthOrHeight: 800,   // cropper never needs more than this
-        maxSizeMB: 0.5,
-        useWebWorker: true,
-        fileType: "image/jpeg",
-      });
+      const preCompressed = await imageCompression(file, { maxWidthOrHeight: 800, maxSizeMB: 0.5, useWebWorker: true, fileType: "image/jpeg" });
       const objectUrl = URL.createObjectURL(preCompressed);
       setTempImage(objectUrl);
       setIsCropOpen(true);
     } catch (err) {
-      console.error("Pre-compression failed:", err);
-      // Fallback: try loading directly (may still crash on very low-memory devices)
       const objectUrl = URL.createObjectURL(file);
       setTempImage(objectUrl);
       setIsCropOpen(true);
@@ -422,40 +375,25 @@ const Login = () => {
   const handleCrop = async () => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) return;
-
-    // Get a small cropped canvas (400x400 is plenty for an avatar)
     const canvas = cropper.getCroppedCanvas({ width: 400, height: 400 });
-
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       try {
-        // Compress the already-small cropped blob
-        const compressed = await imageCompression(blob, {
-          maxSizeMB: 0.08,          // ~80 KB target
-          maxWidthOrHeight: 400,
-          useWebWorker: true,
-          fileType: "image/jpeg",
-        });
-
+        const compressed = await imageCompression(blob, { maxSizeMB: 0.08, maxWidthOrHeight: 400, useWebWorker: true, fileType: "image/jpeg" });
         const reader = new FileReader();
         reader.readAsDataURL(compressed);
         reader.onloadend = async () => {
           const base64data = reader.result;
           await avatarStore.setItem(`avatar_${userData.username}`, base64data);
-          localStorage.removeItem(`avatar_${userData.username}`);
           setAvatar(base64data);
           setIsCropOpen(false);
           URL.revokeObjectURL(tempImage);
           setTempImage(null);
-          // Notify Header (and any other listener) to reload the avatar instantly
           window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: { username: userData.username } }));
         };
       } catch (err) {
-        console.error("Crop/compress error:", err);
-        // Fallback: low-quality inline jpeg
         const fallback = canvas.toDataURL("image/jpeg", 0.5);
         await avatarStore.setItem(`avatar_${userData.username}`, fallback);
-        localStorage.removeItem(`avatar_${userData.username}`);
         setAvatar(fallback);
         setIsCropOpen(false);
         URL.revokeObjectURL(tempImage);
@@ -465,21 +403,10 @@ const Login = () => {
     }, "image/jpeg", 0.8);
   };
 
-
-  if (isLoggedIn && (isCustomer || userType.includes("spo"))) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{
       minHeight: '100vh',
-      background: isLoggedIn
-        ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: isLoggedIn ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       pt: isLoggedIn ? { xs: 0.5, md: 1 } : 4,
       pb: 4,
       px: { xs: 0, sm: 2 },
@@ -489,50 +416,17 @@ const Login = () => {
     }}>
       {isLoggedIn ? (
         <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 4 }, width: '100%' }}>
-          <Box sx={{
-            mb: { xs: 2, md: 4 },
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            gap: { xs: 2, md: 6 },
-            textAlign: 'left'
-          }}>
+          <Box sx={{ mb: { xs: 2, md: 4 }, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: { xs: 2, md: 6 }, textAlign: 'left' }}>
             <Box sx={{ position: 'relative', flexShrink: 0 }}>
-              <input
-                type="file"
-                accept="image/*"
-                capture="user"
-                id="avatar-upload"
-                style={{ display: 'none' }}
-                onChange={handleAvatarChange}
-              />
+              <input type="file" accept="image/*" capture="user" id="avatar-upload" style={{ display: 'none' }} onChange={handleAvatarChange} />
               <label htmlFor="avatar-upload">
-                <Avatar
-                  src={avatar}
-                  sx={{
-                    width: { xs: 80, sm: 120, md: 200 }, height: { xs: 80, sm: 120, md: 200 },
-                    bgcolor: 'primary.main', fontSize: { xs: '2.5rem', md: '4rem' },
-                    boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
-                    cursor: 'pointer',
-                    '&:hover': { opacity: 0.8 }
-                  }}
-                >
+                <Avatar src={avatar} sx={{ width: { xs: 80, sm: 120, md: 200 }, height: { xs: 80, sm: 120, md: 200 }, bgcolor: 'primary.main', fontSize: { xs: '2.5rem', md: '4rem' }, boxShadow: '0 12px 32px rgba(0,0,0,0.15)', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
                   {!avatar && (userData?.username?.charAt(0).toUpperCase() || <PersonIcon />)}
                 </Avatar>
               </label>
             </Box>
             <Box>
-              <Typography
-                variant="h2"
-                fontWeight="900"
-                sx={{
-                  color: '#1a1a1a', mb: { xs: 0.5, md: 1 },
-                  fontSize: { xs: '1.8rem', sm: '1.75rem', md: '4rem' },
-                  letterSpacing: '-1px',
-                  lineHeight: 1.1
-                }}
-              >
+              <Typography variant="h2" fontWeight="900" sx={{ color: '#1a1a1a', mb: { xs: 0.5, md: 1 }, fontSize: { xs: '1.8rem', sm: '1.75rem', md: '4rem' }, letterSpacing: '-1px', lineHeight: 1.1 }}>
                 Welcome back, {userData?.username || "Admin"}
               </Typography>
               <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '1.05rem', sm: '1rem', md: '1.5rem' } }}>
@@ -540,21 +434,9 @@ const Login = () => {
               </Typography>
             </Box>
           </Box>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gridAutoRows: '1fr', // Ensure all rows have same height
-              gap: { xs: '6px', sm: '12px', md: '20px' },
-              width: '100%',
-            }}
-          >
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '1fr', gap: { xs: '6px', sm: '12px', md: '20px' }, width: '100%' }}>
             {ALL_DASHBOARD_CARDS
-              .filter(card => {
-                if (card.adminOnly && userType !== "admin") return false;
-                return canSee(card.key);
-              })
+              .filter(card => (card.adminOnly ? userType === "admin" : canSee(card.key)))
               .sort((a, b) => getSortOrder(a.key) - getSortOrder(b.key))
               .map(card => {
                 let value = null;
@@ -563,153 +445,37 @@ const Login = () => {
                   if (card.dynamicValue === "todaySales") value = todaySales;
                   if (card.dynamicValue === "todayPendingOrders") value = todayPendingOrders;
                 }
-                return (
-                  <ActionCard
-                    key={card.key}
-                    title={card.title}
-                    subtitle={card.subtitle}
-                    icon={card.icon}
-                    color={card.color}
-                    path={card.path}
-                    value={value}
-                  />
-                );
+                return <ActionCard key={card.key} title={card.title} subtitle={card.subtitle} icon={card.icon} color={card.color} path={card.path} value={value} />;
               })}
           </Box>
-
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            mt: { xs: 4, md: 8 },
-            mb: 2
-          }}>
-            <IconButton
-              onClick={handleLogout}
-              sx={{
-                width: 56,
-                height: 56,
-                bgcolor: 'rgba(211, 47, 47, 0.1)',
-                color: '#d32f2f',
-                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  bgcolor: '#d32f2f',
-                  color: 'white',
-                  transform: 'rotate(180deg) scale(1.1)',
-                  boxShadow: '0 0 25px rgba(211, 47, 47, 0.4)'
-                },
-                boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
-              }}
-            >
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: { xs: 4, md: 8 }, mb: 2 }}>
+            <IconButton onClick={handleLogout} sx={{ width: 56, height: 56, bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#d32f2f', transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)', '&:hover': { bgcolor: '#d32f2f', color: 'white', transform: 'rotate(180deg) scale(1.1)', boxShadow: '0 0 25px rgba(211, 47, 47, 0.4)' }, boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
               <LogoutIcon sx={{ fontSize: 24 }} />
             </IconButton>
-            <Typography
-              variant="caption"
-              sx={{
-                mt: 1.5,
-                fontWeight: 700,
-                color: '#999',
-                letterSpacing: '3px',
-                textTransform: 'uppercase',
-                fontSize: '0.6rem'
-              }}
-            >
-              End Session
-            </Typography>
+            <Typography variant="caption" sx={{ mt: 1.5, fontWeight: 700, color: '#999', letterSpacing: '3px', textTransform: 'uppercase', fontSize: '0.6rem' }}>End Session</Typography>
           </Box>
         </Container>
       ) : (
-        <Paper
-          elevation={24}
-          sx={{
-            p: { xs: 2.5, md: 3 }, width: '100%', maxWidth: 450, borderRadius: '32px',
-            background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
-          }}
-        >
+        <Paper elevation={24} sx={{ p: { xs: 2.5, md: 3 }, width: '100%', maxWidth: 450, borderRadius: '32px', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
           <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <Typography variant="h4" fontWeight="900" sx={{ color: '#1a1a1a', letterSpacing: '-1px' }}>
-              Welcome back.
-            </Typography>
-            <Typography variant="body1" sx={{ color: '#666' }}>
-              Enter your password to access the system.
-            </Typography>
+            <Typography variant="h4" fontWeight="900" sx={{ color: '#1a1a1a', letterSpacing: '-1px' }}>Welcome back.</Typography>
+            <Typography variant="body1" sx={{ color: '#666' }}>Enter your password to access the system.</Typography>
           </Box>
-
           <Box component="form" onSubmit={handleLogin}>
             <FormControl fullWidth sx={{ mb: 3 }}>
               <Typography variant="body2" fontWeight="600" sx={{ mb: 1, ml: 1 }}>Password</Typography>
-              <OutlinedInput
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                sx={{ borderRadius: '16px', bgcolor: 'white' }}
-                startAdornment={<InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>}
-                endAdornment={
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                }
-              />
+              <OutlinedInput type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required sx={{ borderRadius: '16px', bgcolor: 'white' }} startAdornment={<InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>} endAdornment={<InputAdornment position="end"><IconButton onClick={() => setShowPassword(!showPassword)} edge="end">{showPassword ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment>} />
             </FormControl>
-
-            <FormControlLabel
-              control={<Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)} />}
-              label="Keep me signed in"
-              sx={{ mb: 4, ml: 0.5 }}
-            />
-
+            <FormControlLabel control={<Checkbox checked={checked} onChange={(e) => setChecked(e.target.checked)} />} label="Keep me signed in" sx={{ mb: 4, ml: 0.5 }} />
             {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>{error}</Alert>}
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              disabled={isLoading}
-              sx={{
-                py: 2, borderRadius: '16px', fontSize: '1.1rem', fontWeight: 700,
-                textTransform: 'none', boxShadow: '0 10px 20px -10px #1976d2'
-              }}
-            >
-              {isLoading ? <CircularProgress size={24} color="inherit" /> : "Sign In"}
-            </Button>
+            <Button type="submit" fullWidth variant="contained" disabled={isLoading} sx={{ py: 2, borderRadius: '16px', fontSize: '1.1rem', fontWeight: 700, textTransform: 'none', boxShadow: '0 10px 20px -10px #1976d2' }}>{isLoading ? <CircularProgress size(24) color="inherit" /> : "Sign In"}</Button>
           </Box>
         </Paper>
       )}
-
-      {/* Cropper Dialog */}
       <Dialog open={isCropOpen} onClose={() => setIsCropOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 800 }}>Adjust Profile Picture</DialogTitle>
-        <DialogContent dividers>
-          {tempImage && (
-            <Box sx={{ width: '100%', height: 400, bgcolor: '#000' }}>
-              <Cropper
-                src={tempImage}
-                style={{ height: 400, width: "100%" }}
-                initialAspectRatio={1}
-                aspectRatio={1}
-                guides={true}
-                ref={cropperRef}
-                viewMode={1}
-                dragMode="move"
-                autoCropArea={1}
-                background={false}
-                responsive={true}
-                checkOrientation={true}
-              />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setIsCropOpen(false)} sx={{ fontWeight: 600 }}>Cancel</Button>
-          <Button onClick={handleCrop} variant="contained" color="primary" sx={{ borderRadius: '12px', px: 4, fontWeight: 700 }}>
-            Save Picture
-          </Button>
-        </DialogActions>
+        <DialogContent dividers>{tempImage && <Box sx={{ width: '100%', height: 400, bgcolor: '#000' }}><Cropper src={tempImage} style={{ height: 400, width: "100%" }} initialAspectRatio={1} aspectRatio={1} guides={true} ref={cropperRef} viewMode={1} dragMode="move" autoCropArea={1} background={false} responsive={true} checkOrientation={true} /></Box>}</DialogContent>
+        <DialogActions sx={{ p: 2 }}><Button onClick={() => setIsCropOpen(false)} sx={{ fontWeight: 600 }}>Cancel</Button><Button onClick={handleCrop} variant="contained" color="primary" sx={{ borderRadius: '12px', px: 4, fontWeight: 700 }}>Save Picture</Button></DialogActions>
       </Dialog>
     </Box>
   );

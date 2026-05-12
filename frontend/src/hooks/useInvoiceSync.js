@@ -22,7 +22,16 @@ export const useInvoiceSync = (invoice, setInvoice, token) => {
       );
 
       const successfulIndexes = results
-        .map((res, idx) => (res.status === "fulfilled" ? idx : null))
+        .map((res, idx) => {
+          if (res.status === "fulfilled") {
+            // Treat 200, 201, and 204 (duplicate) as success
+            const status = res.value.status;
+            if (status === 200 || status === 201 || status === 204) {
+              return idx;
+            }
+          }
+          return null;
+        })
         .filter((idx) => idx !== null);
 
       if (successfulIndexes.length > 0) {

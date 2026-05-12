@@ -672,6 +672,21 @@ const orderControllers = {
       res.status(500).json({ error: error.message || "Internal server error" });
     }
   },
+
+  getAllSchemes: async (req, res) => {
+    try {
+      const pool = await getPool();
+      const result = await pool.request().query(`
+        SELECT s.*, p.code 
+        FROM SchQTYSlabs s
+        JOIN Products p ON s.PRID = p.ID
+      `);
+      res.json(result.recordset);
+    } catch (error) {
+      console.error("Error fetching all schemes:", error);
+      res.status(500).json({ error: "Failed to fetch schemes" });
+    }
+  },
 };
 
 module.exports = orderControllers;

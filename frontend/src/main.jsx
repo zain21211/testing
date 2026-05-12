@@ -23,15 +23,19 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+import { SyncProvider } from './SyncProvider.jsx';
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')).render(
   <ErrorBoundary style={{ width: "100%", height: "10rem" }}>
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AppLayout />
-        </BrowserRouter>
+        <SyncProvider>
+          <BrowserRouter>
+            <AppLayout />
+          </BrowserRouter>
+        </SyncProvider>
       </QueryClientProvider>
     </Provider>
   </ErrorBoundary>

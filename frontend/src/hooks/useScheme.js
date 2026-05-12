@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { fetchScheme } from "../utils/api";
 import { useFetch } from "./useFetch";
+import { offlineService } from "../services/offlineService";
 
 export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) {
     const [schPc, setSchPc] = useState(0);       // calculated free pieces
@@ -15,18 +16,32 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
 
     // fetch scheme whenever product changes (NOT when quantity changes)
     // Note: We still call this hook even if isScheme is false to maintain hook order
-    const { data, isLoading, error } = useFetch(
+    const { data: serverData, isLoading, error } = useFetch(
         "scheme",
         fetchScheme,
         [
             selectedProduct?.code,
-            isScheme, // Don't pass orderQuantity to API - only fetch based on product
+            isScheme,
             new Date().toISOString().split("T")[0],
         ],
         {
-            enabled: !!selectedProduct?.code && isScheme, // Only fetch if scheme is enabled
+            enabled: !!selectedProduct?.code && isScheme,
         }
     );
+
+    const [localData, setLocalData] = useState(null);
+
+    useEffect(() => {
+        const loadLocal = async () => {
+            if (selectedProduct?.code && isScheme) {
+                const cached = await offlineService.getLocalScheme(selectedProduct.code);
+                setLocalData(cached);
+            }
+        };
+        loadLocal();
+    }, [selectedProduct?.code, isScheme]);
+
+    const data = serverData || localData;
 
     // When product changes: update price and reset scheme
     useEffect(() => {

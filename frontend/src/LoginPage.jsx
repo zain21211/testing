@@ -39,6 +39,24 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ImageIcon from '@mui/icons-material/Image';
 import BookIcon from '@mui/icons-material/Book';
 
+const ALL_DASHBOARD_CARDS = [
+  { key: "packing", title: "Packing", subtitle: "Pending", icon: InventoryIcon, color: "#ff3d07", path: "/pending" },
+  { key: "load", title: "Load", subtitle: "Shipping", icon: LocalShippingIcon, color: "#00a611", path: "/load" },
+  { key: "spo", title: "SPO", subtitle: "Working", icon: AssessmentIcon, color: "#FFC107", path: "/turnoverreport" },
+  { key: "paymentvoucher", title: "Payment", subtitle: "Voucher", icon: AccountBalanceWalletIcon, color: "#795548", path: "/paymentvoucher" },
+  { key: "saleshistory", title: "History", subtitle: "Sales", icon: HistoryIcon, color: "#009688", path: "/saleshistory" },
+  { key: "accounts", title: "Accounts", subtitle: "COA", icon: PeopleAltIcon, color: "#610051", path: "/coa" },
+  { key: "recovery", title: "Recovery", subtitle: "Dues", icon: ReceiptLongIcon, color: "#2e7d32", path: "/recovery", dynamicValue: "todayRecovery" },
+  { key: "sales", title: "Sales", subtitle: "Daily", icon: TrendingUpIcon, color: "#009688", path: "/sales", dynamicValue: "todaySales" },
+  { key: "neworder", title: "New Order", subtitle: "Invoice", icon: AddShoppingCartIcon, color: "#1976d2", path: "/order", dynamicValue: "todayPendingOrders" },
+  { key: "products", title: "Products", subtitle: "Stock", icon: ShoppingBagIcon, color: "#ff00ea", path: "/productslist" },
+  { key: "routes", title: "Routes", subtitle: "Mapping", icon: RouteIcon, color: "#3f51b5", path: "/list" },
+  { key: "delivery", title: "Delivery", subtitle: "Tracking", icon: DeliveryDiningIcon, color: "#a41260", path: "/delivery" },
+  { key: "imageviewer", title: "Images", subtitle: "Viewer", icon: ImageIcon, color: "#0288d1", path: "/image-viewer" },
+  { key: "ledger", title: "Ledger", subtitle: "Statement", icon: BookIcon, color: "#7b1fa2", path: "/ledger" },
+  { key: "visibility", title: "Visibility", subtitle: "Manager", icon: AdminPanelSettingsIcon, color: "#6c63ff", path: "/admin/visibility", adminOnly: true },
+];
+
 // Fallback defaults (used if API fetch fails)
 const FALLBACK_VISIBILITY = {
   packing: ["admin", "pack", "operator"],
@@ -172,15 +190,37 @@ const Login = () => {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(true);
   const [isCustomer, setIsCustomer] = useState(false);
-  // ── Visibility config (fetched from server) ─────────────────────────────
-  const [visibilityConfig, setVisibilityConfig] = useState(null); // null = not yet fetched
+  // ── Visibility config (fetched from server or local cache) ─────────────────────────────
+  const [visibilityConfig, setVisibilityConfig] = useState(() => {
+    try {
+      const cached = localStorage.getItem(`visibilityConfig_${userData?.username}`);
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  }); // null = not yet fetched nor cached
 
-  // --- Today's Recovery Total ---
   const [todayRecovery, setTodayRecovery] = useState(null);
   const [todaySales, setTodaySales] = useState(null);
   const [todayPendingOrders, setTodayPendingOrders] = useState(null);
 
-  const isAdmin = userData?.userType?.toLowerCase().includes('admin');
+  const userType = userData?.userType?.toLowerCase() || "";
+  const isAdmin = userType.includes('admin');
+  const isBilty = userType.includes("bilty");
+
+  useEffect(() => {
+    // Load from cache immediately when user changes (e.g. on login)
+    if (userData?.username) {
+      try {
+        const cached = localStorage.getItem(`visibilityConfig_${userData.username}`);
+        if (cached) {
+          setVisibilityConfig(JSON.parse(cached));
+        }
+      } catch (e) {
+        console.error("Cache load error:", e);
+      }
+    }
+  }, [userData?.username]);
 
   useEffect(() => {
     // Fetch visibility config whenever user logs in
@@ -189,15 +229,16 @@ const Login = () => {
       .then(res => {
         if (Array.isArray(res.data)) {
           const map = {};
-          res.data.forEach(({ usertype, form_key, is_visible }) => {
-            map[`${usertype}|${form_key}`] = !!is_visible;
+          res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
+            map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
           });
           setVisibilityConfig(map);
+          // Cache locally for offline use and zero flickering
+          localStorage.setItem(`visibilityConfig_${userData?.username}`, JSON.stringify(map));
         }
       })
       .catch(() => {
-        // Server unavailable — fall back to hardcoded defaults silently
-        setVisibilityConfig(null);
+        // Server unavailable — fallback is already set by initial state from localStorage
       });
 
     // Fetch today's recovery and sales if admin
@@ -261,12 +302,25 @@ const Login = () => {
   const canSee = (formKey) => {
     // Extract base type: e.g. "sm-kr" -> "sm", "operator-1" -> "operator"
     const baseType = userType.split('-')[0];
+    if (userType === "admin" && formKey === "visibility") return true;
+
     if (visibilityConfig) {
-      // Use server config
-      return visibilityConfig[`${baseType}|${formKey}`] ?? false;
+      const config = visibilityConfig[`${baseType}|${formKey}`];
+      if (config && typeof config === 'object') return config.isVisible;
+      if (config === true || config === false) return config; // Backward compatibility check
     }
-    // Fallback to hardcoded defaults
+
+    // Fallback logic
     return FALLBACK_VISIBILITY[formKey]?.includes(baseType) ?? false;
+  };
+
+  const getSortOrder = (formKey) => {
+    const baseType = userType.split('-')[0];
+    if (visibilityConfig) {
+      const config = visibilityConfig[`${baseType}|${formKey}`];
+      return (config && typeof config === 'object') ? config.sortOrder : 999;
+    }
+    return 999;
   };
 
 
@@ -411,8 +465,6 @@ const Login = () => {
     }, "image/jpeg", 0.8);
   };
 
-  const userType = userData?.userType?.toLowerCase() || "";
-  const isBilty = userType.includes("bilty");
 
   if (isLoggedIn && (isCustomer || userType.includes("spo"))) {
     return (
@@ -498,99 +550,31 @@ const Login = () => {
               width: '100%',
             }}
           >
-            {canSee("packing") && (
-              <ActionCard
-                title="Packing" subtitle="Pending"
-                icon={InventoryIcon} color="#ff3d07" path="/pending"
-              />
-            )}
-            {canSee("load") && (
-              <ActionCard
-                title="Load" subtitle="Shipping"
-                icon={LocalShippingIcon} color="#00a611" path="/load"
-              />
-            )}
-            {canSee("spo") && (
-              <ActionCard
-                title="SPO" subtitle="Working"
-                icon={AssessmentIcon} color="#FFC107" path="/turnoverreport"
-              />
-            )}
-            {canSee("paymentvoucher") && (
-              <ActionCard
-                title="Payment" subtitle="Voucher"
-                icon={AccountBalanceWalletIcon} color="#795548" path="/paymentvoucher"
-              />
-            )}
-            {canSee("saleshistory") && (
-              <ActionCard
-                title="History" subtitle="Sales"
-                icon={HistoryIcon} color="#009688" path="/saleshistory"
-              />
-            )}
-            {canSee("accounts") && (
-              <ActionCard
-                title="Accounts" subtitle="COA"
-                icon={PeopleAltIcon} color="#610051" path="/coa"
-              />
-            )}
-            {canSee("recovery") && (
-              <ActionCard
-                title="Recovery" subtitle="Dues"
-                icon={ReceiptLongIcon} color="#2e7d32" path="/recovery"
-                value={isAdmin ? (todayRecovery ?? 0) : null}
-              />
-            )}
-            {canSee("sales") && (
-              <ActionCard
-                title="Sales" subtitle="Daily"
-                icon={TrendingUpIcon} color="#009688" path="/sales"
-                value={isAdmin ? (todaySales ?? 0) : null}
-              />
-            )}
-            {canSee("neworder") && (
-              <ActionCard
-                title="New Order" subtitle="Invoice"
-                icon={AddShoppingCartIcon} color="#1976d2" path="/order"
-                value={isAdmin ? (todayPendingOrders ?? 0) : null}
-              />
-            )}
-            {canSee("products") && (
-              <ActionCard
-                title="Products" subtitle="Stock"
-                icon={ShoppingBagIcon} color="#ff00ea" path="/productslist"
-              />
-            )}
-            {canSee("routes") && (
-              <ActionCard
-                title="Routes" subtitle="Mapping"
-                icon={RouteIcon} color="#3f51b5" path="/list"
-              />
-            )}
-            {canSee("delivery") && (
-              <ActionCard
-                title="Delivery" subtitle="Tracking"
-                icon={DeliveryDiningIcon} color="#a41260" path="/delivery"
-              />
-            )}
-            {canSee("imageviewer") && (
-              <ActionCard
-                title="Images" subtitle="Viewer"
-                icon={ImageIcon} color="#0288d1" path="/image-viewer"
-              />
-            )}
-            {canSee("ledger") && (
-              <ActionCard
-                title="Ledger" subtitle="Statement"
-                icon={BookIcon} color="#7b1fa2" path="/ledger"
-              />
-            )}
-            {userType === "admin" && (
-              <ActionCard
-                title="Visibility" subtitle="Manager"
-                icon={AdminPanelSettingsIcon} color="#6c63ff" path="/admin/visibility"
-              />
-            )}
+            {ALL_DASHBOARD_CARDS
+              .filter(card => {
+                if (card.adminOnly && userType !== "admin") return false;
+                return canSee(card.key);
+              })
+              .sort((a, b) => getSortOrder(a.key) - getSortOrder(b.key))
+              .map(card => {
+                let value = null;
+                if (isAdmin) {
+                  if (card.dynamicValue === "todayRecovery") value = todayRecovery;
+                  if (card.dynamicValue === "todaySales") value = todaySales;
+                  if (card.dynamicValue === "todayPendingOrders") value = todayPendingOrders;
+                }
+                return (
+                  <ActionCard
+                    key={card.key}
+                    title={card.title}
+                    subtitle={card.subtitle}
+                    icon={card.icon}
+                    color={card.color}
+                    path={card.path}
+                    value={value}
+                  />
+                );
+              })}
           </Box>
 
           <Box sx={{

@@ -93,16 +93,30 @@ const CustomerDashboard = () => {
     }, [allCustomers, filters]);
 
     return (
-        <Box sx={{ padding: 2 }}>
-            <TransporterFilter 
-                onFilterChange={handleFilterChange} 
-                routes={routes} 
-                resetDocTrigger={resetDocTrigger}
-            />
-            {loading && <CircularProgress sx={{ marginTop: 2 }} />}
-            {error && <Alert severity="error" sx={{ marginTop: 2 }}>{error}</Alert>}
-            {!loading && !error && (
-                <>
+        <Box sx={{ p: 0 }}>
+            <Box sx={{
+                position: 'sticky',
+                top: 56, // Adjusting for fixed AppBar height
+                zIndex: 100,
+                bgcolor: 'white',
+                p: 2,
+                pb: 1,
+                mt: -1, // Pull it up slightly to align with the toolbar offset
+                borderBottom: '1px solid #eee',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+                <TransporterFilter 
+                    onFilterChange={handleFilterChange} 
+                    onReset={() => fetchList({}, 1, 5000)}
+                    routes={routes} 
+                    resetDocTrigger={resetDocTrigger}
+                />
+            </Box>
+            
+            <Box sx={{ p: 2 }}>
+                {loading && <CircularProgress sx={{ marginTop: 2 }} />}
+                {error && <Alert severity="error" sx={{ marginTop: 2 }}>{error}</Alert>}
+                {!loading && !error && (
                     <CustomerList 
                         customers={filteredAndSortedCustomers} 
                         fetchList={() => fetchList({}, 1, 5000)} 
@@ -112,8 +126,8 @@ const CustomerDashboard = () => {
                         user={user} 
                         onSuccess={handleSuccess}
                     />
-                </>
-            )}
+                )}
+            </Box>
         </Box>
     );
 };

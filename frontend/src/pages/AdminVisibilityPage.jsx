@@ -9,11 +9,13 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 const url = import.meta.env.VITE_API_URL;
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const FORM_KEYS = [
+const INITIAL_FORM_KEYS = [
   { key: "packing",        label: "Packing",        emoji: "📦" },
   { key: "load",           label: "Load",            emoji: "🚚" },
   { key: "spo",            label: "SPO",             emoji: "📊" },
@@ -59,11 +61,12 @@ const AdminVisibilityPage = () => {
   const token = localStorage.getItem("authToken");
 
   // ── State ────────────────────────────────────────────────────────────────
-  const [visibility, setVisibility] = useState({}); // { "admin|packing": true, ... }
+  const [visibility, setVisibility] = useState({}); 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [saving, setSaving] = useState({}); // { "admin|packing": true } while PUT in-flight
+  const [saving, setSaving] = useState({}); 
   const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
+  const [formKeys, setFormKeys] = useState(INITIAL_FORM_KEYS);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchVisibility = useCallback(async () => {
@@ -72,10 +75,18 @@ const AdminVisibilityPage = () => {
     try {
       const res = await axios.get(`${url}/form-visibility`);
       const map = {};
-      res.data.forEach(({ usertype, form_key, is_visible }) => {
-        map[`${usertype}|${form_key}`] = !!is_visible;
+      const orderMap = {}; // key -> sortOrder
+      res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
+        map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
+        orderMap[form_key] = sort_order;
       });
       setVisibility(map);
+
+      // Re-sort the local formKeys based on the fetched sort_order (using the first usertype's order)
+      setFormKeys(prev => {
+        const sorted = [...prev].sort((a, b) => (orderMap[a.key] ?? 999) - (orderMap[b.key] ?? 999));
+        return sorted;
+      });
     } catch (err) {
       setFetchError("Failed to load visibility settings. Is the backend running?");
     } finally {
@@ -88,36 +99,78 @@ const AdminVisibilityPage = () => {
   // ── Toggle ───────────────────────────────────────────────────────────────
   const handleToggle = async (usertype, form_key, newValue) => {
     const key = `${usertype}|${form_key}`;
+    const currentOrder = visibility[key]?.sortOrder ?? 0;
+    
     setSaving((p) => ({ ...p, [key]: true }));
-    // Optimistic update
-    setVisibility((p) => ({ ...p, [key]: newValue }));
+    setVisibility((p) => ({ ...p, [key]: { ...p[key], isVisible: newValue } }));
+
     try {
       await axios.put(
         `${url}/form-visibility`,
-        { usertype, form_key, is_visible: newValue },
+        { usertype, form_key, is_visible: newValue, sort_order: currentOrder },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSnack({ open: true, msg: `✅ ${usertype} → ${form_key} set to ${newValue ? "visible" : "hidden"}`, severity: "success" });
     } catch (err) {
-      // Revert on failure
-      setVisibility((p) => ({ ...p, [key]: !newValue }));
+      setVisibility((p) => ({ ...p, [key]: { ...p[key], isVisible: !newValue } }));
       setSnack({ open: true, msg: `❌ Failed to update: ${err.response?.data?.message || err.message}`, severity: "error" });
     } finally {
       setSaving((p) => ({ ...p, [key]: false }));
     }
   };
 
+  const moveRow = async (index, direction) => {
+    const newKeys = [...formKeys];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= newKeys.length) return;
+
+    // Swap elements in local state
+    [newKeys[index], newKeys[targetIndex]] = [newKeys[targetIndex], newKeys[index]];
+    setFormKeys(newKeys);
+
+    // Save ALL orders for ALL usertypes to backend in ONE BULK request
+    setLoading(true);
+    try {
+      const updates = [];
+      for (let i = 0; i < newKeys.length; i++) {
+        const fkey = newKeys[i].key;
+        for (const ut of USER_TYPES) {
+          const vis = visibility[`${ut}|${fkey}`]?.isVisible ?? false;
+          updates.push({ 
+            usertype: ut, 
+            form_key: fkey, 
+            is_visible: vis, 
+            sort_order: i 
+          });
+        }
+      }
+      
+      await axios.put(
+        `${url}/form-visibility/bulk`,
+        { updates },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setSnack({ open: true, msg: "✅ Dashboard order updated successfully!", severity: "success" });
+      fetchVisibility(); // Refresh to ensure sync
+    } catch (err) {
+      setSnack({ open: true, msg: `❌ Failed to reorder: ${err.message}`, severity: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Helpers ──────────────────────────────────────────────────────────────
   const isVisible = (usertype, form_key) => {
     const key = `${usertype}|${form_key}`;
-    return visibility[key] ?? false;
+    return visibility[key]?.isVisible ?? false;
   };
 
   const isSaving = (usertype, form_key) => saving[`${usertype}|${form_key}`] ?? false;
 
   // How many forms are visible for a user type
   const countVisible = (usertype) =>
-    FORM_KEYS.filter((f) => isVisible(usertype, f.key)).length;
+    formKeys.filter((f) => isVisible(usertype, f.key)).length;
 
   // ── Render ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -232,17 +285,28 @@ const AdminVisibilityPage = () => {
                       {ut.toUpperCase()}
                     </span>
                     <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.58rem" }}>
-                      {countVisible(ut)}/{FORM_KEYS.length}
+                      {countVisible(ut)}/{formKeys.length}
                     </span>
                   </div>
                 </th>
               ))}
+              <th style={{
+                position: "sticky", top: 0, zIndex: 3,
+                background: "#1a1630",
+                padding: "10px 4px",
+                borderBottom: "1px solid rgba(255,255,255,0.12)",
+                textAlign: "center", minWidth: 80,
+              }}>
+                <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 700, fontSize: "0.65rem", letterSpacing: 1, textTransform: "uppercase" }}>
+                  Order
+                </span>
+              </th>
             </tr>
           </thead>
 
           {/* tbody */}
           <tbody>
-            {FORM_KEYS.map((form, idx) => {
+            {formKeys.map((form, idx) => {
               const rowBg = idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.025)";
               const stickyBg = idx % 2 === 0 ? "#1c1836" : "#1e1a3a";
               return (
@@ -259,7 +323,7 @@ const AdminVisibilityPage = () => {
                     zIndex: 2,
                     background: stickyBg,
                     padding: "10px 8px",
-                    borderBottom: idx < FORM_KEYS.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                    borderBottom: idx < formKeys.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
                     borderRight: "1px solid rgba(255,255,255,0.1)",
                     whiteSpace: "nowrap",
                   }}>
@@ -278,7 +342,7 @@ const AdminVisibilityPage = () => {
                     return (
                       <td key={ut} style={{
                         textAlign: "center", padding: "6px 4px",
-                        borderBottom: idx < FORM_KEYS.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                        borderBottom: idx < formKeys.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
                         borderLeft: "1px solid rgba(255,255,255,0.06)",
                       }}>
                         {saving ? (
@@ -299,6 +363,31 @@ const AdminVisibilityPage = () => {
                       </td>
                     );
                   })}
+                  {/* Order controls cell */}
+                  <td style={{
+                    textAlign: "center", padding: "4px",
+                    borderBottom: idx < formKeys.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                    borderLeft: "1px solid rgba(255,255,255,0.12)",
+                  }}>
+                    <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => moveRow(idx, -1)}
+                        disabled={idx === 0}
+                        sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#6c63ff" } }}
+                      >
+                        <ArrowUpwardIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => moveRow(idx, 1)}
+                        disabled={idx === formKeys.length - 1}
+                        sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#6c63ff" } }}
+                      >
+                        <ArrowDownwardIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </td>
                 </tr>
               );
             })}

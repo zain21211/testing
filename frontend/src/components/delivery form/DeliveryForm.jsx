@@ -507,7 +507,14 @@ const DeliveryForm = () => {
     const [previewSrc, setPreviewSrc] = useState(null);
 
     // --- LOCAL FILTERING STATE ---
-    const [localFilters, setLocalFilters] = useState({ route: '', acid: '', doc: '', dateSort: 'DESC', docSort: '' });
+    const [localFilters, setLocalFilters] = useState({ 
+        route: '', 
+        acid: '', 
+        doc: '', 
+        dateFilter: 'all',
+        dateSort: 'DESC', 
+        docSort: '' 
+    });
 
     // const captureRef = useRef();
     // --- USER & ROLES ---
@@ -545,19 +552,28 @@ const DeliveryForm = () => {
 
         // Apply filters
         if (localFilters.route) {
-            result = result.filter(c => c.route?.toLowerCase().includes(localFilters.route.toLowerCase()));
+            result = result.filter(c => (c.route || "")?.toLowerCase().includes(localFilters.route.toLowerCase()));
         }
         if (localFilters.acid) {
-            result = result.filter(c => String(c.ACID).includes(localFilters.acid));
+            result = result.filter(c => String(c.ACID || "").includes(localFilters.acid));
         }
         if (localFilters.doc) {
-            result = result.filter(c => String(c.doc).includes(localFilters.doc));
+            result = result.filter(c => String(c.doc || "").includes(localFilters.doc));
+        }
+        
+        // Date Filter: Today
+        if (localFilters.dateFilter === 'today') {
+            const todayStr = new Date().toISOString().split('T')[0];
+            result = result.filter(c => {
+                const itemDate = (c.date || c.LastDate || "");
+                return String(itemDate).startsWith(todayStr);
+            });
         }
 
         // Apply sorting
         result.sort((a, b) => {
             if (localFilters.docSort) {
-                return localFilters.docSort === 'ASC' ? (a.doc || 0) - (b.doc || 0) : (b.doc || 0) - (a.doc || 0);
+                return localFilters.docSort === 'ASC' ? (Number(a.doc) || 0) - (Number(b.doc) || 0) : (Number(b.doc) || 0) - (Number(a.doc) || 0);
             }
 
             const dateA = new Date(a.date || a.LastDate || 0).getTime();
@@ -565,7 +581,7 @@ const DeliveryForm = () => {
 
             if (dateA === dateB) {
                 // Secondary sort by doc if dates tie
-                return localFilters.dateSort === 'ASC' ? (a.doc || 0) - (b.doc || 0) : (b.doc || 0) - (a.doc || 0);
+                return (localFilters.dateSort === 'ASC') ? (Number(a.doc) || 0) - (Number(b.doc) || 0) : (Number(b.doc) || 0) - (Number(a.doc) || 0);
             }
             return localFilters.dateSort === 'ASC' ? dateA - dateB : dateB - dateA;
         });
@@ -855,15 +871,36 @@ const DeliveryForm = () => {
             }, 2000);
     }, [status]);
 
+    const handleFilterChange = useCallback((f) => {
+        fetchList(f);
+    }, [fetchList]);
 
+    const handleLocalFilterChange = useCallback((lf) => {
+        setLocalFilters(prev => ({ ...prev, ...lf }));
+    }, []);
 
 
     // --- RENDER ---
     return (
         <Container sx={{ p: 0 }}>
-            {/* {(userRoles.isAdmin || userRoles.isZain) && ( */}
-            <TransporterFilter onFilterChange={() => { }} onLocalFilterChange={setLocalFilters} disableAutoSearch={true} routes={routes} />
-            {/* )} */}
+            <Box sx={{
+                position: 'sticky',
+                top: 56, // Adjusting for fixed AppBar height
+                zIndex: 100,
+                bgcolor: 'white',
+                pb: 1,
+                mt: -1, // Pull it up slightly to align with the toolbar offset
+                borderBottom: '1px solid #eee',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+                <TransporterFilter 
+                    onFilterChange={() => {}} 
+                    onLocalFilterChange={handleLocalFilterChange} 
+                    onReset={() => fetchList()}
+                    disableAutoSearch={true} 
+                    routes={routes} 
+                />
+            </Box>
 
             {/* <Box sx={{
                 marginBottom: 2,

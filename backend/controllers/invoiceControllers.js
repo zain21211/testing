@@ -188,7 +188,7 @@ const invoiceControllers = {
   },
 
   getDeliveryList: async (req, res) => {
-    const { usertype = "", username = "", acid = "", doc = "" } = req.query;
+    const { usertype = "", username = "", acid = "", doc = "", route = "" } = req.query;
 
     const isOperator = usertype.toLowerCase().includes("operator") || username.toLowerCase().includes("operator");
     const isAdmin = usertype.toLowerCase().includes("admin") || username.toLowerCase().includes("zain") || isOperator;
@@ -222,6 +222,7 @@ INNER JOIN TodayPSDetail p
 WHERE 
     (@acid = '' OR c.id LIKE @acid + '%')
     AND (@doc = '' OR p.doc LIKE '%' + @doc + '%')
+    AND (@route = '' OR c.route LIKE '%' + @route + '%')
     `;
 
     if (!isAdmin) {
@@ -237,6 +238,7 @@ WHERE
       request.input("vehicle", sql.VarChar, transporter);
       request.input("acid", sql.VarChar, acid);
       request.input("doc", sql.VarChar, doc);
+      request.input("route", sql.VarChar, route);
 
       const result = await request.query(query);
       const data = result.recordset;

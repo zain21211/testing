@@ -121,13 +121,13 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
 
   return (
     <Card elevation={4} sx={{ 
-      mb: 3, 
+      mb: 2, 
       borderRadius: '20px',
       background: 'linear-gradient(135deg, #ffffff 0%, #f1f4f8 100%)',
       boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
       border: '1px solid rgba(255,255,255,0.8)'
     }}>
-      <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
+      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
         <Box
           display="grid"
           gap={3}
@@ -137,42 +137,42 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
             sm: "1fr 1fr"
           }}
         >
-          {/* Row 1: Opening Balance and Total Debits */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
+          {/* Row 1: Total Debits and Opening Balance */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
-                Opening Balance
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+                Total Debits
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: '900', color: '#1a237e' }}>
-                {formatCurrency(openingBalance)}
+              <Typography variant="h6" sx={{ fontWeight: '900', color: '#d32f2f' }}>
+                {formatCurrency(totalDebit)}
               </Typography>
             </Box>
             <Box textAlign="right">
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
-                Total Debits
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+                Opening Balance
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: '900', color: '#d32f2f' }}>
-                {formatCurrency(totalDebit)}
+              <Typography variant="h6" sx={{ fontWeight: '900', color: '#1a237e' }}>
+                {formatCurrency(openingBalance)}
               </Typography>
             </Box>
           </Box>
 
-          {/* Row 2: Closing Balance and Total Credits */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
+          {/* Row 2: Total Credits and Closing Balance */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: 'rgba(26, 35, 126, 0.03)', borderRadius: '12px' }}>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
-                Closing Balance
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+                Total Credits
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: '900', color: '#1a237e' }}>
-                {formatCurrency(closingBalance)}
+              <Typography variant="h6" sx={{ fontWeight: '900', color: '#2e7d32' }}>
+                {formatCurrency(totalCredit)}
               </Typography>
             </Box>
             <Box textAlign="right">
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.5, display: 'block' }}>
-                Total Credits
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', mb: 0.2, display: 'block' }}>
+                Closing Balance
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: '900', color: '#2e7d32' }}>
-                {formatCurrency(totalCredit)}
+              <Typography variant="h6" sx={{ fontWeight: '900', color: '#1a237e' }}>
+                {formatCurrency(closingBalance)}
               </Typography>
             </Box>
           </Box>
@@ -180,18 +180,18 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
 
         {/* Optional Net Increase Row */}
         {isIncreased && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: '#fff5f5', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px dashed #feb2b2' }}>
-            <Typography variant="body1" sx={{ fontWeight: '800', color: '#d32f2f', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          <Box sx={{ mt: 1, p: 1.5, bgcolor: '#fff5f5', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px dashed #feb2b2' }}>
+            <Typography variant="body2" sx={{ fontWeight: '800', color: '#d32f2f', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Increased Balance:
             </Typography>
-            <Typography variant="h5" sx={{ color: '#d32f2f', fontWeight: '900' }}>
+            <Typography variant="h6" sx={{ color: '#d32f2f', fontWeight: '900' }}>
               {formatCurrency(balanceDifference)}
             </Typography>
           </Box>
         )}
 
         {/* PDF Download Button - Now at the bottom */}
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
           <Button
             variant="contained"
             disabled={loading}
@@ -201,11 +201,11 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
             sx={{
               background: 'linear-gradient(45deg, #1a237e 30%, #3949ab 90%)',
               color: 'white',
-              py: 2,
+              py: 1.5,
               borderRadius: '16px',
               textTransform: 'none',
               fontWeight: '800',
-              fontSize: '1.1rem',
+              fontSize: '1rem',
               boxShadow: '0 8px 20px rgba(26, 35, 126, 0.3)',
               '&:hover': {
                 background: 'linear-gradient(45deg, #3949ab 30%, #5c6bc0 90%)',
@@ -214,7 +214,7 @@ const LedgerSummary = React.memo(({ summary, onDownload, loading, rows }) => {
               }
             }}
           >
-            Download Full Ledger PDF
+            Download Ledger PDF
           </Button>
         </Box>
       </CardContent>
@@ -378,12 +378,12 @@ const Ledger = () => {
     const isIncreased = balanceDifference > 0;
 
     // Header - Business Info
-    doc.setFontSize(24);
+    doc.setFontSize(25);
     doc.setTextColor(26, 35, 126); // #1a237e
     doc.setFont("helvetica", "bold");
     doc.text("Ahmad International", 105, 20, { align: "center" });
     
-    doc.setFontSize(14);
+    doc.setFontSize(15);
     doc.setTextColor(100);
     doc.setFont("helvetica", "normal");
     doc.text("Ledger Statement", 105, 28, { align: "center" });
@@ -393,7 +393,7 @@ const Ledger = () => {
     doc.setLineWidth(0.5);
     doc.line(14, 35, 196, 35);
 
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(0);
     doc.setFont("helvetica", "bold");
     doc.text(`Customer:`, 14, 45);
@@ -438,7 +438,7 @@ const Ledger = () => {
       headStyles: { 
         fillColor: [26, 35, 126], 
         textColor: 255, 
-        fontSize: 10,
+        fontSize: 11,
         halign: 'center',
         fontStyle: 'bold'
       },
@@ -450,7 +450,7 @@ const Ledger = () => {
         4: { halign: 'right', cellWidth: 22 },
         5: { halign: 'right', cellWidth: 25 },
       },
-      styles: { fontSize: 8.5, cellPadding: 2.5 },
+      styles: { fontSize: 9.5, cellPadding: 2.5 },
       alternateRowStyles: { fillColor: [245, 248, 255] },
       margin: { top: 60, bottom: 20 },
       didDrawPage: (data) => {
@@ -472,7 +472,7 @@ const Ledger = () => {
     doc.setDrawColor(200);
     doc.rect(startX - 5, finalY - 5, summaryWidth + 10, (isIncreased ? 60 : 48), 'S'); // Increased height
 
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(26, 35, 126);
     doc.setFont("helvetica", "bold");
     doc.text("SUMMARY STATEMENT", startX, finalY + 5);
@@ -482,7 +482,7 @@ const Ledger = () => {
     doc.line(startX, finalY + 7, startX + summaryWidth, finalY + 7);
 
     const drawSummaryRow = (label, value, y, color = [0, 0, 0], isBold = false) => {
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
       doc.text(label, startX, y);
@@ -497,14 +497,14 @@ const Ledger = () => {
     drawSummaryRow("Total Credits:", summary.totalCredit, finalY + 31, [46, 125, 50]); // Changed to GREEN
     
     // Closing Balance
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     drawSummaryRow("Closing Balance:", closingBalance, finalY + 41, [26, 35, 126], true);
 
     if (isIncreased) {
         doc.setFillColor(255, 235, 235);
         doc.rect(startX, finalY + 45, summaryWidth, 9, 'F'); // Increased height to 9
         doc.setTextColor(211, 47, 47);
-        doc.setFontSize(10);
+        doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
         doc.text("Increased Balance:", startX + 2, finalY + 51);
         doc.text(formatCurrency(balanceDifference), startX + summaryWidth - 2, finalY + 51, { align: "right" });
@@ -799,12 +799,13 @@ const Ledger = () => {
       const firstRow = invoiceData[0];
       
       // Header - Business Info
-      doc.setFontSize(24);
+      // Header - Business Info
+      doc.setFontSize(25);
       doc.setTextColor(26, 35, 126); 
       doc.setFont("helvetica", "bold");
       doc.text("Ahmad International", 105, 20, { align: "center" });
       
-      doc.setFontSize(14);
+      doc.setFontSize(15);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
       doc.text("Sales Invoice", 105, 28, { align: "center" });
@@ -814,7 +815,7 @@ const Ledger = () => {
       doc.setLineWidth(0.5);
       doc.line(14, 35, 196, 35);
 
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setTextColor(0);
       doc.setFont("helvetica", "bold");
       
@@ -861,35 +862,58 @@ const Ledger = () => {
 
       // Table Data
       let totalGross = 0;
+      let totalDiscpAmount = 0; // Sum of first discount
       
-      const tableColumn = ["S.No", "Code", "Product Name", "Batch", "Qty", "Rate", "Discp", "Amount"];
-      const tableRows = invoiceData.map((item, index) => {
-        const qty = item.Qty || 0;
-        const rate = item.Rate || 0;
-        const amount = item.VIST || 0;
-        totalGross += amount;
+      const tableColumn = ["S.No", "Code", "Product Name", "Qty", "FOC", "Rate", "DiscP2", "Amount"];
+      const tableRows = invoiceData
+        .filter(item => (item.Qty || 0) !== 0) // Skip lines with qty=0
+        .map((item, index) => {
+          const qty = item.Qty || 0;
+          const rate = item.Rate || 0;
+          const discP2 = item.DiscP2 || 0;
+          // Calculate amount with discP2 as a percentage: (rate * qty) - ((rate * qty) * discP2 / 100)
+          const subtotal = rate * qty;
+          const calculatedAmount = subtotal - (subtotal * discP2 / 100);
+          
+          totalGross += calculatedAmount;
+          totalDiscpAmount += (item.Discount || 0);
 
-        return [
-          index + 1,
-          item.ProductCode || "",
-          `${item.company || ""} ${item.category || ""} ${item.Name || ""}`.trim(),
-          item.Batch || "",
-          qty,
-          formatCurrency(rate),
-          formatCurrency(item.Discp || 0),
-          formatCurrency(amount)
-        ];
-      });
+          // Remove duplicate company name
+          let company = String(item.company || "").trim();
+          let category = String(item.category || "").trim();
+          let name = String(item.Name || "").trim();
+          
+          if (category.toLowerCase() === company.toLowerCase()) category = "";
+          if (name.toLowerCase().startsWith(company.toLowerCase())) name = name.substring(company.length).trim();
+
+          const fullName = `${company} ${name} ${category}`.replace(/\s+/g, ' ').trim();
+          // Add double newline to fullName to make definitive space for Urdu image below
+          const productDisplay = item.Urduname ? `${fullName}\n\n ` : fullName;
+
+          return {
+            data: [
+              index + 1,
+              item.ProductCode || "",
+              productDisplay,
+              qty,
+              String(item.SchPc || 0).split(',')[0],
+              formatCurrency(rate),
+              formatCurrency(item.DiscP2 || 0),
+              formatCurrency(calculatedAmount)
+            ],
+            urdu: item.Urduname
+          };
+        });
 
       autoTable(doc, {
         startY: 75,
         head: [tableColumn],
-        body: tableRows,
+        body: tableRows.map(r => r.data),
         theme: 'grid',
         headStyles: { 
           fillColor: [26, 35, 126], 
           textColor: 255, 
-          fontSize: 9,
+          fontSize: 10,
           halign: 'center',
           fontStyle: 'bold'
         },
@@ -897,15 +921,44 @@ const Ledger = () => {
           0: { halign: 'center', cellWidth: 12 },
           1: { halign: 'center', cellWidth: 15 },
           2: { halign: 'left' },
-          3: { halign: 'center', cellWidth: 20 },
-          4: { halign: 'center', cellWidth: 15 },
+          3: { halign: 'center', cellWidth: 15 }, // Qty
+          4: { halign: 'center', cellWidth: 15 }, // FOC
           5: { halign: 'right', cellWidth: 20 },
-          6: { halign: 'right', cellWidth: 15 },
+          6: { halign: 'right', cellWidth: 18 },
           7: { halign: 'right', cellWidth: 25 },
         },
-        styles: { fontSize: 8, cellPadding: 2 },
+        styles: { fontSize: 9, cellPadding: 2, minCellHeight: 16 }, // Increased min height
         alternateRowStyles: { fillColor: [245, 248, 255] },
         margin: { bottom: 20 },
+        didDrawCell: (data) => {
+          if (data.column.index === 2 && data.cell.section === 'body') {
+            const urduText = tableRows[data.row.index]?.urdu;
+            if (urduText) {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              const fontSize = 40;
+              ctx.font = `${fontSize}px 'Jameel Noori Nastaleeq'`;
+              const textWidth = ctx.measureText(urduText).width;
+              
+              canvas.width = textWidth + 20;
+              canvas.height = fontSize + 20;
+              
+              ctx.font = `${fontSize}px 'Jameel Noori Nastaleeq'`;
+              ctx.textBaseline = 'middle';
+              ctx.fillStyle = 'black';
+              ctx.fillText(urduText, 10, canvas.height / 2);
+              
+              const imgData = canvas.toDataURL('image/png');
+              const imgHeight = 7; 
+              const ratio = canvas.width / canvas.height;
+              const imgWidth = imgHeight * ratio;
+              
+              // Draw Urdu at the bottom right of the cell, ensuring it doesn't exceed cell width
+              const finalWidth = Math.min(imgWidth, data.cell.width - 4);
+              doc.addImage(imgData, 'PNG', data.cell.x + data.cell.width - finalWidth - 2, data.cell.y + data.cell.height - imgHeight - 1, finalWidth, imgHeight);
+            }
+          }
+        },
         didDrawPage: (data) => {
           doc.setFontSize(8);
           doc.setTextColor(150);
@@ -930,7 +983,7 @@ const Ledger = () => {
       doc.setDrawColor(200);
       doc.rect(startX - 5, finalY - 5, summaryWidth + 10, 55, 'S');
 
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setTextColor(26, 35, 126);
       doc.setFont("helvetica", "bold");
       doc.text("INVOICE SUMMARY", startX, finalY + 2);
@@ -940,7 +993,7 @@ const Ledger = () => {
       doc.line(startX, finalY + 4, startX + summaryWidth, finalY + 4);
 
       const drawSummaryRow = (label, value, y, color = [0, 0, 0], isBold = false) => {
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
         doc.text(label, startX, y);
@@ -951,12 +1004,11 @@ const Ledger = () => {
       };
 
       drawSummaryRow("Gross Amount:", totalGross, finalY + 11);
-      drawSummaryRow("Total Discount:", totalDisc, finalY + 17, [211, 47, 47]);
-      drawSummaryRow("Extra Discount:", extraDisc, finalY + 23, [211, 47, 47]);
-      drawSummaryRow("Freight:", freight, finalY + 29);
-      drawSummaryRow("Net Amount:", netAmount, finalY + 35, [26, 35, 126], true);
-      drawSummaryRow("Previous Balance:", preBal, finalY + 41);
-      drawSummaryRow("Total Payable:", totalPayable, finalY + 47, [26, 35, 126], true);
+      drawSummaryRow("Extra:", totalDiscpAmount, finalY + 17, [211, 47, 47]);
+      drawSummaryRow("Freight:", Math.abs(freight), finalY + 23);
+      drawSummaryRow("Net Amount:", netAmount, finalY + 29, [26, 35, 126], true);
+      drawSummaryRow("Previous Balance:", preBal, finalY + 35);
+      drawSummaryRow("Total Payable:", totalPayable, finalY + 41, [26, 35, 126], true);
 
       doc.save(fileName);
     } catch (err) {
@@ -968,12 +1020,12 @@ const Ledger = () => {
   }, [ID, customerName, searchParams, masterCustomerList, userData]);
 
   return (
-    <Container maxWidth={false} sx={{ py: 4, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>
-      <Box sx={{ mb: 4, px: 1 }}>
+    <Container maxWidth={false} sx={{ py: 2, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>
+      <Box sx={{ mb: 2, px: 1 }}>
         <Typography variant="h4" sx={{ fontWeight: 900, color: '#1a237e', mb: 0.5, letterSpacing: '-0.5px' }}>
           Customer Ledger
         </Typography>
-        <Typography variant="body1" sx={{ color: '#64748b', fontWeight: 500 }}>
+        <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
           Manage and review customer accounts with real-time transaction tracking.
         </Typography>
       </Box>
@@ -982,7 +1034,7 @@ const Ledger = () => {
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 4, 
+          gap: 2, 
           m: 0,
           width: '100%',
         }}

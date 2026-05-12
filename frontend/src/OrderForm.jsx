@@ -8,7 +8,11 @@ import React, {
 import { useSelector } from "react-redux";
 import { useNavigate, useNavigation, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import localforage from "localforage";
+import { backgroundSyncService } from "./services/backgroundSyncService";
 import LocalPendingItems from "./components/orderform/LocalPendingItems.jsx";
+import OrderEntriesList from "./components/orderform/OrderEntriesList.jsx";
+import { downloadInvoice } from "./services/invoicePdfService";
 // import debounce from "lodash.debounce";
 import { v4 as uuidv4 } from "uuid";
 
@@ -151,6 +155,16 @@ const OrderForm = () => {
 
   // --- Local Storage State ---
   const [invoice, setInvoice] = useLocalStorageState("invoice", []);
+  const [dailyOrders, setDailyOrders] = useIndexedDBState("dailyOrders", []);
+  
+  const myDailyOrders = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    return dailyOrders.filter(o => 
+      o.username === user?.username && 
+      o.orderDate?.split('T')[0] === todayStr
+    );
+  }, [dailyOrders, user]);
+
   const [orderItems, setOrderItems] = useLocalStorageState(
     "orderFormOrderItems",
     [],
@@ -214,6 +228,7 @@ const OrderForm = () => {
           console.log(products)
           const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
             headers,
+            timeout: 5000,
           });
           console.log(prodResponse.data)
           const allProducts = prodResponse.data || products;
@@ -238,7 +253,7 @@ const OrderForm = () => {
         console.error("Error fetching initial data:", errorMessage);
         setError(`Failed to load initial data. ${errorMessage}`);
       } finally {
-        // setInitialDataLoading(false);
+        setInitialDataLoading(false);
       }
     };
 
@@ -262,6 +277,12 @@ const OrderForm = () => {
         return;
       }
 
+      if (!navigator.onLine) {
+        setBalance("Offline");
+        setOverDue("Offline");
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -269,8 +290,8 @@ const OrderForm = () => {
         const params = { acid: selectedCustomer.acid, date: selectedDate };
 
         const [balRes, overDueRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/balance`, { params, headers }),
-          axios.get(`${API_BASE_URL}/balance/overdue`, { params, headers }),
+          axios.get(`${API_BASE_URL}/balance`, { params, headers, timeout: 5000 }),
+          axios.get(`${API_BASE_URL}/balance/overdue`, { params, headers, timeout: 5000 }),
         ]);
 
         setBalance(formatCurrency(Math.round(balRes.data.balance)));
@@ -278,7 +299,7 @@ const OrderForm = () => {
       } catch (err) {
         const errorMessage = err.response?.data?.message || err.message;
         console.error("Error fetching customer financials:", errorMessage);
-        setError(`Failed to load customer financials. ${errorMessage}`);
+        // setError(`Failed to load customer financials. ${errorMessage}`);
         setBalance(null);
         setOverDue(null);
       } finally {
@@ -318,9 +339,9 @@ const OrderForm = () => {
   const getInvoicePreview = async () => {
     try {
       const doc = await handlePostOrder("INVOICE");
-
-      navigate(`/invoice/${doc}`)
-
+      if (doc) {
+        navigate(`/invoice/${doc}`)
+      }
     } catch (error) {
       console.error(error);
     }
@@ -400,6 +421,7 @@ const OrderForm = () => {
 
     setLoading(true);
 
+    const transId = uuidv4();
     const payload = {
       products: orderItems.map((item) => ({
         date: selectedDate,
@@ -424,11 +446,13 @@ const OrderForm = () => {
       })),
       orderDate: selectedDate,
       customerAcid: String(selectedCustomer.acid),
+      customerName: selectedCustomer.name,
+      UrduName: selectedCustomer.UrduName,
       userId: user?.UserID,
       username: user?.username || "unknown",
       userType: user?.UserLevel || "STAFF",
       salesRevenueAcid: 4,
-      transactionID: `TXN-${Date.now()}-${user?.UserID || 'guest'}`,
+      transactionID: transId,
       totalAmount: orderItems.reduce(
         (sum, item) => sum + (Number(item.amount) || 0),
         0
@@ -437,51 +461,83 @@ const OrderForm = () => {
       status: status || "ESTIMATE",
     };
 
-    try {
-      console.log("Posting order with payload:", payload);
-      const response = await axios.post(
-        `${API_BASE_URL}/create-order`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      setProducts(response.data.updatedProducts);
-      setSuccess(response.data.message || "Order created successfully!");
-
-      // Clear form state after successful post
+    const clearFormState = () => {
       setOrderItems([]);
       setSelectedCustomer(null);
       resetProductInputs();
       setBalance(null);
       setOverDue(null);
       dispatch(clearSelection({ key: "orderForm" }));
-      return response.data.doc;
-    } catch (err) {
-      // Errors
-      const errorMessage =
-        err.response?.data?.details || err.response?.data?.message || err.response?.data?.error || "Failed to create order.";
-      dispatch(clearSelection({ key: "orderForm" }));
-      console.error(
-        "Order creation failed:",
-        err.response?.data || err.message || err,
-      );
-      setError(`${errorMessage} Please check details and try again.`);
+    };
 
-      // for sync
-      const confirmed = window.confirm(
-        "Are you sure you want to delete this and let it post automatically?",
-      );
-      if (!confirmed) return;
-      console.log("Saving invoice for retry later.", invoice);
-      setInvoice((prev) => [...(Array.isArray(prev) ? prev : []), payload]);
-      setOrderItems([]);
-      setSelectedCustomer(null);
-      resetProductInputs(); // Save payload for retry if offline
-    } finally {
-      setLoading(false);
+    // --- REAL-TIME POST ATTEMPT (if online) ---
+    if (navigator.onLine) {
+      try {
+        console.log("Attempting real-time post...");
+        const response = await axios.post(
+          `${API_BASE_URL}/create-order`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 5000 // Short timeout for field work
+          },
+        );
+
+        if (response.status === 200 || response.status === 201 || response.status === 204) {
+          const doc = response.data.doc;
+          const newDailyOrder = { ...payload, synced: true, doc };
+
+          // Save to daily history
+          const currentDailyOrders = await localforage.getItem("dailyOrders") || [];
+          await localforage.setItem("dailyOrders", [...currentDailyOrders, newDailyOrder]);
+          setDailyOrders(prev => [...prev, newDailyOrder]);
+
+          setSuccess(`Order posted successfully! Doc: ${doc} ✅`);
+          
+          // --- AUTOMATIC PDF DOWNLOAD ---
+          try {
+            await downloadInvoice({
+              docNum: doc,
+              acid: payload.customerAcid,
+              name: payload.customerName,
+              userData: user
+            });
+          } catch (pdfErr) {
+            console.error("Auto PDF download failed:", pdfErr);
+            // Non-blocking error
+          }
+
+          clearFormState();
+          setLoading(false);
+          return doc;
+        }
+      } catch (err) {
+        console.warn("Real-time post failed or timed out, falling back to offline queue:", err.message);
+      }
     }
+
+    // --- OFFLINE FALLBACK (or failed online attempt) ---
+    const newDailyOrder = { ...payload, synced: false };
+    
+    // 1. Save to local daily history
+    const currentDailyOrders = await localforage.getItem("dailyOrders") || [];
+    await localforage.setItem("dailyOrders", [...currentDailyOrders, newDailyOrder]);
+    setDailyOrders(prev => [...prev, newDailyOrder]);
+    
+    // 2. Add to sync queue
+    const currentInvoices = JSON.parse(localStorage.getItem("invoice") || "[]");
+    const updatedInvoices = [...currentInvoices, payload];
+    localStorage.setItem("invoice", JSON.stringify(updatedInvoices));
+    setInvoice(updatedInvoices);
+    
+    setSuccess("Network unstable. Order saved locally and will sync in background. ✅");
+    clearFormState();
+
+    // Trigger background sync (non-blocking)
+    backgroundSyncService.syncInvoices().catch(console.error);
+
+    setLoading(false);
+    return null;
   };
 
   const handlePendingItems = async (company = "fit") => {
@@ -526,6 +582,39 @@ const OrderForm = () => {
     }
   };
 
+  const handleSyncOneOrder = async (order) => {
+    if (!navigator.onLine) {
+        setError("Still offline. Please check your internet connection.");
+        return;
+    }
+
+    setLoading(true);
+    try {
+        const response = await backgroundSyncService.syncOneInvoice(order.transactionID);
+        setSuccess("Order synchronized successfully! ✅");
+        
+        // --- AUTOMATIC PDF DOWNLOAD AFTER SYNC ---
+        if (response && response.doc) {
+            try {
+                await downloadInvoice({
+                    docNum: response.doc,
+                    acid: order.customerAcid,
+                    name: order.customerName,
+                    userData: user
+                });
+            } catch (pdfErr) {
+                console.error("Post-sync PDF download failed:", pdfErr);
+            }
+        }
+    } catch (e) {
+        console.error("Manual sync failed:", e);
+        const detailMsg = e.response?.data?.details || e.message;
+        setError(`Failed to sync: ${detailMsg}`);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const totalAmount = useMemo(
     () => orderItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
     [orderItems],
@@ -535,7 +624,7 @@ const OrderForm = () => {
     <Container
       tabIndex={0} // makes it focusable
       onKeyDown={HandleShortcuts}
-      maxWidth={300}
+      maxWidth="lg"
     // sx={{ outline: "none" }} // prevent blue border
     >
       {(success || error) && (
@@ -939,17 +1028,17 @@ const OrderForm = () => {
         >
           {postButtons.map((btn) => (
             <Button
+              key={btn.text}
               variant="contained"
               color={btn.color}
               size="large"
               onClick={() => btn.text.toLowerCase() === 'invoice' ? getInvoicePreview(btn.text) : handlePostOrder(btn.text)}
               disabled={
                 loading ||
-                // initialDataLoading ||
                 orderItems.length === 0 ||
                 !selectedCustomer
               }
-              sx={{ minWidth: "200px" }}
+              sx={{ flex: 1, py: 1.5 }}
             >
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
@@ -959,6 +1048,12 @@ const OrderForm = () => {
             </Button>
           ))}
         </Box>
+
+        <OrderEntriesList 
+          orders={myDailyOrders.slice().reverse()} 
+          pendingCount={myDailyOrders.filter(o => !o.synced).length}
+          onSyncOne={handleSyncOneOrder}
+        />
       </Paper>
     </Container>
   );

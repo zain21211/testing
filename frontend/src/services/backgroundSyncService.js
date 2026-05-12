@@ -7,34 +7,90 @@ export const backgroundSyncService = {
   // --- INVOICES (ORDERS) ---
   syncInvoices: async () => {
     if (!navigator.onLine) return;
-    const invoices = JSON.parse(localStorage.getItem("invoice") || "[]");
-    if (invoices.length === 0) return;
+    
+    let dailyOrders = await localforage.getItem("dailyOrders") || [];
+    const pendingOrders = dailyOrders.filter(o => !o.synced);
+    
+    if (pendingOrders.length === 0) return;
 
-    console.log(`📦 Syncing ${invoices.length} pending invoices...`);
-    const remainingInvoices = [];
+    console.log(`📦 [Sync] Starting background sync for ${pendingOrders.length} orders...`);
 
-    for (const invoice of invoices) {
+    for (const order of pendingOrders) {
       try {
-        const res = await axios.post(`${API_URL}/create-order`, invoice);
-        // Treat 200, 201, and 204 (duplicate) as success
-        if (res.status === 200 || res.status === 201 || res.status === 204) {
-          console.log(`✅ Invoice ${invoice.transactionID} synced`);
-        } else {
-          remainingInvoices.push(invoice);
+        console.log(`📡 [Sync] Posting order ${order.transactionID}...`);
+        const res = await axios.post(`${API_URL}/create-order`, order);
+        
+        if (res.status === 200 || res.status === 201) {
+          const serverDoc = res.data?.doc;
+          console.log(`✅ [Sync] Order ${order.transactionID} synced. Doc: ${serverDoc}`);
+          
+          // Refresh list from storage in case it changed
+          dailyOrders = await localforage.getItem("dailyOrders") || [];
+          
+          dailyOrders = dailyOrders.map(o => 
+            String(o.transactionID).trim() === String(order.transactionID).trim()
+            ? { ...o, synced: true, doc: serverDoc || o.doc } 
+            : o
+          );
+          
+          await localforage.setItem("dailyOrders", dailyOrders);
+          window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: 'dailyOrders' } }));
+          
+          // Clean up localStorage
+          const invoices = JSON.parse(localStorage.getItem("invoice") || "[]");
+          localStorage.setItem("invoice", JSON.stringify(invoices.filter(i => String(i.transactionID).trim() !== String(order.transactionID).trim())));
         }
       } catch (e) {
-        console.error(`❌ Invoice sync failed for ${invoice.transactionID}:`, e);
-        remainingInvoices.push(invoice);
+        console.error(`❌ [Sync] Order ${order.transactionID} failed:`, e.message);
       }
     }
-    localStorage.setItem("invoice", JSON.stringify(remainingInvoices));
+  },
+
+  syncOneInvoice: async (transactionID) => {
+    if (!navigator.onLine) throw new Error("Offline");
+    
+    console.log(`📡 [Manual Sync] Attempting sync for ${transactionID}...`);
+    let dailyOrders = await localforage.getItem("dailyOrders") || [];
+    const orderToSync = dailyOrders.find(o => String(o.transactionID).trim() === String(transactionID).trim());
+    
+    if (!orderToSync) {
+        console.warn(`⚠️ [Manual Sync] Order ${transactionID} not found in history.`);
+        return;
+    }
+    if (orderToSync.synced) {
+        console.log(`ℹ️ [Manual Sync] Order ${transactionID} is already marked as synced.`);
+        return;
+    }
+
+    try {
+        const res = await axios.post(`${API_URL}/create-order`, orderToSync);
+        if (res.status === 200 || res.status === 201) {
+            const serverDoc = res.data?.doc;
+            console.log(`✅ [Manual Sync] Success. Doc: ${serverDoc}`);
+            
+            dailyOrders = await localforage.getItem("dailyOrders") || [];
+            dailyOrders = dailyOrders.map(o => 
+                String(o.transactionID).trim() === String(transactionID).trim()
+                ? { ...o, synced: true, doc: serverDoc || o.doc } 
+                : o
+            );
+            
+            await localforage.setItem("dailyOrders", dailyOrders);
+            window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: 'dailyOrders' } }));
+            
+            const invoices = JSON.parse(localStorage.getItem("invoice") || "[]");
+            localStorage.setItem("invoice", JSON.stringify(invoices.filter(i => String(i.transactionID).trim() !== String(transactionID).trim())));
+        }
+    } catch (e) {
+        console.error(`❌ [Manual Sync] Failed for ${transactionID}:`, e.message);
+        throw e;
+    }
   },
 
   // --- RECOVERY ENTRIES ---
   syncRecoveries: async () => {
     if (!navigator.onLine) return;
-    const recoveryStore = localforage.createInstance({ name: "localforage", storeName: "keyvaluepairs" }); // Matches useIndexedDBState
-    const entries = await recoveryStore.getItem("recoveryPaperEntries") || [];
+    const entries = await localforage.getItem("recoveryPaperEntries") || [];
     const pendingEntries = entries.filter(e => !e.status);
     
     if (pendingEntries.length === 0) return;
@@ -92,6 +148,7 @@ export const backgroundSyncService = {
       }
     }
 
-    await recoveryStore.setItem("recoveryPaperEntries", updatedEntries);
+    await localforage.setItem("recoveryPaperEntries", updatedEntries);
+    window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: 'recoveryPaperEntries' } }));
   }
 };

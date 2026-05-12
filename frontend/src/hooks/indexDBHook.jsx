@@ -26,12 +26,28 @@ export function useIndexedDBState(key, initialValue) {
     (value) => {
       setState((prev) => {
         const newValue = typeof value === "function" ? value(prev) : value;
-        localforage.setItem(key, newValue);
+        localforage.setItem(key, newValue).then(() => {
+          // Notify other hooks using the same key
+          window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key } }));
+        });
         return newValue;
       });
     },
     [key]
   );
+
+  // Listen for external changes (e.g. from background services)
+  useEffect(() => {
+    const handleSync = (event) => {
+      if (event.detail?.key === key) {
+        localforage.getItem(key).then((val) => {
+          if (val !== null) setState(val);
+        });
+      }
+    };
+    window.addEventListener('indexeddb-change', handleSync);
+    return () => window.removeEventListener('indexeddb-change', handleSync);
+  }, [key]);
 
   return [state, setValue, isLoaded];
 }

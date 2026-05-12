@@ -33,30 +33,40 @@ const getPool = async () => {
 
 // Helper to calculate today's total sales
 const calculateTodaySales = async (pool) => {
-  const result = await pool
-    .request()
-    .query(`
-      SELECT SUM(amount) AS total 
-      FROM psdetail 
-      WHERE (type = 'sale' OR type = 'SALE') 
-        AND status = 'INVOICE' 
-        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
-    `);
-  return result.recordset[0].total || 0;
+  try {
+    const result = await pool
+      .request()
+      .query(`
+        SELECT ISNULL(SUM(Amount), 0) AS total 
+        FROM PSDetail 
+        WHERE (Type = 'SALE' OR Type = 'sale') 
+          AND Status = 'INVOICE' 
+          AND CAST(Date AS DATE) = CAST(GETDATE() AS DATE)
+      `);
+    return result.recordset[0].total || 0;
+  } catch (err) {
+    console.error("Error calculating today sales:", err);
+    return 0;
+  }
 };
 
 // Helper to calculate today's total pending orders (NULL or ESTIMATE)
 const calculateTodayPendingOrders = async (pool) => {
-  const result = await pool
-    .request()
-    .query(`
-      SELECT SUM(amount) AS total 
-      FROM psdetail 
-      WHERE (type = 'sale' OR type = 'SALE') 
-        AND (status IS NULL OR status <> 'INVOICE')
-        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
-    `);
-  return result.recordset[0].total || 0;
+  try {
+    const result = await pool
+      .request()
+      .query(`
+        SELECT ISNULL(SUM(Amount), 0) AS total 
+        FROM PSDetail 
+        WHERE (Type = 'SALE' OR Type = 'sale') 
+          AND (Status IS NULL OR Status <> 'INVOICE')
+          AND CAST(Date AS DATE) = CAST(GETDATE() AS DATE)
+      `);
+    return result.recordset[0].total || 0;
+  } catch (err) {
+    console.error("Error calculating pending orders:", err);
+    return 0;
+  }
 };
 
 // to get the updated products
@@ -82,13 +92,15 @@ const checkDuplicate = async (transactionid) => {
     const result = await pool.request()
       .input("transactionId", sql.VarChar, transactionid)
       .query(`
-      SELECT 1
+      SELECT Doc
       FROM ledgers
-      where transactionId=@transactionId OR transactionId=@transactionId + '-DR';
+      WHERE transactionId = @transactionId + '-DR';
     `);
 
-    const duplicate = result.recordset.length > 0;
-    return duplicate;
+    if (result.recordset.length > 0) {
+      return { duplicate: true, doc: result.recordset[0].Doc };
+    }
+    return { duplicate: false };
   } catch (err) {
     console.error("Error fetching duplicate:", err);
     throw err;
@@ -124,9 +136,10 @@ const updateStock = async (id, qty, columnName) => {
   }
 };
 
+
 const orderControllers = {
   postOrder: async (req, res) => {
-    const startTime = performance.now();
+    const startTime = Date.now();
     const {
       // nextDoc,
       orderDate,
@@ -158,14 +171,21 @@ const orderControllers = {
       const safeSalesRevenueAcid = salesRevenueAcid || 4;
       const safeTransactionID = transactionID || `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      const duplicate = await checkDuplicate(safeTransactionID);
-      if (duplicate) return res.status(204).json({ message: "Duplicate document number found." });
+      const duplicateInfo = await checkDuplicate(safeTransactionID);
+      if (duplicateInfo.duplicate) {
+        return res.status(200).json({ 
+          message: "Duplicate document number found.", 
+          doc: duplicateInfo.doc,
+          isDuplicate: true
+        });
+      }
 
       transaction = new sql.Transaction(pool);
       await transaction.begin();
 
       const nextDoc = await getNextDocNumber(transaction, "sale");
-      const transactionRequest = transaction.request();
+      const nextDocNum = parseInt(nextDoc);
+      if (isNaN(nextDocNum)) throw new Error(`Invalid Doc Number generated: ${nextDoc}`);
 
       const parsedLines = JSON.parse(JSON.stringify(linesJson || []));
       if (!parsedLines.length) throw new Error("No items found in order.");
@@ -192,23 +212,23 @@ const orderControllers = {
 
           await transaction.request()
             .input("date", sql.DateTime, new Date(orderDate))
-            .input("prid", sql.Int, prid)
-            .input("acid", sql.Int, acid)
-            .input("qty", sql.Int, qty)
-            .input("aQty", sql.Int, qty)
-            .input("bQty", sql.Int, qty)
-            .input("rate", sql.Decimal(18, 2), suggestedPrice)
-            .input("suggestedPrice", sql.Decimal(18, 2), suggestedPrice)
-            .input("vest", sql.Decimal(18, 2), vest)
-            .input("discP1", sql.Decimal(18, 2), discP1)
-            .input("discP2", sql.Decimal(18, 2), discP2)
-            .input("vist", sql.Decimal(18, 2), vist)
-            .input("SchPc", sql.Int, SchPc)
-            .input("sch", sql.Int, sch)
-            .input("isClaim", sql.Bit, isClaim)
-            .input("spo", sql.VarChar(255), spo)
-            .input("profit", sql.Decimal(18, 2), profit)
-            .input("doc", sql.Int, parseInt(nextDoc))
+            .input("prid", sql.Int, parseInt(prid) || 0)
+            .input("acid", sql.Int, parseInt(acid) || 0)
+            .input("qty", sql.Int, parseInt(qty) || 0)
+            .input("aQty", sql.Int, parseInt(qty) || 0)
+            .input("bQty", sql.Int, parseInt(qty) || 0)
+            .input("rate", sql.Decimal(18, 2), parseFloat(rate) || 0)
+            .input("suggestedPrice", sql.Decimal(18, 2), parseFloat(suggestedPrice) || 0)
+            .input("vest", sql.Decimal(18, 2), parseFloat(vest) || 0)
+            .input("discP1", sql.Decimal(18, 2), parseFloat(discP1) || 0)
+            .input("discP2", sql.Decimal(18, 2), parseFloat(discP2) || 0)
+            .input("vist", sql.Decimal(18, 2), parseFloat(vist) || 0)
+            .input("SchPc", sql.Int, parseInt(SchPc) || 0)
+            .input("sch", sql.Int, sch ? 1 : 0)
+            .input("isClaim", sql.Int, isClaim ? 1 : 0)
+            .input("spo", sql.VarChar(255), String(spo || ""))
+            .input("profit", sql.Decimal(18, 2), parseFloat(profit) || 0)
+            .input("doc", sql.Int, nextDocNum)
             .input("username", sql.VarChar(50), safeUsername).query(`
             INSERT INTO PsProduct
             ([Date],[Type],[Doc],[Type2],[Prid],[Acid],[Qty2],[AQty],[Qty],[Rate],
@@ -224,34 +244,33 @@ const orderControllers = {
           `);
         }
       } catch (e) {
-        throw new Error(`Step 1 (PsProduct) failed: ${e.message}`);
+        throw new Error(`Step 1 (PsProduct) failed for Doc ${nextDocNum}: ${e.message}`);
       }
 
       // ✅ 2. Update stock (normal + claim)
-      const updateStockQuery = `
-      UPDATE p
-      SET p.stockqty = ISNULL(p.stockqty,0) - sub.totalQty
-      FROM Products p
-      JOIN (
-        SELECT prid, SUM(ISNULL(AQTY,0) + ISNULL(SchPc,0)) AS totalQty
-        FROM PsProduct WHERE Doc=@nextDoc AND Type='SALE' AND ISNULL(isclaim,0)=0
-        GROUP BY prid
-      ) sub ON p.id = sub.prid;
-
-      UPDATE p
-      SET p.claimStock = ISNULL(p.claimStock,0) - sub.totalQty
-      FROM Products p
-      JOIN (
-        SELECT prid, SUM(ISNULL(AQTY,0) + ISNULL(SchPc,0)) AS totalQty
-        FROM PsProduct WHERE Doc=@nextDoc AND Type='SALE' AND ISNULL(isclaim,0)=1
-        GROUP BY prid
-      ) sub ON p.id = sub.prid;
-    `;
       try {
         const stockReq = transaction.request();
         await stockReq
-          .input("nextDoc", sql.Int, nextDoc)
-          .query(updateStockQuery);
+          .input("nextDoc", sql.Int, nextDocNum)
+          .query(`
+          UPDATE p
+          SET p.stockqty = ISNULL(p.stockqty,0) - sub.totalQty
+          FROM Products p
+          JOIN (
+            SELECT prid, SUM(ISNULL(AQTY,0) + ISNULL(SchPc,0)) AS totalQty
+            FROM PsProduct WHERE Doc=@nextDoc AND Type='SALE' AND ISNULL(isclaim,0)=0
+            GROUP BY prid
+          ) sub ON p.id = sub.prid;
+
+          UPDATE p
+          SET p.claimStock = ISNULL(p.claimStock,0) - sub.totalQty
+          FROM Products p
+          JOIN (
+            SELECT prid, SUM(ISNULL(AQTY,0) + ISNULL(SchPc,0)) AS totalQty
+            FROM PsProduct WHERE Doc=@nextDoc AND Type='SALE' AND ISNULL(isclaim,0)=1
+            GROUP BY prid
+          ) sub ON p.id = sub.prid;
+        `);
       } catch (e) {
         throw new Error(`Step 2 (UpdateStock) failed: ${e.message}`);
       }
@@ -259,7 +278,7 @@ const orderControllers = {
       // ✅ 3. Insert into psproductHistory
       try {
         await transaction.request()
-          .input("doc", sql.Int, nextDoc)
+          .input("doc", sql.Int, nextDocNum)
           .input("username", sql.VarChar(50), safeUsername)
           .input("userType", sql.VarChar(50), safeUserType)
           .input("orderDate", sql.DateTime, new Date(orderDate)).query(`
@@ -270,140 +289,108 @@ const orderControllers = {
         throw new Error(`Step 3 (History) failed: ${e.message}`);
       }
 
-      console.log(nextDoc);
-      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
       const dueDate = new Date();
 
       // ✅ 4. Insert into PSDetail
       try {
+        const custAcid = parseInt(customerAcid);
+        if (isNaN(custAcid)) throw new Error(`Invalid Customer Acid: ${customerAcid}`);
+
         const detailReq = transaction.request();
         await detailReq
-          .input("nextDoc", sql.Int, parseInt(nextDoc))
+          .input("nextDoc", sql.Int, nextDocNum)
           .input("orderDate", sql.DateTime, new Date(orderDate))
-          .input("customerAcid", sql.Int, parseInt(customerAcid))
+          .input("customerAcid", sql.Int, custAcid)
           .input("description", sql.VarChar(255), description)
-          .input("totalAmount", sql.Decimal(18, 2), totalAmount)
+          .input("totalAmount", sql.Decimal(18, 2), parseFloat(totalAmount) || 0)
           .input("status", sql.VarChar(50), status)
           .input("dueDate", sql.DateTime, dueDate)
-          .input("PBALANCE", sql.Int, 0)
+          .input("PBalance", sql.Int, 0)
           .input("FREIGHT", sql.Int, 0)
           .input("username", sql.VarChar(50), safeUsername).query(`
-    INSERT INTO PSDetail
-    (Doc, Date, Type, Acid, Description, Amount, GrossProfit, Status, Shopper, DueDate, PBalance, Freight)
-    VALUES
-    (
-      @nextDoc,
-      @orderDate,
-      'SALE',
-      @customerAcid,
-      @description,
-      @totalAmount,
-      (SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc),
-      @status,
-      'P',
-      @dueDate,
-      @PBALANCE,
-      @FREIGHT
-          )
-  `);
+        INSERT INTO PSDetail
+        (
+          [Doc],
+          [Date],
+          [Type],
+          [Acid],
+          [Description],
+          [Amount],
+          [GrossProfit],
+          [DueDate],
+          [PBalance]
+        )
+        VALUES
+        (
+          @nextDoc,
+          @orderDate,
+          'SALE',
+          @customerAcid,
+          @description,
+          @totalAmount,
+          ISNULL((SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc), 0),
+          @dueDate,
+          @PBalance
+        )
+      `);
       } catch (e) {
         throw new Error(`Step 4 (PSDetail) failed: ${e.message}`);
       }
-      const entryDate = new Date();
-      try {
-        const detailHistReq = transaction.request();
-        await detailHistReq
-          .input("nextDoc", sql.Int, parseInt(nextDoc))
-          .input("orderDate", sql.DateTime, new Date(orderDate))
-          .input("entryDate", sql.DateTime, entryDate)
-          .input("customerAcid", sql.Int, parseInt(customerAcid))
-          .input("description", sql.VarChar(255), description)
-          .input("totalAmount", sql.Decimal(18, 2), totalAmount)
-          .input("status", sql.VarChar(50), status)
-          .input("dueDate", sql.DateTime, dueDate)
-          .input("PBALANCE", sql.Int, 0)
-          .input("FREIGHT", sql.Int, 0)
-          .input("username", sql.VarChar(50), safeUsername).query(`
-    INSERT INTO PSDetailHistory
-      (Doc, Date, Type, Acid, Description, Amount, GrossProfit, DueDate, PBalance, EntryDate, username)
-    VALUES
-      (
-        @nextDoc,
-        @orderDate,
-        'SALE',
-        @customerAcid,
-        @description,
-        @totalAmount,
-        ISNULL((SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc), 0),
-        @dueDate,
-        @PBALANCE,
-        @orderDate,
-        @username
-      )
-  `);
-      } catch (e) {
-        throw new Error(`Step 4b (DetailHistory) failed: ${e.message}`);
-      }
 
       // ✅ 5. Insert into ledgers + ledgersHistory
-      const ledgerReq = transaction.request();
-      ledgerReq
-        .input("customerAcid", sql.Int, parseInt(customerAcid))
-        .input("salesRevenueAcid", sql.Int, parseInt(safeSalesRevenueAcid))
-        .input("orderDate", sql.DateTime, new Date(orderDate))
-        .input("nextDoc", sql.Int, nextDoc)
-        .input("description", sql.VarChar(255), description)
-        .input("username", sql.VarChar(50), safeUsername)
-        .input("userType", sql.VarChar(50), safeUserType)
-        .input("totalAmount", sql.Decimal(18, 2), totalAmount)
-        .input("transactionID", sql.VarChar(255), safeTransactionID);
-
       try {
-        await ledgerReq.query(`
-        INSERT INTO ledgers (Acid,Date,Type,Doc,NarrationS,narration,Debit,Credit,EntryBy,EntryDateTime,transactionId)
-        VALUES
-          (@customerAcid,@orderDate,'sale',@nextDoc,@description,@description,@totalAmount,NULL,@username,@orderDate,@transactionID + '-DR'),
-          (@salesRevenueAcid,@orderDate,'sale',@nextDoc,@description,@description,NULL,@totalAmount,@username,@orderDate,@transactionID + '-CR');
+        const custAcid = parseInt(customerAcid);
+        const ledgerReq = transaction.request();
+        await ledgerReq
+          .input("doc", sql.Int, nextDocNum)
+          .input("date", sql.DateTime, new Date(orderDate))
+          .input("customerAcid", sql.Int, custAcid)
+          .input("salesRevenueAcid", sql.Int, parseInt(safeSalesRevenueAcid))
+          .input("description", sql.VarChar(255), description)
+          .input("totalAmount", sql.Decimal(18, 2), parseFloat(totalAmount) || 0)
+          .input("transactionID", sql.VarChar(100), safeTransactionID)
+          .input("username", sql.VarChar(50), safeUsername).query(`
+        -- 1. Debit Customer
+        INSERT INTO ledgers (Date, Type, Doc, Acid, Debit, Credit, NARRATION, EntryBy, EntryDateTime, transactionId)
+        VALUES (@date, 'SALE', @doc, @customerAcid, @totalAmount, 0, @description, @username, GETDATE(), @transactionID + '-DR');
 
-        INSERT INTO ledgersHistory (Acid,Date,Doc,Type,Narration,Invoice,Debit,Credit,remainingamount,status,
-          UserName,UserLevel,EntryDate,EntryStatus)
-        VALUES
-          (@customerAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,@totalAmount,NULL,@totalAmount,0,
-            @username,@userType,@orderDate,'SAVE'),
-          (@salesRevenueAcid,@orderDate,@nextDoc,'sale',@description,@nextDoc,NULL,@totalAmount,0,0,
-            @username,@userType,@orderDate,'SAVE');
+        -- 2. Credit Sales Revenue
+        INSERT INTO ledgers (Date, Type, Doc, Acid, Debit, Credit, NARRATION, EntryBy, EntryDateTime, transactionId)
+        VALUES (@date, 'SALE', @doc, @salesRevenueAcid, 0, @totalAmount, @description, @username, GETDATE(), @transactionID + '-CR');
+
+        -- 3. LedgersHistory
+        INSERT INTO LedgersHistory (Doc, Date, Acid, Type, UserName, EntryStatus)
+        VALUES (@doc, @date, @customerAcid, 'SALE', @username, 'SAVE');
       `);
       } catch (e) {
         throw new Error(`Step 5 (Ledgers) failed: ${e.message}`);
       }
 
-      //const updatedProducts = await getProducts();
-
-      // ✅ Commit
       await transaction.commit();
+      console.log(`✅ Order ${nextDocNum} committed to database.`);
 
-      // Trigger socket update for live sales total
-      const newSalesTotal = await calculateTodaySales(pool);
-      const io = req.app.get("io");
-      if (io) {
-        io.emit("salesUpdated", { total: newSalesTotal });
-        
-        const newPendingTotal = await calculateTodayPendingOrders(pool);
-        io.emit("pendingOrdersUpdated", { total: newPendingTotal });
-        
-        console.log(`📡 Socket emitted salesUpdated: ${newSalesTotal} and pendingOrdersUpdated: ${newPendingTotal}`);
+      // Update Dashboard Metrics (Socket)
+      try {
+        const io = req.app.get("io");
+        if (io) {
+          const newSalesTotal = await calculateTodaySales(pool);
+          io.emit("salesUpdated", { total: newSalesTotal });
+          
+          const newPendingTotal = await calculateTodayPendingOrders(pool);
+          io.emit("pendingOrdersUpdated", { total: newPendingTotal });
+          console.log("📊 Dashboard metrics updated via socket.");
+        }
+      } catch (socketErr) {
+        console.warn("⚠️ Dashboard update failed, but order was saved:", socketErr.message);
+        logToFile(`⚠️ Socket Update Error: ${socketErr.message}`);
       }
 
-      const duration = ((performance.now() - startTime) / 1000).toFixed(2);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       res.json({
         success: true,
         message: "Order posted successfully",
         duration,
-        invoiceData: [],
-        updatedProducts: [],
-        doc: nextDoc,
+        doc: nextDocNum,
       });
     } catch (error) {
       logToFile(`❌ postOrder Error: ${error.message}`);
@@ -411,18 +398,16 @@ const orderControllers = {
       console.error("❌ postOrder Error detail:", error);
       if (transaction) {
         try {
-          console.log("🔄 Rolling back transaction...");
           await transaction.rollback();
-          logToFile("🔄 Transaction rolled back successfully");
+          logToFile("🔄 Transaction rolled back");
         } catch (rbErr) {
-          console.error("❌ Rollback failed:", rbErr);
           logToFile(`❌ Rollback failed: ${rbErr.message}`);
         }
       }
       res.status(500).json({
         error: "Failed to create order",
         details: error.message,
-        payload: { customerAcid, totalAmount, orderDate }
+        payload: { customerAcid, totalAmount, orderDate, transactionID }
       });
     }
   },

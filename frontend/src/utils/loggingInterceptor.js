@@ -1,7 +1,15 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-const user = JSON.parse(localStorage.getItem("user")) || {};
+let user = {};
+try {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    user = JSON.parse(storedUser);
+  }
+} catch (e) {
+  console.error("Failed to parse user from localStorage:", e);
+}
 class LoggingInterceptor {
   constructor() {
     this.requestQueue = [];

@@ -57,15 +57,17 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(req)
         .then(response => {
-          // Only cache successful HTML responses (not Cloudflare error pages)
-          if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
+          // If network is OK, cache it and return it
+          if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_SHELL).then(cache => cache.put(req, clone));
+            return response;
           }
-          return response;
+          // If network returns an error (4xx/5xx/Cloudflare), fallback to cache
+          return caches.match('/index.html').then(cached => cached || response);
         })
         .catch(() =>
-          // Network failed → serve cached index.html so the SPA loads
+          // Network completely failed (no internet) → serve cached index.html
           caches.match('/index.html').then(cached => {
             if (cached) return cached;
             return new Response(

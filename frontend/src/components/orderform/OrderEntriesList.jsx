@@ -47,8 +47,8 @@ export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne }) =
                                     py: 1.5, 
                                     px: 2,
                                     cursor: isSynced ? 'default' : 'pointer',
-                                    bgcolor: isSynced ? 'white' : '#fffde7', // light yellow for pending
-                                    '&:hover': { bgcolor: isSynced ? '#f9f9f9' : '#fff9c4' },
+                                    bgcolor: isSynced ? '#e8f5e9' : '#fffde7', // light green for synced, yellow for pending
+                                    '&:hover': { bgcolor: isSynced ? '#c8e6c9' : '#fff9c4' },
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
@@ -63,10 +63,10 @@ export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne }) =
                                     )}
                                     <Box>
                                         <Typography sx={{ fontWeight: 'bold', fontSize: '1.3rem', fontFamily: 'Jameel Noori Nastaleeq, serif' }}>
-                                            {order.UrduName || order.customerName}
+                                            {order.UrduName || order.customerName} - {order.customerAcid}
                                         </Typography>
                                         <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>
-                                            {order.customerAcid} | {order.status}
+                                            {order.route}{order.rno ? ` - ${order.rno}` : ''}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -75,9 +75,16 @@ export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne }) =
                                     <Typography sx={{ fontWeight: 'bold', color: '#1976d2', fontSize: '1.1rem' }}>
                                         {formatCurrency(order.totalAmount)}
                                     </Typography>
-                                    <Typography variant="caption" color="textSecondary" sx={{ direction: 'ltr', fontSize: '0.85rem' }}>
-                                        {order.orderDate?.split('T')[0]} {order.doc ? `| Doc: ${order.doc}` : ''}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, direction: 'ltr' }}>
+                                        {order.doc && (
+                                            <Typography sx={{ bgcolor: '#e0e0e0', px: 1, borderRadius: 1, fontSize: '1rem', fontWeight: 'bold', color: 'black' }}>
+                                                {order.doc}
+                                            </Typography>
+                                        )}
+                                        <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>
+                                            {order.orderDate?.split('T')[0]}
+                                        </Typography>
+                                    </Box>
                                 </Box>
                             </ListItem>
                             {index < orders.length - 1 && <Divider />}

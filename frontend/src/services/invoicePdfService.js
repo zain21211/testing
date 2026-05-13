@@ -115,7 +115,15 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
     let totalGross = 0;
     let totalDiscpAmount = 0;
 
-    const tableColumn = ["S.No", "Code", "Product Name", "Qty", "FOC", "Rate", "DiscP2", "Amount"];
+    const hasFOC = invoiceData.some(item => (item.Qty || 0) !== 0 && Number(String(item.SchPc || 0).split(',')[0]) > 0);
+    const hasDiscP2 = invoiceData.some(item => (item.Qty || 0) !== 0 && (item.DiscP2 || 0) > 0);
+
+    const tableColumn = ["S.No", "Code", "Product Name", "Qty"];
+    if (hasFOC) tableColumn.push("FOC");
+    tableColumn.push("Rate");
+    if (hasDiscP2) tableColumn.push("DiscP2");
+    tableColumn.push("Amount");
+
     const tableRows = invoiceData
       .filter(item => (item.Qty || 0) !== 0)
       .map((item, index) => {
@@ -132,23 +140,33 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
         let category = String(item.category || "").trim();
         let name = String(item.Name || "").trim();
 
-        if (category.toLowerCase() === company.toLowerCase()) category = "";
-        if (name.toLowerCase().startsWith(company.toLowerCase())) name = name.substring(company.length).trim();
+        // Handle duplicates like "race,race" in company
+        company = Array.from(new Set(company.split(/[, ]+/))).join(' ');
 
-        const fullName = `${company} ${name} ${category}`.replace(/\s+/g, ' ').trim();
+        // Deduplicate all words in company, name, and category
+        const fullName = `${company} ${name} ${category}`
+            .replace(/[,]/g, ' ')
+            .split(/\s+/)
+            .filter((word, idx, arr) => word && arr.findIndex(w => w.toLowerCase() === word.toLowerCase()) === idx)
+            .join(' ')
+            .trim();
+
         const productDisplay = item.Urduname ? `${fullName}\n\n ` : fullName;
 
-        return {
-          data: [
+        const rowData = [
             index + 1,
             item.ProductCode || "",
             productDisplay,
-            qty,
-            String(item.SchPc || 0).split(',')[0],
-            formatCurrency(rate),
-            formatCurrency(item.DiscP2 || 0),
-            formatCurrency(calculatedAmount)
-          ],
+            qty
+        ];
+        
+        if (hasFOC) rowData.push(String(item.SchPc || 0).split(',')[0]);
+        rowData.push(formatCurrency(rate));
+        if (hasDiscP2) rowData.push(formatCurrency(item.DiscP2 || 0));
+        rowData.push(formatCurrency(calculatedAmount));
+
+        return {
+          data: rowData,
           urdu: item.Urduname
         };
       });
@@ -165,16 +183,19 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
         halign: 'center',
         fontStyle: 'bold'
       },
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 12 },
-        1: { halign: 'center', cellWidth: 15 },
-        2: { halign: 'left' },
-        3: { halign: 'center', cellWidth: 15 },
-        4: { halign: 'center', cellWidth: 15 },
-        5: { halign: 'right', cellWidth: 20 },
-        6: { halign: 'right', cellWidth: 18 },
-        7: { halign: 'right', cellWidth: 25 },
-      },
+      columnStyles: (() => {
+        let colIndex = 0;
+        const styles = {};
+        styles[colIndex++] = { halign: 'center', cellWidth: 12 }; // S.No
+        styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Code
+        styles[colIndex++] = { halign: 'left' };                  // Product Name
+        styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Qty
+        if (hasFOC) styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // FOC
+        styles[colIndex++] = { halign: 'right', cellWidth: 20 };  // Rate
+        if (hasDiscP2) styles[colIndex++] = { halign: 'right', cellWidth: 18 }; // DiscP2
+        styles[colIndex++] = { halign: 'right', cellWidth: 25 };  // Amount
+        return styles;
+      })(),
       styles: { fontSize: 9, cellPadding: 2, minCellHeight: 16 },
       alternateRowStyles: { fillColor: [245, 248, 255] },
       margin: { bottom: 20 },

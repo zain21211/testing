@@ -338,10 +338,9 @@ const OrderForm = () => {
 
   const getInvoicePreview = async () => {
     try {
-      const doc = await handlePostOrder("INVOICE");
-      if (doc) {
-        navigate(`/invoice/${doc}`)
-      }
+      await handlePostOrder("INVOICE");
+      // PDF is auto-opened by downloadInvoice; no page navigation needed.
+      // Focus returns to customer input via clearFormState.
     } catch (error) {
       console.error(error);
     }
@@ -448,6 +447,8 @@ const OrderForm = () => {
       customerAcid: String(selectedCustomer.acid),
       customerName: selectedCustomer.name,
       UrduName: selectedCustomer.UrduName,
+      route: selectedCustomer.route || "",
+      rno: selectedCustomer.rno || "",
       userId: user?.UserID,
       username: user?.username || "unknown",
       userType: user?.UserLevel || "STAFF",
@@ -468,6 +469,8 @@ const OrderForm = () => {
       setBalance(null);
       setOverDue(null);
       dispatch(clearSelection({ key: "orderForm" }));
+      // Return focus to the customer search box for the next order
+      setTimeout(() => customerInputRef.current?.focus(), 100);
     };
 
     // --- REAL-TIME POST ATTEMPT (if online) ---

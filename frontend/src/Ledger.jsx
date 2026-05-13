@@ -334,6 +334,9 @@ const Ledger = () => {
   const [balanceInc, setBalanceInc] = useState(true);
   const storageKey = `accountID-/ledger`;
   const [ID, setID] = useLocalStorageState(storageKey, null);
+  // Track the acid/name of the currently-displayed ledger (never stale)
+  const [currentAcid, setCurrentAcid] = useState(null);
+  const [currentName, setCurrentName] = useState("");
   const dispatch = useDispatch();
   const masterCustomerList = useSelector((state) => state.customerData?.masterCustomerList || []);
   const [searchParams] = useSearchParams();
@@ -368,11 +371,10 @@ const Ledger = () => {
       hour: "2-digit", minute: "2-digit", second: "2-digit" 
     });
     
-    // Get ACID and Name
-    const acid = searchParams.get("acid") || ID || "N/A";
-    const foundCustomer = masterCustomerList.find(c => String(c.acid) === String(acid));
-    const nameToUse = foundCustomer ? foundCustomer.name : (customerName || searchParams.get("name") || "Valued Customer");
-    const fileName = `${acid}_${nameToUse.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+    // Use the acid/name from the most recent fetch (never stale localStorage)
+    const acid = currentAcid || searchParams.get("acid") || ID || "N/A";
+    const nameToUse = currentName || customerName || searchParams.get("name") || "Valued Customer";
+    const fileName = `Ledger_${acid}_${nameToUse.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
 
     // Extract Balances
     const firstRow = rows[0];
@@ -514,8 +516,14 @@ const Ledger = () => {
         doc.text(formatCurrency(balanceDifference), startX + summaryWidth - 2, finalY + 51, { align: "right" });
     }
 
+    // Save and auto-open in new tab
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
     doc.save(fileName);
-  }, [rows, summary, customerName, searchParams, ID, userData]);
+    window.open(blobUrl, '_blank');
+    // Revoke after a short delay to free memory
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  }, [rows, summary, customerName, currentAcid, currentName, searchParams, ID, userData]);
 
   // --- DATA FETCHING ---
   const handleFetchData = useCallback(async (params) => {
@@ -533,7 +541,9 @@ const Ledger = () => {
     const { acid, startDate, endDate, name } = params;
     setLoading(true);
     setError(null);
-    setID(acid); // Ensure ID is persisted for PDF generation
+    setID(acid); // Persist for legacy fallback
+    setCurrentAcid(String(acid)); // Always track the real acid for PDF
+    setCurrentName(name || "");   // Always track the real name for PDF
     setCustomerName(name || "");
     setSearchAttempted(true);
     setRows([]);
@@ -768,8 +778,9 @@ const Ledger = () => {
       return;
     }
     
-    const acid = searchParams.get("acid") || ID;
-    const nameToUse = customerName || searchParams.get("name") || "Valued_Customer";
+    // Use the acid/name from the most recent fetch (never stale localStorage)
+    const acid = currentAcid || searchParams.get("acid") || ID;
+    const nameToUse = currentName || customerName || searchParams.get("name") || "Valued_Customer";
     
     if (!acid || acid === "N/A") {
       alert("failed to download invoice pdf\npls try again\nverify all required values before generating invoice pdf");
@@ -789,7 +800,7 @@ const Ledger = () => {
     } finally {
       setLoading(false);
     }
-  }, [ID, customerName, searchParams, userData]);
+  }, [currentAcid, currentName, ID, customerName, searchParams, userData]);
 
   return (
     <Container maxWidth={false} sx={{ py: 1, px: { xs: 1, sm: 2, md: 4 }, backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%' }}>

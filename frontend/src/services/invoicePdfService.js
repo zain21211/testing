@@ -29,7 +29,7 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
     day: "2-digit", month: "short", year: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit"
   });
-  const fileName = `${acid}_${(name || "Customer").replace(/\s+/g, '_')}_${docNum}_${new Date().getTime()}.pdf`;
+  // fileName will be set after API data is received, using DB values
 
   try {
     const response = await axios.post(`${import.meta.env.VITE_API_URL}/report/generate-report`, {
@@ -44,6 +44,11 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
 
     const doc = new jsPDF();
     const firstRow = invoiceData[0];
+
+    // Use acid and customer name from DB data (always correct, not stale caller data)
+    const realAcid = firstRow.id || acid;
+    const realName = firstRow.Subsidary || name || "Customer";
+    const fileName = `Invoice_${realAcid}_${realName.replace(/\s+/g, '_')}_${docNum}_${new Date().getTime()}.pdf`;
 
     // Header - Business Info
     doc.setFontSize(25);
@@ -249,7 +254,12 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
     drawSummaryRow("Previous Balance:", preBal, finalY + 35);
     drawSummaryRow("Total Payable:", totalPayable, finalY + 41, [26, 35, 126], true);
 
+    // Save and auto-open in new tab
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
     doc.save(fileName);
+    window.open(blobUrl, '_blank');
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     return true;
   } catch (err) {
     console.error("Invoice PDF download failed:", err);

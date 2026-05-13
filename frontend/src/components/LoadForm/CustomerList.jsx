@@ -35,10 +35,8 @@ const CustomerList = ({ customers, fetchList, to, setTo, deliver, user, onSucces
             const docs = res.data.updated; // This is usually an array
             deleteItem(docs);
             if (onSuccess) onSuccess(docs);
-            // We don't necessarily need fetchList() here if we do local removal, 
-            // but keeping it as a fallback might be okay. 
-            // However, the user said "without refreshing data from table".
-            // fetchList(); 
+            // Fetch fresh data from DB after load to refresh the list
+            if (fetchList) fetchList();
         } catch (error) {
             console.error(error);
         } finally {

@@ -15,9 +15,9 @@ export const SyncProvider = ({ children }) => {
     console.log("🔄 Background Sync Started...");
     try {
       await Promise.all([
-        offlineService.syncCustomers(token),
-        offlineService.syncProducts(token),
-        offlineService.syncSchemes(token),
+        offlineService.syncCustomers(currentToken),
+        offlineService.syncProducts(currentToken),
+        offlineService.syncSchemes(currentToken),
         offlineService.syncPackingData(),       // ← Packing list cache
         backgroundSyncService.syncInvoices(),
         backgroundSyncService.syncRecoveries(),

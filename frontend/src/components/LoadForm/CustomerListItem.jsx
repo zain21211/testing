@@ -65,7 +65,10 @@ const CustomerListItem = ({ customer, nug, setNug, user, fetchList, onSuccess })
     const cropperRef = useRef(null);
 
     const doc = customer.doc;
-    const isOperatorOrAdmin = user?.userType?.toLowerCase().includes('operator') || user?.userType?.toLowerCase().includes('admin') || user?.username?.toLowerCase().includes('zain');
+    const isOperatorOrAdmin = user?.userType?.toLowerCase().includes('operator') || 
+                              user?.userType?.toLowerCase().includes('admin') || 
+                              user?.userType?.toLowerCase().includes('pack') || 
+                              user?.username?.toLowerCase().includes('zain');
 
     const handleFileChange = async (e) => {
         try {

@@ -52,6 +52,7 @@ const invoiceControllers = {
         ISNULL(pd.Shopper, '') AS shopper,
         pd.goods,
         a.route,
+        a.rno,
         pd.vehicle,
         COUNT(*) OVER() AS TotalCount
       FROM PSDetail pd

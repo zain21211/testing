@@ -511,7 +511,8 @@ const DeliveryForm = () => {
         route: '', 
         acid: '', 
         doc: '', 
-        dateFilter: 'all',
+        dateFilter: 'today',
+        customDate: new Date().toLocaleDateString('en-CA'),
         dateSort: 'DESC', 
         docSort: '' 
     });
@@ -561,12 +562,25 @@ const DeliveryForm = () => {
             result = result.filter(c => String(c.doc || "").includes(localFilters.doc));
         }
         
-        // Date Filter: Today
+        // Date Filter
         if (localFilters.dateFilter === 'today') {
             const todayStr = new Date().toISOString().split('T')[0];
             result = result.filter(c => {
                 const itemDate = (c.date || c.LastDate || "");
                 return String(itemDate).startsWith(todayStr);
+            });
+        } else if (localFilters.dateFilter === 'tomorrow') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            result = result.filter(c => {
+                const itemDate = (c.date || c.LastDate || "");
+                return String(itemDate).startsWith(tomorrowStr);
+            });
+        } else if (localFilters.dateFilter === 'custom' && localFilters.customDate) {
+            result = result.filter(c => {
+                const itemDate = (c.date || c.LastDate || "");
+                return String(itemDate).startsWith(localFilters.customDate);
             });
         }
 
@@ -899,6 +913,7 @@ const DeliveryForm = () => {
                     onReset={() => fetchList()}
                     disableAutoSearch={true} 
                     routes={routes} 
+                    defaultDateFilter="today"
                 />
             </Box>
 
@@ -987,7 +1002,7 @@ const DeliveryForm = () => {
                 display: "grid",
                 gridTemplateColumns: { xs: '1fr', sm: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
                 gap: 2,
-                p: 1
+                p: 0.5
             }}>
                 {filteredCustomers.map((customer) => (
                     <DeliveryTraderCard

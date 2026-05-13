@@ -4,14 +4,31 @@ import { Box, CircularProgress, Alert } from '@mui/material';
 import TransporterFilter from './TransporterFilter';
 import CustomerList from './CustomerList';
 import { useFetchList } from '../../hooks/LoadForm/useFetchList';
+import useLocalStorageState from 'use-local-storage-state';
 
 const CustomerDashboard = () => {
     const { customers: allCustomers, setCustomers, loading, error, fetchList, routes } = useFetchList();
     const [to, setTo] = useState('');
     const [loaders, setLoaders] = useState([]);
-    const [filters, setFilters] = useState({ dateFilter: 'all', route: '', acid: '', doc: '' });
+    const getDefaultDateFilter = () => {
+        const hour = new Date().getHours();
+        return hour >= 17 ? 'tomorrow' : 'today';
+    };
+
+    const [filters, setFilters] = useState({ 
+        dateFilter: getDefaultDateFilter(), 
+        route: '', 
+        acid: '', 
+        doc: '', 
+        customDate: new Date().toLocaleDateString('en-CA') 
+    });
+    const [nug, setNug] = useLocalStorageState('loadNugs', { defaultValue: {} });
     const [resetDocTrigger, setResetDocTrigger] = useState(0);
     const url = import.meta.env.VITE_API_URL;
+
+    const clearNugs = useCallback(() => {
+        setNug({});
+    }, [setNug]);
 
     const fetchLoaders = async () => {
         try {
@@ -40,9 +57,9 @@ const CustomerDashboard = () => {
 
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-    // Fetch list once on mount (with large limit to get all data)
+    // Fetch list once on mount
     useEffect(() => {
-        if (fetchList) fetchList({}, 1, 5000); 
+        if (fetchList) fetchList(filters, 1, 5000); 
     }, [fetchList]);
 
     // Fetch loaders only once on mount
@@ -60,24 +77,33 @@ const CustomerDashboard = () => {
             
             let matchDate = true;
             if (filters.dateFilter === 'today') {
-                const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+                const today = new Date().toLocaleDateString('en-CA');
                 const itemDate = new Date(c.Date || c.date).toLocaleDateString('en-CA');
                 matchDate = itemDate === today;
+            } else if (filters.dateFilter === 'tomorrow') {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = tomorrow.toLocaleDateString('en-CA');
+                const itemDate = new Date(c.Date || c.date).toLocaleDateString('en-CA');
+                matchDate = itemDate === tomorrowStr;
+            } else if (filters.dateFilter === 'custom' && filters.customDate) {
+                const itemDate = new Date(c.Date || c.date).toLocaleDateString('en-CA');
+                matchDate = itemDate === filters.customDate;
             }
             
             return matchRoute && matchAcid && matchDoc && matchDate;
         });
 
-        // Sort Order: route (ASC), RNO (ASC), Date (DESC), doc (DESC)
+        // Sort Order: route (ASC), rno (ASC), Date (DESC), doc (DESC)
         return filtered.sort((a, b) => {
             // 1. Route (Ascending)
-            const routeA = (a.route || a.RouteNumber || '').toString();
-            const routeB = (b.route || b.RouteNumber || '').toString();
+            const routeA = (a.route || '').toString();
+            const routeB = (b.route || '').toString();
             if (routeA !== routeB) return routeA.localeCompare(routeB);
 
             // 2. RNO (Ascending)
-            const rnoA = parseInt(a.RNO || a.rno || 0);
-            const rnoB = parseInt(b.RNO || b.rno || 0);
+            const rnoA = parseInt(a.rno || 0);
+            const rnoB = parseInt(b.rno || 0);
             if (rnoA !== rnoB) return rnoA - rnoB;
 
             // 3. Date (Descending)
@@ -99,7 +125,7 @@ const CustomerDashboard = () => {
                 top: 56, // Adjusting for fixed AppBar height
                 zIndex: 100,
                 bgcolor: 'white',
-                p: 2,
+                p: 1,
                 pb: 1,
                 mt: -1, // Pull it up slightly to align with the toolbar offset
                 borderBottom: '1px solid #eee',
@@ -107,24 +133,30 @@ const CustomerDashboard = () => {
             }}>
                 <TransporterFilter 
                     onFilterChange={handleFilterChange} 
-                    onReset={() => fetchList({}, 1, 5000)}
+                    onReset={() => {
+                        fetchList(filters, 1, 5000);
+                        clearNugs();
+                    }}
                     routes={routes} 
                     resetDocTrigger={resetDocTrigger}
+                    defaultDateFilter={getDefaultDateFilter()}
                 />
             </Box>
             
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 1 }}>
                 {loading && <CircularProgress sx={{ marginTop: 2 }} />}
                 {error && <Alert severity="error" sx={{ marginTop: 2 }}>{error}</Alert>}
                 {!loading && !error && (
                     <CustomerList 
                         customers={filteredAndSortedCustomers} 
-                        fetchList={() => fetchList({}, 1, 5000)} 
+                        fetchList={() => fetchList(filters, 1, 5000)} 
                         to={to} 
                         setTo={setTo} 
                         deliver={loaders} 
                         user={user} 
                         onSuccess={handleSuccess}
+                        nug={nug}
+                        setNug={setNug}
                     />
                 )}
             </Box>

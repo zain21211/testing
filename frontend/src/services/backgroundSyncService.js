@@ -50,8 +50,6 @@ export const backgroundSyncService = {
           localStorage.setItem("invoice", JSON.stringify(invoices.filter(i => String(i.transactionID).trim() !== String(order.transactionID).trim())));
         }
       } catch (e) {
-        }
-      } catch (e) {
         console.error(`❌ [Sync] Order ${order.transactionID} failed:`, e.response?.data?.message || e.message);
         
         // If it's a duplicate error, mark it as synced because it's already on the server

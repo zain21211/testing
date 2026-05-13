@@ -165,7 +165,7 @@ const CustomerListItem = ({ customer, nug, setNug, user, fetchList, onSuccess })
                 <Typography sx={{ fontStyle: "italic", color: "text.secondary", fontWeight: "bold", fontSize: "1.1rem" }}>
                     {customer.RouteNumber || customer.route}
                 </Typography>
-                <Typography sx={{ fontSize: '0.95rem', color: '#888' }}>
+                <Typography sx={{ fontSize: '1.15rem', color: '#888' }}>
                     {customer.Date ? (() => {
                         const d = new Date(customer.Date);
                         const day = String(d.getDate()).padStart(2, '0');

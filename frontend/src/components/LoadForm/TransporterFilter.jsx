@@ -138,10 +138,10 @@ const TransporterFilter = ({ onFilterChange, onLocalFilterChange, routes, disabl
                   sx={{ 
                     ...inputStyle, 
                     "& .MuiInputBase-input": { 
-                      fontSize: '0.8rem',
-                      padding: '8px 4px'
-                    } 
-                  }}
+                    fontSize: '1.0rem',
+                    padding: '8px 4px'
+                  } 
+                }}
                   InputLabelProps={{ shrink: true }}
                 />
               }

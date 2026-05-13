@@ -384,52 +384,50 @@ const Ledger = () => {
     const isIncreased = balanceDifference > 0;
 
     // Header - Business Info
-    doc.setFontSize(25);
+    doc.setFontSize(27);
     doc.setTextColor(26, 35, 126); // #1a237e
     doc.setFont("helvetica", "bold");
     doc.text("Ahmad International", 105, 20, { align: "center" });
     
-    doc.setFontSize(15);
+    doc.setFontSize(17);
     doc.setTextColor(100);
     doc.setFont("helvetica", "normal");
-    doc.text("Ledger Statement", 105, 28, { align: "center" });
+    doc.text("Ledger Statement", 105, 30, { align: "center" });
 
     // Customer Info Box
     doc.setDrawColor(26, 35, 126);
     doc.setLineWidth(0.5);
-    doc.line(14, 35, 196, 35);
+    doc.line(6, 35, 204, 35);
 
-    doc.setFontSize(12);
-    doc.setTextColor(0);
     doc.setFont("helvetica", "bold");
-    doc.text(`Customer:`, 14, 45);
+    doc.text(`Customer:`, 6, 45);
     doc.setFont("helvetica", "normal");
-    doc.text(`${acid} - ${nameToUse}`, 35, 45);
+    doc.text(`${acid} - ${nameToUse}`, 32, 45);
     
     // Period Calculation
     let startDateStr = searchParams.get("startDate") ? formatDate(searchParams.get("startDate")) : formatDate(rows[0].Date);
     let endDateStr = searchParams.get("endDate") ? formatDate(searchParams.get("endDate")) : formatDate(rows[rows.length - 1].Date);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Period:`, 14, 52);
+    doc.text(`Period:`, 6, 52);
     doc.setFont("helvetica", "normal");
-    doc.text(`${startDateStr} to ${endDateStr}`, 35, 52);
+    doc.text(`${startDateStr} to ${endDateStr}`, 32, 52);
     
     doc.setFont("helvetica", "bold");
-    doc.text(`Print Date:`, 130, 45);
+    doc.text(`Print Date:`, 140, 45);
     doc.setFont("helvetica", "normal");
-    doc.text(`${timestamp}`, 155, 45);
+    doc.text(`${timestamp}`, 165, 45);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Printed By:`, 130, 52);
+    doc.text(`Printed By:`, 140, 52);
     doc.setFont("helvetica", "normal");
-    doc.text(`${userData?.username || "System"}`, 155, 52);
+    doc.text(`${userData?.username || "System"}`, 165, 52);
 
     // Table
-    const tableColumn = ["Date", "Type/Doc", "Narration", "Debit", "Credit", "Balance"];
+    const tableColumn = ["Date", "Document #", "Narration", "Debit", "Credit", "Balance"];
     const tableRows = rows.map(row => [
       formatDate(row.Date),
-      row.Type && row.Doc ? `${row.Type} ${row.Doc}` : row.Doc || "N/A",
+      row.Type && row.Doc ? `${String(row.Type).toUpperCase()} ${row.Doc}` : row.Doc || "N/A",
       row.Narration || "",
       formatCurrency(row.Debit),
       formatCurrency(row.Credit),
@@ -444,41 +442,48 @@ const Ledger = () => {
       headStyles: { 
         fillColor: [26, 35, 126], 
         textColor: 255, 
-        fontSize: 11,
+        fontSize: 13,
         halign: 'center',
         fontStyle: 'bold'
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 25 },
-        1: { halign: 'left', cellWidth: 35 },
-        2: { halign: 'left' },
+        0: { halign: 'center', cellWidth: 24 },
+        1: { halign: 'left', cellWidth: 27 },
+        2: { halign: 'left' }, // Narration auto-expands
         3: { halign: 'right', cellWidth: 22 },
         4: { halign: 'right', cellWidth: 22 },
         5: { halign: 'right', cellWidth: 25 },
       },
-      styles: { fontSize: 9.5, cellPadding: 2.5 },
+      styles: { fontSize: 11.5, cellPadding: 4, minCellHeight: 14 },
       alternateRowStyles: { fillColor: [245, 248, 255] },
-      margin: { top: 60, bottom: 20 },
+      margin: { top: 60, left: 6, right: 6, bottom: 20 },
       didDrawPage: (data) => {
         // Footer
-        doc.setFontSize(8);
+        doc.setFontSize(10);
         doc.setTextColor(150);
         doc.text(`Generated on ${timestamp} | Printed by ${userData?.username || "System"} | Page ${data.pageNumber}`, 105, 285, { align: "center" });
       }
     });
 
     // Totalling Section
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const summaryBoxHeight = isIncreased ? 65 : 53;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let finalY = doc.lastAutoTable.finalY + 10;
+    // If summary won't fit on current page, push to a new page
+    if (finalY + summaryBoxHeight > pageHeight - 18) {
+      doc.addPage();
+      finalY = 20;
+    }
     const summaryWidth = 85;
-    const startX = 200 - summaryWidth - 14;
+    const startX = 204 - summaryWidth;
 
     // Background for summary
     doc.setFillColor(248, 249, 250);
-    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, (isIncreased ? 60 : 48), 'F'); // Increased height
+    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, summaryBoxHeight, 'F');
     doc.setDrawColor(200);
-    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, (isIncreased ? 60 : 48), 'S'); // Increased height
+    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, summaryBoxHeight, 'S');
 
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setTextColor(26, 35, 126);
     doc.setFont("helvetica", "bold");
     doc.text("SUMMARY STATEMENT", startX, finalY + 5);
@@ -488,7 +493,7 @@ const Ledger = () => {
     doc.line(startX, finalY + 7, startX + summaryWidth, finalY + 7);
 
     const drawSummaryRow = (label, value, y, color = [0, 0, 0], isBold = false) => {
-      doc.setFontSize(11);
+      doc.setFontSize(13);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
       doc.text(label, startX, y);
@@ -503,14 +508,14 @@ const Ledger = () => {
     drawSummaryRow("Total Credits:", summary.totalCredit, finalY + 31, [46, 125, 50]); // Changed to GREEN
     
     // Closing Balance
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     drawSummaryRow("Closing Balance:", closingBalance, finalY + 41, [26, 35, 126], true);
 
     if (isIncreased) {
         doc.setFillColor(255, 235, 235);
         doc.rect(startX, finalY + 45, summaryWidth, 9, 'F'); // Increased height to 9
         doc.setTextColor(211, 47, 47);
-        doc.setFontSize(11);
+        doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
         doc.text("Increased Balance:", startX + 2, finalY + 51);
         doc.text(formatCurrency(balanceDifference), startX + summaryWidth - 2, finalY + 51, { align: "right" });

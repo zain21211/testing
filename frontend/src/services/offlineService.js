@@ -4,15 +4,17 @@ import axios from "axios";
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Database instances
+// Note: CustomerData.js configures the default localforage instance to name: "CustomerDB", storeName: "customers"
+// We use createInstance to be explicit, but point to the same underlying storage.
 const customersStore = localforage.createInstance({ name: "CustomerDB", storeName: "customers" });
-const productsStore = localforage.createInstance({ name: "localforage", storeName: "keyvaluepairs" }); // Default
-const schemesStore = localforage.createInstance({ name: "localforage", storeName: "keyvaluepairs" });
+const productsStore = localforage.createInstance({ name: "CustomerDB", storeName: "customers" }); 
+const schemesStore = localforage.createInstance({ name: "CustomerDB", storeName: "customers" });
 const authStore = localforage.createInstance({ name: "offlineDB", storeName: "auth" });
 
 export const offlineService = {
   // --- AUTH ---
   saveCredentials: async (username, password) => {
-    const hash = btoa(username + ":" + password); 
+    const hash = btoa(username + ":" + password);
     await authStore.setItem("lastUser", { username, hash });
   },
 
@@ -23,6 +25,11 @@ export const offlineService = {
     return lastUser.username === username && lastUser.hash === currentHash;
   },
 
+  getLastUsername: async () => {
+    const lastUser = await authStore.getItem("lastUser");
+    return lastUser?.username || null;
+  },
+
   // --- CUSTOMERS ---
   syncCustomers: async (token) => {
     if (!navigator.onLine) return;
@@ -31,8 +38,8 @@ export const offlineService = {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (Array.isArray(res.data)) {
-        // Match masterCustomerList key used in useCustomerSearch
         await customersStore.setItem("masterCustomerList", res.data);
+        window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: "masterCustomerList" } }));
         await authStore.setItem("lastCustomerSync", new Date().toISOString());
         return res.data;
       }
@@ -54,6 +61,7 @@ export const offlineService = {
       });
       if (Array.isArray(res.data)) {
         await productsStore.setItem("products", res.data);
+        window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: "products" } }));
         await authStore.setItem("lastProductSync", new Date().toISOString());
         return res.data;
       }
@@ -79,6 +87,7 @@ export const offlineService = {
             if (s.code) schemeMap[s.code] = s;
         });
         await schemesStore.setItem("schemes_map", schemeMap);
+        window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: "schemes_map" } }));
         await authStore.setItem("lastSchemeSync", new Date().toISOString());
         return schemeMap;
       }
@@ -90,5 +99,42 @@ export const offlineService = {
   getLocalScheme: async (productCode) => {
     const map = await schemesStore.getItem("schemes_map") || {};
     return map[productCode] || null;
-  }
+  },
+
+  // --- PACKING LIST (Pending Orders) ---
+  syncPackingData: async () => {
+    if (!navigator.onLine) return;
+    try {
+      const res = await axios.get(`${API_URL}/sales-report`, {
+        params: { invoiceStatus: "estimate", page: "pack" },
+        timeout: 8000,
+      });
+      if (Array.isArray(res.data)) {
+        // Use the same key that PackingList.jsx uses for localStorage
+        localStorage.setItem("pendingTableData", JSON.stringify(res.data));
+        await authStore.setItem("lastPackingSync", new Date().toISOString());
+      }
+    } catch (e) {
+      console.error("Packing sync failed:", e);
+    }
+  },
+
+  // --- DASHBOARD TOTALS ---
+  saveDashboardTotals: (totals) => {
+    try {
+      localStorage.setItem("cached_dashboard_totals", JSON.stringify({
+        ...totals,
+        cachedAt: new Date().toISOString(),
+      }));
+    } catch (e) {}
+  },
+
+  getCachedDashboardTotals: () => {
+    try {
+      const raw = localStorage.getItem("cached_dashboard_totals");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
 };

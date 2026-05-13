@@ -7,43 +7,72 @@ export const backgroundSyncService = {
   // --- INVOICES (ORDERS) ---
   syncInvoices: async () => {
     if (!navigator.onLine) return;
+    if (this._syncingInvoices) return;
+    this._syncingInvoices = true;
     
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+        this._syncingInvoices = false;
+        return;
+    }
+
     let dailyOrders = await localforage.getItem("dailyOrders") || [];
     const pendingOrders = dailyOrders.filter(o => !o.synced);
     
-    if (pendingOrders.length === 0) return;
+    if (pendingOrders.length === 0) {
+        this._syncingInvoices = false;
+        return;
+    }
 
     console.log(`📦 [Sync] Starting background sync for ${pendingOrders.length} orders...`);
 
     for (const order of pendingOrders) {
       try {
         console.log(`📡 [Sync] Posting order ${order.transactionID}...`);
-        const res = await axios.post(`${API_URL}/create-order`, order);
+        const res = await axios.post(`${API_URL}/create-order`, order, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         
-        if (res.status === 200 || res.status === 201) {
+        if (res.status === 200 || res.status === 201 || res.status === 204) {
           const serverDoc = res.data?.doc;
           console.log(`✅ [Sync] Order ${order.transactionID} synced. Doc: ${serverDoc}`);
           
-          // Refresh list from storage in case it changed
           dailyOrders = await localforage.getItem("dailyOrders") || [];
-          
           dailyOrders = dailyOrders.map(o => 
             String(o.transactionID).trim() === String(order.transactionID).trim()
             ? { ...o, synced: true, doc: serverDoc || o.doc } 
             : o
           );
-          
           await localforage.setItem("dailyOrders", dailyOrders);
           window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: 'dailyOrders' } }));
           
-          // Clean up localStorage
           const invoices = JSON.parse(localStorage.getItem("invoice") || "[]");
           localStorage.setItem("invoice", JSON.stringify(invoices.filter(i => String(i.transactionID).trim() !== String(order.transactionID).trim())));
         }
       } catch (e) {
-        console.error(`❌ [Sync] Order ${order.transactionID} failed:`, e.message);
+        }
+      } catch (e) {
+        console.error(`❌ [Sync] Order ${order.transactionID} failed:`, e.response?.data?.message || e.message);
+        
+        // If it's a duplicate error, mark it as synced because it's already on the server
+        if (e.response?.status === 400 && e.response.data?.error?.toLowerCase().includes("duplicate")) {
+          console.log(`ℹ️ [Sync] Order ${order.transactionID} was already on server (duplicate). Marking as synced.`);
+          dailyOrders = await localforage.getItem("dailyOrders") || [];
+          dailyOrders = dailyOrders.map(o => 
+            String(o.transactionID).trim() === String(order.transactionID).trim()
+            ? { ...o, synced: true } 
+            : o
+          );
+          await localforage.setItem("dailyOrders", dailyOrders);
+          window.dispatchEvent(new CustomEvent('indexeddb-change', { detail: { key: 'dailyOrders' } }));
+          
+          // Also clean up from the pending queue
+          const invoices = JSON.parse(localStorage.getItem("invoice") || "[]");
+          localStorage.setItem("invoice", JSON.stringify(invoices.filter(i => String(i.transactionID).trim() !== String(order.transactionID).trim())));
+        }
       }
     }
+    this._syncingInvoices = false;
   },
 
   syncOneInvoice: async (transactionID) => {
@@ -95,6 +124,9 @@ export const backgroundSyncService = {
     
     if (pendingEntries.length === 0) return;
 
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
     console.log(`💰 Syncing ${pendingEntries.length} pending recoveries...`);
     const updatedEntries = [...entries];
 
@@ -123,7 +155,9 @@ export const backgroundSyncService = {
         };
 
         try {
-          const res = await axios.post(`${API_URL}/cash-entry`, payload);
+          const res = await axios.post(`${API_URL}/cash-entry`, payload, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
           if (res.status === 200 || res.status === 201 || (res.status === 400 && res.data?.error === "Duplicate transaction IDs")) {
              newSubStatus[method] = true;
           } else {

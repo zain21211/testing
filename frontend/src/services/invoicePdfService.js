@@ -11,6 +11,13 @@ const formatCurrency = (value) => {
   });
 };
 
+// Smart decimal: shows decimals only when they exist (10 → "10", 10.5 → "10.5")
+const formatSmartDecimal = (value) => {
+  const num = parseFloat(value);
+  if (isNaN(num)) return "0";
+  return num % 1 === 0 ? num.toString() : num.toString();
+};
+
 const formatDate = (value) => {
   const date = new Date(value);
   const day = String(date.getDate()).padStart(2, "0");
@@ -51,65 +58,64 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
     const fileName = `Invoice_${realAcid}_${realName.replace(/\s+/g, '_')}_${docNum}_${new Date().getTime()}.pdf`;
 
     // Header - Business Info
-    doc.setFontSize(25);
+    doc.setFontSize(27);
     doc.setTextColor(26, 35, 126);
     doc.setFont("helvetica", "bold");
     doc.text("Ahmad International", 105, 20, { align: "center" });
 
-    doc.setFontSize(15);
+    doc.setFontSize(17);
     doc.setTextColor(100);
     doc.setFont("helvetica", "normal");
-    doc.text("Sales Invoice", 105, 28, { align: "center" });
+    doc.text("Sales Invoice", 105, 30, { align: "center" });
 
     // Customer Info Box
     doc.setDrawColor(26, 35, 126);
     doc.setLineWidth(0.5);
-    doc.line(14, 35, 196, 35);
+    doc.line(6, 35, 204, 35);
 
-    doc.setFontSize(11);
+    doc.setFontSize(13);
     doc.setTextColor(0);
     doc.setFont("helvetica", "bold");
 
     // Left Column
-    doc.text(`Customer:`, 14, 45);
+    doc.text(`Customer:`, 6, 45);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.id || acid} - ${firstRow.Subsidary || name}`, 35, 45);
+    doc.text(`${firstRow.id || acid} - ${firstRow.Subsidary || name}`, 27, 45);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Address:`, 14, 52);
+    doc.text(`Address:`, 6, 52);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.OAddress || "N/A"}`, 35, 52);
+    doc.text(`${firstRow.OAddress || "N/A"}`, 27, 52);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Phone:`, 14, 59);
+    doc.text(`Phone:`, 6, 59);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.OCell || "N/A"}`, 35, 59);
+    doc.text(`${firstRow.OCell || "N/A"}`, 27, 59);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Route:`, 14, 66);
+    doc.text(`Route:`, 6, 66);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.ROUTE || "N/A"}`, 35, 66);
+    doc.text(`${firstRow.ROUTE || "N/A"}`, 27, 66);
 
     // Right Column
-    doc.setFont("helvetica", "bold");
-    doc.text(`Invoice No:`, 120, 45);
+    doc.text(`Invoice No:`, 130, 45);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.DoC || docNum}`, 145, 45);
+    doc.text(`${firstRow.DoC || docNum}`, 155, 45);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Date:`, 120, 52);
+    doc.text(`Date:`, 130, 52);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.Date ? formatDate(firstRow.Date) : "N/A"}`, 145, 52);
+    doc.text(`${firstRow.Date ? formatDate(firstRow.Date) : "N/A"}`, 155, 52);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`SPO:`, 120, 59);
+    doc.text(`SPO:`, 130, 59);
     doc.setFont("helvetica", "normal");
-    doc.text(`${firstRow.SPO || "N/A"}`, 145, 59);
+    doc.text(`${firstRow.SPO || "N/A"}`, 155, 59);
 
     doc.setFont("helvetica", "bold");
-    doc.text(`Print Date:`, 120, 66);
+    doc.text(`Print Date:`, 130, 66);
     doc.setFont("helvetica", "normal");
-    doc.text(`${timestamp}`, 145, 66);
+    doc.text(`${timestamp}`, 155, 66);
 
     // Table Data
     let totalGross = 0;
@@ -118,10 +124,10 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
     const hasFOC = invoiceData.some(item => (item.Qty || 0) !== 0 && Number(String(item.SchPc || 0).split(',')[0]) > 0);
     const hasDiscP2 = invoiceData.some(item => (item.Qty || 0) !== 0 && (item.DiscP2 || 0) > 0);
 
-    const tableColumn = ["S.No", "Code", "Product Name", "Qty"];
+    const tableColumn = ["S.No", "Product Name", "Qty"];
     if (hasFOC) tableColumn.push("FOC");
     tableColumn.push("Rate");
-    if (hasDiscP2) tableColumn.push("DiscP2");
+    if (hasDiscP2) tableColumn.push("Disc");
     tableColumn.push("Amount");
 
     const tableRows = invoiceData
@@ -155,14 +161,13 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
 
         const rowData = [
             index + 1,
-            item.ProductCode || "",
             productDisplay,
             qty
         ];
         
         if (hasFOC) rowData.push(String(item.SchPc || 0).split(',')[0]);
         rowData.push(formatCurrency(rate));
-        if (hasDiscP2) rowData.push(formatCurrency(item.DiscP2 || 0));
+        if (hasDiscP2) rowData.push(formatSmartDecimal(item.DiscP2 || 0));
         rowData.push(formatCurrency(calculatedAmount));
 
         return {
@@ -179,28 +184,27 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
       headStyles: {
         fillColor: [26, 35, 126],
         textColor: 255,
-        fontSize: 10,
+        fontSize: 12,
         halign: 'center',
         fontStyle: 'bold'
       },
       columnStyles: (() => {
         let colIndex = 0;
         const styles = {};
-        styles[colIndex++] = { halign: 'center', cellWidth: 12 }; // S.No
-        styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Code
-        styles[colIndex++] = { halign: 'left' };                  // Product Name
-        styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Qty
-        if (hasFOC) styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // FOC
-        styles[colIndex++] = { halign: 'right', cellWidth: 20 };  // Rate
-        if (hasDiscP2) styles[colIndex++] = { halign: 'right', cellWidth: 18 }; // DiscP2
-        styles[colIndex++] = { halign: 'right', cellWidth: 25 };  // Amount
+        styles[colIndex++] = { halign: 'center', cellWidth: 11 }; // S.No
+        styles[colIndex++] = { halign: 'left' };                  // Product Name (auto, gets all remaining width)
+        styles[colIndex++] = { halign: 'center', cellWidth: 18 }; // Qty
+        if (hasFOC) styles[colIndex++] = { halign: 'center', cellWidth: 12 }; // FOC
+        styles[colIndex++] = { halign: 'right', cellWidth: 17 };  // Rate
+        if (hasDiscP2) styles[colIndex++] = { halign: 'right', cellWidth: 16 }; // Disc
+        styles[colIndex++] = { halign: 'right', cellWidth: 27 };  // Amount
         return styles;
       })(),
-      styles: { fontSize: 9, cellPadding: 2, minCellHeight: 16 },
+      styles: { fontSize: 11, cellPadding: 3.5, minCellHeight: 19 },
       alternateRowStyles: { fillColor: [245, 248, 255] },
-      margin: { bottom: 20 },
+      margin: { left: 6, right: 6, bottom: 20 },
       didDrawCell: (data) => {
-        if (data.column.index === 2 && data.cell.section === 'body') {
+        if (data.column.index === 1 && data.cell.section === 'body') {
           const urduText = tableRows[data.row.index]?.urdu;
           if (urduText) {
             const canvas = document.createElement('canvas');
@@ -228,27 +232,41 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
         }
       },
       didDrawPage: (data) => {
-        doc.setFontSize(8);
+        doc.setFontSize(10);
         doc.setTextColor(150);
         doc.text(`Generated on ${timestamp} | Printed by ${userData?.username || "System"} | Page ${data.pageNumber}`, 105, 285, { align: "center" });
       }
     });
 
     // Footer Calculations
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const summaryBoxHeight = 60; // height of the summary block
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let finalY = doc.lastAutoTable.finalY + 10;
+    // If summary won't fit on current page, push to a new page
+    if (finalY + summaryBoxHeight > pageHeight - 18) {
+      doc.addPage();
+      finalY = 20;
+    }
     const summaryWidth = 80;
-    const startX = 200 - summaryWidth - 14;
+    const startX = 204 - summaryWidth;
 
     const preBal = firstRow.PreBal || 0;
     const netAmount = firstRow.amount || 0;
     const totalPayable = preBal + netAmount;
 
-    doc.setFillColor(248, 249, 250);
-    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, 55, 'F');
-    doc.setDrawColor(200);
-    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, 55, 'S');
+    const hasExtra    = totalDiscpAmount !== 0;
+    const hasFreight  = Math.abs(firstRow.Freight || 0) !== 0;
+    const rowSpacing  = 8; // px between each summary row
+    const rowCount    = 3 + (hasExtra ? 1 : 0) + (hasFreight ? 1 : 0); // Gross + optional + Net + PrevBal + Total
+    const dynSummaryH = 14 + rowCount * rowSpacing + 6; // header(14) + rows + padding(6)
 
-    doc.setFontSize(11);
+    // Redraw the box with the correct dynamic height
+    doc.setFillColor(248, 249, 250);
+    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, dynSummaryH, 'F');
+    doc.setDrawColor(200);
+    doc.rect(startX - 5, finalY - 5, summaryWidth + 10, dynSummaryH, 'S');
+
+    doc.setFontSize(13);
     doc.setTextColor(26, 35, 126);
     doc.setFont("helvetica", "bold");
     doc.text("INVOICE SUMMARY", startX, finalY + 2);
@@ -258,7 +276,7 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
     doc.line(startX, finalY + 4, startX + summaryWidth, finalY + 4);
 
     const drawSummaryRow = (label, value, y, color = [0, 0, 0], isBold = false) => {
-      doc.setFontSize(10);
+      doc.setFontSize(12);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
       doc.text(label, startX, y);
@@ -268,12 +286,14 @@ export const downloadInvoice = async ({ docNum, acid, name, userData }) => {
       doc.text(formatCurrency(value), startX + summaryWidth, y, { align: "right" });
     };
 
-    drawSummaryRow("Gross Amount:", totalGross, finalY + 11);
-    drawSummaryRow("Extra:", totalDiscpAmount, finalY + 17, [211, 47, 47]);
-    drawSummaryRow("Freight:", Math.abs(firstRow.Freight || 0), finalY + 23);
-    drawSummaryRow("Net Amount:", netAmount, finalY + 29, [26, 35, 126], true);
-    drawSummaryRow("Previous Balance:", preBal, finalY + 35);
-    drawSummaryRow("Total Payable:", totalPayable, finalY + 41, [26, 35, 126], true);
+    // Dynamic Y cursor — rows only added when they have a value
+    let curY = finalY + 11;
+    drawSummaryRow("Gross Amount:", totalGross, curY);         curY += rowSpacing;
+    if (hasExtra)   { drawSummaryRow("Extra:",   totalDiscpAmount,                  curY, [211, 47, 47]); curY += rowSpacing; }
+    if (hasFreight) { drawSummaryRow("Freight:", Math.abs(firstRow.Freight || 0),   curY);                curY += rowSpacing; }
+    drawSummaryRow("Net Amount:",       netAmount,    curY, [26, 35, 126], true);  curY += rowSpacing;
+    drawSummaryRow("Previous Balance:", preBal,       curY);                        curY += rowSpacing;
+    drawSummaryRow("Total Payable:",    totalPayable, curY, [26, 35, 126], true);
 
     // Save and auto-open in new tab
     const pdfBlob = doc.output('blob');

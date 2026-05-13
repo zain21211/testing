@@ -210,7 +210,24 @@ const OrderForm = () => {
     }
   }, []); // Runs only on mount
 
-  // Fetch initial products, companies, and categories
+  // --- Data Loading Effects ---
+
+  // 1. Sync companies and categories whenever products load or change
+  useEffect(() => {
+    if (productsLoaded && products.length > 0) {
+      const uniqueCompanies = [...new Set(products.map((p) => p.Company).filter(Boolean))].sort();
+      const uniqueCategories = [...new Set(products.map((p) => p.Category).filter(Boolean))].sort();
+      
+      // Only update if they are currently empty to avoid unnecessary re-renders
+      setCompanies(uniqueCompanies);
+      setCategories(uniqueCategories);
+      
+      if (!navigator.onLine) {
+        setInitialDataLoading(false);
+      }
+    }
+  }, [products, productsLoaded]);
+
   useEffect(() => {
     if (!token) {
       setError("Authentication token not found. Please log in.");
@@ -222,36 +239,48 @@ const OrderForm = () => {
       //setInitialDataLoading(true);
       setError(null);
 
-      try {
-        if (navigator.onLine) {
-          const headers = { Authorization: `Bearer ${token}` };
-          console.log(products)
-          const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
-            headers,
-            timeout: 5000,
-          });
-          console.log(prodResponse.data)
-          const allProducts = prodResponse.data || products;
-
-          const cleanedProducts = allProducts
-            .map((p) => ({
-              ...p,
-              Name: p.Name ? String(p.Name).trim() : "",
-              Company: p.Company ? String(p.Company).trim() : "",
-              Category: p.Category ? String(p.Category).trim() : "",
-              SaleRate: p.SaleRate ?? 0,
-              ID: p.ID,
-              code: p.code,
-              StockQty: p.StockQty ?? 0,
-            }))
-            .filter((p) => p.ID != null && p.Name && p.Name.trim() !== "");
-          if (cleanedProducts.length !== 0)
-            setProducts(cleanedProducts);
+      // If offline, use cached products already loaded by useIndexedDBState
+      if (!navigator.onLine) {
+        if (products.length > 0) {
+          setCompanies([...new Set(products.map((p) => p.Company).filter(Boolean))].sort());
+          setCategories([...new Set(products.map((p) => p.Category).filter(Boolean))].sort());
         }
+        setInitialDataLoading(false);
+        return;
+      }
+
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+        console.log(products)
+        const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
+          headers,
+          timeout: 5000,
+        });
+        console.log(prodResponse.data)
+        const allProducts = prodResponse.data || products;
+
+        const cleanedProducts = allProducts
+          .map((p) => ({
+            ...p,
+            Name: p.Name ? String(p.Name).trim() : "",
+            Company: p.Company ? String(p.Company).trim() : "",
+            Category: p.Category ? String(p.Category).trim() : "",
+            SaleRate: p.SaleRate ?? 0,
+            ID: p.ID,
+            code: p.code,
+            StockQty: p.StockQty ?? 0,
+          }))
+          .filter((p) => p.ID != null && p.Name && p.Name.trim() !== "");
+        if (cleanedProducts.length !== 0)
+          setProducts(cleanedProducts);
       } catch (err) {
-        const errorMessage = err.response?.data?.message || err.message;
-        console.error("Error fetching initial data:", errorMessage);
-        setError(`Failed to load initial data. ${errorMessage}`);
+        // If request fails (tunnel/server down), silently use cached products
+        console.warn("Product fetch failed, using cached products:", err.message);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+           setError("Session expired or unauthorized. Some features may be limited. Please log in again when online.");
+        } else if (products.length === 0) {
+           setError("Could not load products. Please check your connection or try again later.");
+        }
       } finally {
         setInitialDataLoading(false);
       }
@@ -512,6 +541,10 @@ const OrderForm = () => {
 
           clearFormState();
           setLoading(false);
+
+          // Trigger background sync to process any older pending orders
+          backgroundSyncService.syncInvoices().catch(console.error);
+
           return doc;
         }
       } catch (err) {
@@ -615,6 +648,8 @@ const OrderForm = () => {
         setError(`Failed to sync: ${detailMsg}`);
     } finally {
         setLoading(false);
+        // After manual sync, check if there are others to sync
+        backgroundSyncService.syncInvoices().catch(console.error);
     }
   };
 

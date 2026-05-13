@@ -9,6 +9,7 @@ import axios from 'axios';
 import useLocalStorageState from 'use-local-storage-state';
 import io from "socket.io-client";
 import { useNavigate } from 'react-router-dom';
+import { useRealOnlineStatus } from './hooks/IsOnlineHook';
 
 
 // GLOBAL CONSTANTS
@@ -119,9 +120,15 @@ const useDataFetching = () => {
 
 
     const fetchData = async (requestBody) => {
-        setLoading(true);
-        setError('');
-        setTableData([]);
+        // Only wipe the displayed data if we are online; offline keeps the cache visible
+        if (navigator.onLine) {
+            setLoading(true);
+            setError('');
+            setTableData([]);
+        } else {
+            setLoading(false);
+            return { success: false, message: "Offline – showing cached data" };
+        }
 
         try {
             const apiUrl = `${url}/sales-report`;
@@ -397,6 +404,7 @@ const PackingList = () => {
 
     // Use custom hooks
     const { filters, endDate, setEndDate, handleFilterChange } = useFilters();
+    const isOnline = useRealOnlineStatus();
     const {
         loading,
         error,
@@ -462,6 +470,11 @@ const PackingList = () => {
         // };
     }, []);
 
+    // Auto-refresh when connectivity is restored
+    useEffect(() => {
+        if (isOnline) handleSubmit();
+    }, [isOnline]);
+
     // Handle form submission
     const handleSubmit = async () => {
         const [route, doc, customer, invoiceStatus] = filters.map(f => f?.name || null);
@@ -481,6 +494,13 @@ const PackingList = () => {
 
     return (
         <Box sx={{ px: { xs: 1, sm: 5 }, maxWidth: '1600px', margin: 'auto' }}>
+            {!isOnline && (
+                <Box sx={{ mb: 2, p: 1.5, bgcolor: '#fff3e0', border: '1px solid #ff9800', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography sx={{ fontWeight: 700, color: '#e65100', fontSize: '0.95rem' }}>
+                        📴 Offline — Showing last cached packing list. Data will refresh automatically when connection is restored.
+                    </Typography>
+                </Box>
+            )}
             <ErrorDisplay error={error} />
             <br />
 

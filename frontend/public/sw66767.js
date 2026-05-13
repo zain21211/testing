@@ -1,94 +1,117 @@
-const CACHE_NAME_PAGES = 'pages-v1';
-const CACHE_NAME_ASSETS = 'assets-v1';
-const CACHE_NAME_IMAGES = 'images-v1';
+// ─── Ahmad International PWA Service Worker ───────────────────────────────
+// Strategy:
+//   Navigation (HTML)  → Network-first, fall back to cached /index.html
+//   JS / CSS / fonts   → Cache-first (stale-while-revalidate in background)
+//   Images             → Cache-first
+//   API calls          → Network-only (never cache, offline handled in app)
+// ──────────────────────────────────────────────────────────────────────────
 
-const PRECACHE_URLS = [
-  '/',          
-  '/index.html',
-  // Add more static files here if needed
-];
+const CACHE_VERSION = 'v4';
+const CACHE_SHELL   = `shell-${CACHE_VERSION}`;
+const CACHE_ASSETS  = `assets-${CACHE_VERSION}`;
+const CACHE_IMAGES  = `images-${CACHE_VERSION}`;
 
-// Install event: Pre-cache core assets
+const ALL_CACHES = [CACHE_SHELL, CACHE_ASSETS, CACHE_IMAGES];
+
+// Pages that must be pre-cached so the app shell works offline immediately
+const PRECACHE_URLS = ['/', '/index.html'];
+
+// ── INSTALL ────────────────────────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME_ASSETS).then(cache => {
-      return cache.addAll(PRECACHE_URLS);
-    })
+    caches.open(CACHE_SHELL).then(cache => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
 });
 
-// Activate event: Cleanup old caches
+// ── ACTIVATE ───────────────────────────────────────────────────────────────
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME_PAGES, CACHE_NAME_ASSETS, CACHE_NAME_IMAGES];
   event.waitUntil(
-    caches.keys().then(cacheNames =>
+    caches.keys().then(keys =>
       Promise.all(
-        cacheNames.map(cacheName => {
-          if (!cacheWhitelist.includes(cacheName)) {
-            return caches.delete(cacheName);
-          }
-        })
+        keys.filter(k => !ALL_CACHES.includes(k)).map(k => caches.delete(k))
       )
     )
   );
   self.clients.claim();
 });
 
-// Fetch event: handle requests
+// ── FETCH ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
-  const request = event.request;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // Only handle GET requests
-  if (request.method !== 'GET') return;
+  // Only handle same-origin or known CDN GET requests
+  if (req.method !== 'GET') return;
 
-  // Navigation requests (HTML pages) — Network First strategy
-  if (request.mode === 'navigate') {
+  // ── API calls → network only, never cache ───────────────────────────────
+  // Adjust this to match your API base URL
+  if (url.pathname.startsWith('/api') || url.hostname !== self.location.hostname) {
+    return; // browser handles it natively
+  }
+
+  // ── Navigation (loading app URL in browser) → Network-first ────────────
+  // If network fails (e.g. Cloudflare 1033), serve the cached index.html
+  // so the React SPA boots from cache instead of showing the error page.
+  if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(req)
         .then(response => {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME_PAGES).then(cache => cache.put(request, cloned));
+          // Only cache successful HTML responses (not Cloudflare error pages)
+          if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
+            const clone = response.clone();
+            caches.open(CACHE_SHELL).then(cache => cache.put(req, clone));
+          }
           return response;
         })
         .catch(() =>
-          caches.match(request).then(cached => cached || caches.match('/index.html'))
+          // Network failed → serve cached index.html so the SPA loads
+          caches.match('/index.html').then(cached => {
+            if (cached) return cached;
+            return new Response(
+              '<h2 style="font-family:sans-serif;text-align:center;margin-top:40px">📴 Offline – please reconnect.</h2>',
+              { headers: { 'Content-Type': 'text/html' } }
+            );
+          })
         )
     );
     return;
   }
 
-  // Static assets (CSS, JS, worker) — Stale While Revalidate
-  if (['style', 'script', 'worker'].includes(request.destination)) {
-event.respondWith(
-  fetch(event.request).then((response) => {
-    const responseClone = response.clone(); // ✅ safe copy
-    caches.open('my-cache').then((cache) => {
-      cache.put(event.request, responseClone); // ✅ use the clone for caching
-    });
-    return response; // ✅ original is still intact for browser
-  })
-);
-
-    return;
-  }
-
-  // Images — Cache First strategy
-  if (request.destination === 'image') {
+  // ── JS / CSS / Fonts → Cache-first, update cache in background ─────────
+  if (['script', 'style', 'font', 'worker'].includes(req.destination)) {
     event.respondWith(
-      caches.match(request).then(cachedResponse => {
-        if (cachedResponse) return cachedResponse;
+      caches.open(CACHE_ASSETS).then(async cache => {
+        const cached = await cache.match(req);
+        // Fetch fresh version in background regardless
+        const networkFetch = fetch(req).then(response => {
+          if (response.ok) cache.put(req, response.clone());
+          return response;
+        }).catch(() => null);
 
-        return fetch(request).then(networkResponse => {
-          const cloned = networkResponse.clone();
-          caches.open(CACHE_NAME_IMAGES).then(cache => cache.put(request, cloned));
-          return networkResponse;
-        });
+        // Return cached immediately if available; else wait for network
+        return cached || networkFetch;
       })
     );
     return;
   }
 
-  // Default: just fetch
-  event.respondWith(fetch(request));
+  // ── Images → Cache-first ────────────────────────────────────────────────
+  if (req.destination === 'image') {
+    event.respondWith(
+      caches.open(CACHE_IMAGES).then(async cache => {
+        const cached = await cache.match(req);
+        if (cached) return cached;
+        const response = await fetch(req);
+        if (response.ok) cache.put(req, response.clone());
+        return response;
+      }).catch(() => new Response('', { status: 503 }))
+    );
+    return;
+  }
+
+  // ── Everything else → network with cache fallback ───────────────────────
+  event.respondWith(
+    fetch(req).catch(() => caches.match(req))
+  );
 });

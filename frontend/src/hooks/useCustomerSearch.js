@@ -136,13 +136,13 @@ export const useCustomerSearch = ({
       setPhoneNumber(selectedCustomer.phonenumber);
   }, [selectedCustomer]);
 
-  // Sync master list
+  // Sync master list and local list
   useEffect(() => {
     isCust && isCust(data.length !== 0 || localCustomerList.length !== 0);
-    0;
-    const status =
-      fetchError?.message.toLowerCase() === "network error" ? 500 : 200;
+    
+    const status = fetchError?.message.toLowerCase() === "network error" ? 500 : 200;
 
+    // 1. If we got fresh data from network, update local storage and Redux
     if (
       navigator.onLine &&
       data.length > 0 &&
@@ -153,15 +153,21 @@ export const useCustomerSearch = ({
       !isCustomerLoading
     ) {
       setLocalCustomerList(data);
-      if (!isAdmin && (formType === "debit" || formType === "credit")) return;
-      setLocalCustomerList(data);
-      const shouldUpdate = !isEqual(data, masterCustomerList);
-      if (shouldUpdate) {
-        dispatch(persistMasterCustomerList(data));
+      if (isAdmin || (formType !== "debit" && formType !== "credit")) {
+         const shouldUpdate = !isEqual(data, masterCustomerList);
+         if (shouldUpdate) {
+           dispatch(persistMasterCustomerList(data));
+         }
       }
     }
-    // 🚨 don't add masterCustomerList here, or you loop forever
-  }, [data]);
+  }, [data, fetchError, isCustomerLoading, localCustomerList, masterCustomerList, dispatch, isAdmin, formType, isCust]);
+
+  // 2. If local list is empty but master list has data (e.g. after offline login/logout), sync them
+  useEffect(() => {
+    if (localCustomerList.length === 0 && masterCustomerList.length > 0) {
+      setLocalCustomerList(masterCustomerList);
+    }
+  }, [masterCustomerList, localCustomerList.length, setLocalCustomerList]);
 
   useEffect(() => {
     autoSelect();
@@ -190,7 +196,7 @@ export const useCustomerSearch = ({
 
   // Effect 1: Sync ID → selectedCustomer
   useEffect(() => {
-    if (!ID || allCustomerOptions?.length === 0) return;
+    if (!ID || localCustomerList?.length === 0) return;
 
     if (selectedCustomer?.acid !== Number(ID)) {
       // Search the FULL list, not just the filtered one
@@ -199,10 +205,9 @@ export const useCustomerSearch = ({
       );
       if (customerToSelect) {
         handleSelect(customerToSelect);
-        return; // prevent unnecessary acidInput reset
       }
     }
-  }, [ID, allCustomerOptions, selectedCustomer, handleSelect]);
+  }, [ID, localCustomerList, selectedCustomer?.acid, handleSelect]);
 
   useEffect(() => {
     if (!acidInput) {

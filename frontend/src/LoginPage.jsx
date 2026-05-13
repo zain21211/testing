@@ -194,12 +194,24 @@ const Login = () => {
     }
   });
 
-  const [todayRecovery, setTodayRecovery] = useState(null);
-  const [todaySales, setTodaySales] = useState(null);
-  const [todayPendingOrders, setTodayPendingOrders] = useState(null);
+  const [todayRecovery, setTodayRecovery] = useState(() => {
+    try { return offlineService.getCachedDashboardTotals()?.todayRecovery ?? null; } catch { return null; }
+  });
+  const [todaySales, setTodaySales] = useState(() => {
+    try { return offlineService.getCachedDashboardTotals()?.todaySales ?? null; } catch { return null; }
+  });
+  const [todayPendingOrders, setTodayPendingOrders] = useState(() => {
+    try { return offlineService.getCachedDashboardTotals()?.todayPendingOrders ?? null; } catch { return null; }
+  });
+  const [lastUsername, setLastUsername] = useState("");
 
   const userType = userData?.userType?.toLowerCase() || "";
   const isAdmin = userType.includes('admin');
+
+  // Load last username for offline login hint
+  useEffect(() => {
+    offlineService.getLastUsername().then(u => { if (u) setLastUsername(u); });
+  }, []);
 
   useEffect(() => {
     if (userData?.username) {
@@ -232,15 +244,27 @@ const Login = () => {
     if (isAdmin) {
       const fetchTotals = () => {
         axios.get(`${url}/cash-entry/today-total`)
-          .then(res => setTodayRecovery(res.data?.total ?? 0))
+          .then(res => {
+            const val = res.data?.total ?? 0;
+            setTodayRecovery(val);
+            offlineService.saveDashboardTotals({ todayRecovery: val, todaySales, todayPendingOrders });
+          })
           .catch(err => console.error("Error fetching today recovery:", err));
 
         axios.get(`${url}/invoices/today-total-sales`)
-          .then(res => setTodaySales(res.data?.total ?? 0))
+          .then(res => {
+            const val = res.data?.total ?? 0;
+            setTodaySales(val);
+            offlineService.saveDashboardTotals({ todayRecovery, todaySales: val, todayPendingOrders });
+          })
           .catch(err => console.error("Error fetching today sales:", err));
 
         axios.get(`${url}/create-order/today-total-pending`)
-          .then(res => setTodayPendingOrders(res.data?.total ?? 0))
+          .then(res => {
+            const val = res.data?.total ?? 0;
+            setTodayPendingOrders(val);
+            offlineService.saveDashboardTotals({ todayRecovery, todaySales, todayPendingOrders: val });
+          })
           .catch(err => console.error("Error fetching today pending orders:", err));
       };
 
@@ -299,45 +323,77 @@ const Login = () => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-    const isOnline = navigator.onLine;
 
+    // Try online login with a short timeout so tunnel/server failures fail fast
     try {
-      const res = await axios.post(`${url}/login`, { password, checked });
+      const res = await axios.post(`${url}/login`, { password, checked }, { timeout: 5000 });
       const token = res.data.token;
       const decoded = jwtDecode(token);
       localStorage.setItem("authToken", token);
       localStorage.setItem("user", JSON.stringify(decoded));
+      // Save offline backup — these keys are intentionally NOT cleared on logout
+      localStorage.setItem("_offlineToken", token);
+      localStorage.setItem("_offlineUser", JSON.stringify(decoded));
       await offlineService.saveCredentials(decoded.username, password);
       setUserData(decoded);
       setIsLoggedIn(true);
       setPassword("");
+      return; // success — done
     } catch (err) {
-      const isNetworkError = !err.response || err.code === 'ECONNABORTED';
-      if (isNetworkError || !isOnline) {
-        const lastUser = await localforage.createInstance({ name: "offlineDB", storeName: "auth" }).getItem("lastUser");
-        if (lastUser) {
-          const isValid = await offlineService.verifyCredentials(lastUser.username, password);
-          if (isValid) {
-            const cachedUser = localStorage.getItem("user");
-            const cachedToken = localStorage.getItem("authToken");
-            if (cachedUser && cachedToken) {
-              setIsLoggedIn(true);
-              setUserData(JSON.parse(cachedUser));
-              setPassword("");
-              return;
+      // Treat any network / timeout / no-response error as "offline"
+      const isNetworkError = !err.response ||
+        err.code === 'ECONNABORTED' ||
+        err.code === 'ERR_NETWORK' ||
+        err.message?.toLowerCase().includes('network') ||
+        err.message?.toLowerCase().includes('timeout');
+
+      if (isNetworkError) {
+        // Attempt offline login using locally cached credentials
+        try {
+          const lastUser = await localforage
+            .createInstance({ name: "offlineDB", storeName: "auth" })
+            .getItem("lastUser");
+
+          if (lastUser) {
+            const isValid = await offlineService.verifyCredentials(lastUser.username, password);
+            if (isValid) {
+              const backupUser  = localStorage.getItem("_offlineUser");
+              const backupToken = localStorage.getItem("_offlineToken");
+              if (backupUser && backupToken) {
+                // Restore active keys so the rest of the app works
+                localStorage.setItem("authToken", backupToken);
+                localStorage.setItem("user", backupUser);
+                setIsLoggedIn(true);
+                setUserData(JSON.parse(backupUser));
+                setPassword("");
+                return;
+              }
             }
           }
+          // Credentials don't match or no backup found
+          setError("Offline login failed — wrong password or no cached session. Please sign in online first.");
+        } catch (offlineErr) {
+          setError("Offline login failed. Please connect to the internet and try again.");
         }
+        setPassword("");
+      } else {
+        // Server responded with an actual error (e.g. wrong password online)
+        setError(err.response?.data?.message || "Login failed");
+        setPassword("");
       }
-      setError(err.response?.data?.message || (isNetworkError ? "Network error. Offline login failed." : "Login failed"));
-      setPassword("");
     } finally {
       setIsLoading(false);
     }
   };
 
+
   const handleLogout = () => {
+    // Preserve offline backup keys (_offlineToken, _offlineUser) so offline re-login works
+    const offlineToken = localStorage.getItem("_offlineToken");
+    const offlineUser = localStorage.getItem("_offlineUser");
     localStorage.clear();
+    if (offlineToken) localStorage.setItem("_offlineToken", offlineToken);
+    if (offlineUser) localStorage.setItem("_offlineUser", offlineUser);
     setIsLoggedIn(false);
     setUserData(null);
     setIsCustomer(false);
@@ -462,6 +518,13 @@ const Login = () => {
             <Typography variant="body1" sx={{ color: '#666' }}>Enter your password to access the system.</Typography>
           </Box>
           <Box component="form" onSubmit={handleLogin}>
+            {lastUsername && (
+              <Box sx={{ mb: 2, p: 1.5, borderRadius: '12px', bgcolor: 'rgba(25, 118, 210, 0.06)', border: '1px solid rgba(25,118,210,0.2)' }}>
+                <Typography variant="body2" sx={{ color: '#555', fontWeight: 600 }}>
+                  👤 Last signed in as: <strong>{lastUsername}</strong>
+                </Typography>
+              </Box>
+            )}
             <FormControl fullWidth sx={{ mb: 3 }}>
               <Typography variant="body2" fontWeight="600" sx={{ mb: 1, ml: 1 }}>Password</Typography>
               <OutlinedInput type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required sx={{ borderRadius: '16px', bgcolor: 'white' }} startAdornment={<InputAdornment position="start"><LockOutlinedIcon color="action" /></InputAdornment>} endAdornment={<InputAdornment position="end"><IconButton onClick={() => setShowPassword(!showPassword)} edge="end">{showPassword ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment>} />

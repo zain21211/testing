@@ -8,10 +8,9 @@ const SyncContext = createContext();
 export const SyncProvider = ({ children }) => {
   const isOnline = useRealOnlineStatus();
   const [isSyncing, setIsSyncing] = useState(false);
-  const token = localStorage.getItem("authToken");
-
   const fullSync = async () => {
-    if (!isOnline || !token) return;
+    const currentToken = localStorage.getItem("authToken");
+    if (!isOnline || !currentToken) return;
     setIsSyncing(true);
     console.log("🔄 Background Sync Started...");
     try {
@@ -19,8 +18,9 @@ export const SyncProvider = ({ children }) => {
         offlineService.syncCustomers(token),
         offlineService.syncProducts(token),
         offlineService.syncSchemes(token),
+        offlineService.syncPackingData(),       // ← Packing list cache
         backgroundSyncService.syncInvoices(),
-        backgroundSyncService.syncRecoveries()
+        backgroundSyncService.syncRecoveries(),
       ]);
       console.log("✅ Background Sync Complete");
     } catch (e) {
@@ -31,13 +31,20 @@ export const SyncProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (isOnline && token) {
-      fullSync();
+    if (isOnline) {
+      // Small delay to ensure localStorage is updated if we just logged in
+      const timer = setTimeout(() => {
+        fullSync();
+      }, 1000);
+      
       // Sync every 5 minutes while app is open and online
       const interval = setInterval(fullSync, 5 * 60 * 1000);
-      return () => clearInterval(interval);
+      return () => {
+        clearTimeout(timer);
+        clearInterval(interval);
+      };
     }
-  }, [isOnline, token]);
+  }, [isOnline]);
 
   return (
     <SyncContext.Provider value={{ isSyncing, fullSync }}>

@@ -60,12 +60,19 @@ export default function OrderPage({
             return;
         }
 
+        // If products haven't been synced yet, warn only after loading is complete
+        if (!initialDataLoading && products.length === 0) {
+            setError("Product list not available offline. Please connect to internet at least once to sync products.");
+            return;
+        }
+        setError(null);
+
         const handler = setTimeout(() => {
             setProductID(productIDInput);
-        }, 1000); // debounce delay
+        }, 500); // reduced debounce delay for snappier feel
 
         return () => clearTimeout(handler); // cleanup previous timeout
-    }, [productIDInput]);
+    }, [productIDInput, products.length]);
 
     useEffect(() => {
         if (productID) {
@@ -73,13 +80,17 @@ export default function OrderPage({
             if (found) {
                 setSelectedProduct(found);
                 setProductInputValue(found.Name || "");
+                setError(null);
                 setTimeout(() => {
                     quantityInputRef.current?.focus();
                 }, 100);
-            } else {
+            } else if (products.length > 0) {
+                // Products loaded but code not found
                 setSelectedProduct(null);
                 setProductInputValue("");
+                setError(`Product code "${productID}" not found.`);
             }
+            // If products.length === 0, the other effect already shows the sync warning
         }
     }, [productID, products]);
 

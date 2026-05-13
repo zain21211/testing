@@ -113,7 +113,7 @@ const ActionCard = ({ title, subtitle, icon: Icon, color, path, onClick, value }
         }}
       >
         <Icon sx={{
-          fontSize: 'clamp(32px, 16vw, 140px)',
+          fontSize: 'clamp(24px, 8vw, 60px)',
           color: color,
           display: 'block',
           lineHeight: 1,
@@ -471,26 +471,26 @@ const Login = () => {
       justifyContent: 'center'
     }}>
       {isLoggedIn ? (
-        <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 4 }, width: '100%' }}>
-          <Box sx={{ mb: { xs: 2, md: 4 }, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: { xs: 2, md: 6 }, textAlign: 'left' }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 2 }, width: '100%' }}>
+          <Box sx={{ mb: { xs: 1, md: 2 }, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: { xs: 1, md: 3 }, textAlign: 'left' }}>
             <Box sx={{ position: 'relative', flexShrink: 0 }}>
               <input type="file" accept="image/*" capture="user" id="avatar-upload" style={{ display: 'none' }} onChange={handleAvatarChange} />
               <label htmlFor="avatar-upload">
-                <Avatar src={avatar} sx={{ width: { xs: 80, sm: 120, md: 200 }, height: { xs: 80, sm: 120, md: 200 }, bgcolor: 'primary.main', fontSize: { xs: '2.5rem', md: '4rem' }, boxShadow: '0 12px 32px rgba(0,0,0,0.15)', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
+                <Avatar src={avatar} sx={{ width: { xs: 50, sm: 70, md: 80 }, height: { xs: 50, sm: 70, md: 80 }, bgcolor: 'primary.main', fontSize: { xs: '1.5rem', md: '2.5rem' }, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
                   {!avatar && (userData?.username?.charAt(0).toUpperCase() || <PersonIcon />)}
                 </Avatar>
               </label>
             </Box>
             <Box>
-              <Typography variant="h2" fontWeight="900" sx={{ color: '#1a1a1a', mb: { xs: 0.5, md: 1 }, fontSize: { xs: '1.8rem', sm: '1.75rem', md: '4rem' }, letterSpacing: '-1px', lineHeight: 1.1 }}>
+              <Typography variant="h2" fontWeight="900" sx={{ color: '#1a1a1a', mb: { xs: 0, md: 0.5 }, fontSize: { xs: '1.2rem', sm: '1.4rem', md: '2rem' }, letterSpacing: '-0.5px', lineHeight: 1.1 }}>
                 Welcome back, {userData?.username || "Admin"}
               </Typography>
-              <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '1.05rem', sm: '1rem', md: '1.5rem' } }}>
+              <Typography variant="h5" sx={{ color: '#555', fontWeight: 500, fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1.1rem' } }}>
                 What would you like to manage today?
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '1fr', gap: { xs: '6px', sm: '12px', md: '20px' }, width: '100%' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(6, 1fr)' }, gridAutoRows: '1fr', gap: { xs: '4px', sm: '8px', md: '12px' }, width: '100%' }}>
             {ALL_DASHBOARD_CARDS
               .filter(card => (card.adminOnly ? userType === "admin" : canSee(card.key)))
               .sort((a, b) => getSortOrder(a.key) - getSortOrder(b.key))

@@ -68,6 +68,7 @@ const AdminVisibilityPage = () => {
   const [saving, setSaving] = useState({}); 
   const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
   const [formKeys, setFormKeys] = useState(INITIAL_FORM_KEYS);
+  const [dynamicUserTypes, setDynamicUserTypes] = useState([]);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchVisibility = useCallback(async () => {
@@ -77,16 +78,34 @@ const AdminVisibilityPage = () => {
       const res = await axios.get(`${url}/form-visibility`);
       const map = {};
       const orderMap = {}; // key -> sortOrder
+      const utSet = new Set();
+
       res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
         map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
         orderMap[form_key] = sort_order;
+        utSet.add(usertype);
       });
-      setVisibility(map);
 
-      // Re-sort the local formKeys based on the fetched sort_order (using the first usertype's order)
+      setVisibility(map);
+      
+      // Sort user types: admin first, then alphabetical
+      const uts = Array.from(utSet).sort((a, b) => {
+        if (a === "admin") return -1;
+        if (b === "admin") return 1;
+        return a.localeCompare(b);
+      });
+      setDynamicUserTypes(uts);
+
+      // Re-sort the local formKeys based on the fetched sort_order
       setFormKeys(prev => {
         const sorted = [...prev].sort((a, b) => (orderMap[a.key] ?? 999) - (orderMap[b.key] ?? 999));
-        return sorted;
+        // Also check if there are keys in the data that are NOT in INITIAL_FORM_KEYS
+        const existingKeys = new Set(prev.map(f => f.key));
+        const newKeysFromData = Array.from(new Set(res.data.map(r => r.form_key)))
+          .filter(k => !existingKeys.has(k))
+          .map(k => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), emoji: "🔹" }));
+        
+        return [...sorted, ...newKeysFromData].sort((a, b) => (orderMap[a.key] ?? 999) - (orderMap[b.key] ?? 999));
       });
     } catch (err) {
       setFetchError("Failed to load visibility settings. Is the backend running?");
@@ -135,7 +154,7 @@ const AdminVisibilityPage = () => {
       const updates = [];
       for (let i = 0; i < newKeys.length; i++) {
         const fkey = newKeys[i].key;
-        for (const ut of USER_TYPES) {
+        for (const ut of dynamicUserTypes) {
           const vis = visibility[`${ut}|${fkey}`]?.isVisible ?? false;
           updates.push({ 
             usertype: ut, 
@@ -257,48 +276,48 @@ const AdminVisibilityPage = () => {
             <tr>
               <th style={{
                 position: "sticky", top: 0, left: 0, zIndex: 4,
-                background: "#1a1630",
-                padding: "14px 8px", textAlign: "left",
-                borderBottom: "1px solid rgba(255,255,255,0.12)",
-                borderRight: "1px solid rgba(255,255,255,0.12)",
-                minWidth: 100, width: 100, whiteSpace: "nowrap",
+                background: "#25213d",
+                padding: "14px 12px", textAlign: "left",
+                borderBottom: "1px solid rgba(255,255,255,0.15)",
+                borderRight: "1px solid rgba(255,255,255,0.15)",
+                minWidth: 180, width: 180, whiteSpace: "nowrap",
               }}>
-                <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 700, fontSize: "0.65rem", letterSpacing: 2, textTransform: "uppercase" }}>
+                <span style={{ color: "#ffffff", fontWeight: 900, fontSize: "0.85rem", letterSpacing: 1.5, textTransform: "uppercase" }}>
                   Form / User Type
                 </span>
               </th>
-              {USER_TYPES.map((ut) => (
+              {dynamicUserTypes.map((ut) => (
                 <th key={ut} style={{
                   position: "sticky", top: 0, zIndex: 3,
-                  background: "#1a1630",
-                  padding: "10px 4px",
-                  borderBottom: "1px solid rgba(255,255,255,0.12)",
-                  borderLeft: "1px solid rgba(255,255,255,0.06)",
-                  textAlign: "center", minWidth: 75,
+                  background: "#25213d",
+                  padding: "12px 6px",
+                  borderBottom: "1px solid rgba(255,255,255,0.15)",
+                  borderLeft: "1px solid rgba(255,255,255,0.08)",
+                  textAlign: "center", minWidth: 110,
                 }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <span style={{
-                      display: "inline-block", padding: "2px 8px", borderRadius: 99,
-                      background: USER_TYPE_COLORS[ut] + "33", color: USER_TYPE_COLORS[ut],
-                      fontWeight: 800, fontSize: "0.62rem",
-                      border: `1px solid ${USER_TYPE_COLORS[ut]}55`, letterSpacing: 1,
+                      color: "#ffffff",
+                      fontWeight: 900, fontSize: "0.8rem",
+                      letterSpacing: 1.2,
+                      textShadow: "0 2px 4px rgba(0,0,0,0.5)",
                     }}>
                       {ut.toUpperCase()}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.58rem" }}>
-                      {countVisible(ut)}/{formKeys.length}
+                    <span style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.65rem", fontWeight: 700 }}>
+                      {countVisible(ut)}/{formKeys.length} Visible
                     </span>
                   </div>
                 </th>
               ))}
               <th style={{
                 position: "sticky", top: 0, zIndex: 3,
-                background: "#1a1630",
+                background: "#25213d",
                 padding: "10px 4px",
-                borderBottom: "1px solid rgba(255,255,255,0.12)",
-                textAlign: "center", minWidth: 80,
+                borderBottom: "1px solid rgba(255,255,255,0.15)",
+                textAlign: "center", minWidth: 90,
               }}>
-                <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 700, fontSize: "0.65rem", letterSpacing: 1, textTransform: "uppercase" }}>
+                <span style={{ color: "rgba(255,255,255,0.85)", fontWeight: 800, fontSize: "0.7rem", letterSpacing: 1, textTransform: "uppercase" }}>
                   Order
                 </span>
               </th>
@@ -309,7 +328,7 @@ const AdminVisibilityPage = () => {
           <tbody>
             {formKeys.map((form, idx) => {
               const rowBg = idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.025)";
-              const stickyBg = idx % 2 === 0 ? "#1c1836" : "#1e1a3a";
+              const stickyBg = idx % 2 === 0 ? "#2a264a" : "#2d294e";
               return (
                 <tr
                   key={form.key}
@@ -328,18 +347,19 @@ const AdminVisibilityPage = () => {
                     borderRight: "1px solid rgba(255,255,255,0.1)",
                     whiteSpace: "nowrap",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>{form.emoji}</span>
-                      <span style={{ color: "rgba(255,255,255,0.9)", fontWeight: 700, fontSize: "0.8rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{form.emoji}</span>
+                      <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.85rem", letterSpacing: "0.5px" }}>
                         {form.label}
                       </span>
                     </div>
                   </td>
 
                   {/* Toggle cells */}
-                  {USER_TYPES.map((ut) => {
+                  {dynamicUserTypes.map((ut) => {
                     const visible = isVisible(ut, form.key);
                     const saving = isSaving(ut, form.key);
+                    const utColor = USER_TYPE_COLORS[ut] || "#555";
                     return (
                       <td key={ut} style={{
                         textAlign: "center", padding: "6px 4px",
@@ -347,7 +367,7 @@ const AdminVisibilityPage = () => {
                         borderLeft: "1px solid rgba(255,255,255,0.06)",
                       }}>
                         {saving ? (
-                          <CircularProgress size={18} sx={{ color: USER_TYPE_COLORS[ut] }} />
+                          <CircularProgress size={18} sx={{ color: utColor }} />
                         ) : (
                           <Tooltip title={`${visible ? "Hide" : "Show"} ${form.label} for ${ut}`} placement="top" arrow>
                             <Switch
@@ -355,8 +375,8 @@ const AdminVisibilityPage = () => {
                               onChange={(e) => handleToggle(ut, form.key, e.target.checked)}
                               size="small"
                               sx={{
-                                "& .MuiSwitch-switchBase.Mui-checked": { color: USER_TYPE_COLORS[ut] },
-                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: USER_TYPE_COLORS[ut] + "88" },
+                                "& .MuiSwitch-switchBase.Mui-checked": { color: utColor },
+                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: utColor + "88" },
                               }}
                             />
                           </Tooltip>

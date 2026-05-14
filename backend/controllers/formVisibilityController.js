@@ -20,6 +20,7 @@ const ALL_FORM_KEYS = [
   "imageviewer",
   "ledger",
   "pendingdemand",
+  "visibility",
 ];
 
 const ALL_USER_TYPES = [
@@ -61,7 +62,7 @@ const ensureTableAndSeed = async (pool) => {
         id        INT IDENTITY(1,1) PRIMARY KEY,
         usertype  NVARCHAR(50) NOT NULL,
         form_key  NVARCHAR(50) NOT NULL,
-        is_visible BIT NOT NULL DEFAULT 1,
+        is_visible BIT NOT NULL DEFAULT 0,
         sort_order INT NOT NULL DEFAULT 0,
         CONSTRAINT UQ_FORM_VIS UNIQUE (usertype, form_key)
       )
@@ -75,34 +76,41 @@ const ensureTableAndSeed = async (pool) => {
     END
   `);
 
-  // 2. Optimized seeding: Check which entries are missing in one go
-  // Instead of 100+ separate queries, we'll only insert what's missing.
-  // We can't easily do a single INSERT for all, but we can reduce it significantly.
+  // 2. Fetch all unique user types from USERS table and normalize (e.g. customer-123 -> customer)
+  const userTypesRes = await pool.request().query("SELECT DISTINCT USERTYPE FROM USERS WHERE USERTYPE IS NOT NULL");
+  const dbUserTypes = userTypesRes.recordset.map(r => r.USERTYPE.toLowerCase().split('-')[0]);
   
-  // Get existing keys
-  const existing = await pool.request().query("SELECT usertype, form_key FROM FORM_VISIBILITY");
-  const existingSet = new Set(existing.recordset.map(r => `${r.usertype.toLowerCase()}|${r.form_key.toLowerCase()}`));
+  // Merge with hardcoded list to ensure standard roles exist
+  const finalUserTypes = Array.from(new Set([...ALL_USER_TYPES, ...dbUserTypes]));
 
-  for (const usertype of ALL_USER_TYPES) {
-    let orderIndex = 0;
-    for (const formKey of ALL_FORM_KEYS) {
-      const key = `${usertype.toLowerCase()}|${formKey.toLowerCase()}`;
-      if (!existingSet.has(key)) {
-        const isVisible = DEFAULT_VISIBILITY[formKey]?.includes(usertype) ? 1 : 0;
-        await pool
-          .request()
-          .input("usertype", mssql.NVarChar, usertype.toLowerCase())
-          .input("form_key", mssql.NVarChar, formKey.toLowerCase())
-          .input("is_visible", mssql.Bit, isVisible)
-          .input("sort_order", mssql.Int, orderIndex)
-          .query(`
-            INSERT INTO FORM_VISIBILITY (usertype, form_key, is_visible, sort_order)
-            VALUES (@usertype, @form_key, @is_visible, @sort_order)
-          `);
-      }
-      orderIndex++;
-    }
-  }
+  // Cleanup: Remove any old entries that still have dashes (e.g. customer-123)
+  // to ensure only normalized base types (e.g. customer) exist in the manager.
+  await pool.request().query("DELETE FROM FORM_VISIBILITY WHERE usertype LIKE '%-%'");
+
+  // 3. Bulk Seed Missing Entries - Single Optimized Query
+  // We combine dynamic user types and hardcoded ones, then cross join with form keys.
+  const utValues = finalUserTypes.map(ut => `('${ut}')`).join(", ");
+  const formValues = ALL_FORM_KEYS.map((key, idx) => `('${key}', ${idx})`).join(", ");
+  const defaultVisEntries = Object.entries(DEFAULT_VISIBILITY).map(([fk, roles]) => 
+    `WHEN v.fkey = '${fk}' AND u.ut IN (${roles.map(r => `'${r}'`).join(",")}) THEN 1`
+  ).join("\n               ");
+
+  await pool.request().query(`
+    INSERT INTO FORM_VISIBILITY (usertype, form_key, is_visible, sort_order)
+    SELECT u.ut, v.fkey, 
+           CASE 
+             WHEN u.ut = 'admin' THEN 1
+             ${defaultVisEntries}
+             ELSE 0
+           END,
+           v.sorder
+    FROM (SELECT ut FROM (VALUES ${utValues}) AS temp(ut)) AS u
+    CROSS JOIN (VALUES ${formValues}) AS v(fkey, sorder)
+    WHERE NOT EXISTS (
+      SELECT 1 FROM FORM_VISIBILITY 
+      WHERE usertype = u.ut AND form_key = v.fkey
+    )
+  `);
 };
 
 // GET /api/form-visibility
@@ -142,17 +150,8 @@ const updateFormVisibility = async (req, res) => {
   }
 
   const { usertype, form_key, is_visible, sort_order } = req.body;
-
   if (!usertype || !form_key || is_visible === undefined) {
     return res.status(400).json({ message: "usertype, form_key, and is_visible are required." });
-  }
-
-  if (!ALL_USER_TYPES.includes(usertype.toLowerCase())) {
-    return res.status(400).json({ message: `Unknown usertype: ${usertype}` });
-  }
-
-  if (!ALL_FORM_KEYS.includes(form_key.toLowerCase())) {
-    return res.status(400).json({ message: `Unknown form_key: ${form_key}` });
   }
 
   try {

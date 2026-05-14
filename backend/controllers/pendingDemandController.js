@@ -8,28 +8,33 @@ const getPendingDemandSummary = async (req, res) => {
         const pool = await dbConnection();
         const request = pool.request();
 
-        // Optimized query with parameters
+        // Optimized query based on user requirement
         const query = `
             SELECT 
-                SUM(ps.qty + ISNULL(ps.schpc, 0)) AS TotalQty,
-                p.Category + ' ' + p.urduname + ' ' + p.Company AS ProductName,
-                p.code,
+                p.Code AS code,
                 p.Company,
-                a.Route
-            FROM psproduct ps 
+                p.UrduName,
+                p.Category,
+                p.Category + ' ' + p.UrduName + ' ' + p.Company AS ProductName,
+                SUM(ISNULL(ps.Qty, 0) + ISNULL(ps.SchPc, 0)) AS TotalQty
+            FROM PsProduct ps 
             JOIN coa a ON ps.acid = a.id 
-            JOIN Products p ON ps.prid = p.id 
-            JOIN PSDetail pd ON ps.type = pd.type AND ps.doc = pd.doc
+            JOIN Products p ON ps.prid = p.ID 
+            JOIN PSDetail pd ON ps.type = pd.type AND ps.doc = pd.Doc
             WHERE 
-                ps.date >= @date 
-                AND a.route LIKE @route + '%' 
+                ps.PackingDateTime IS NULL 
+                AND a.Route LIKE @route + '%' 
                 AND p.Company LIKE @company + '%' 
-                AND ps.packingdatetime IS NULL
-                AND ps.type = 'sale' 
+                AND CAST(ps.Date AS DATE) >= @date 
+                AND pd.Description NOT LIKE 'SV%'
+                AND ps.type = 'sale'
+                AND a.subsidary NOT LIKE '%counter%'
+                AND ps.isclaim = 0
+                AND (pd.Status IS NULL OR pd.Status <> 'INVOICE')
             GROUP BY 
-                p.Company, p.UrduName, p.category, p.code, a.Route
+                p.Company, p.UrduName, p.Category, p.Code
             HAVING 
-                SUM(ps.qty + ISNULL(ps.schpc, 0)) > 0
+                SUM(ISNULL(ps.Qty, 0) + ISNULL(ps.SchPc, 0)) > 0
             ORDER BY 
                 p.Company, p.UrduName
         `;
@@ -56,20 +61,35 @@ const getPendingDemandFilters = async (req, res) => {
 
         const query = `
             SELECT DISTINCT a.Route
-            FROM psproduct ps
+            FROM PsProduct ps
             JOIN coa a ON ps.acid = a.id
-            WHERE ps.date >= @date 
-              AND ps.packingdatetime IS NULL 
+            JOIN PSDetail pd ON ps.type = pd.type AND ps.doc = pd.Doc
+            WHERE CAST(ps.Date AS DATE) >= @date 
+              AND ps.PackingDateTime IS NULL 
+              AND pd.Description NOT LIKE 'SV%'
               AND ps.type = 'sale'
-              AND a.Route IS NOT NULL AND a.Route <> '';
+              AND a.subsidary NOT LIKE '%counter%'
+              AND ps.isclaim = 0
+              AND (pd.Status IS NULL OR pd.Status <> 'INVOICE')
+              AND a.Route IS NOT NULL AND a.Route <> ''
+            GROUP BY a.Route, ps.prid
+            HAVING SUM(ISNULL(ps.Qty, 0) + ISNULL(ps.SchPc, 0)) > 0;
 
             SELECT DISTINCT p.Company
-            FROM psproduct ps
+            FROM PsProduct ps
             JOIN Products p ON ps.prid = p.id
-            WHERE ps.date >= @date 
-              AND ps.packingdatetime IS NULL 
+            JOIN coa a ON ps.acid = a.id
+            JOIN PSDetail pd ON ps.type = pd.type AND ps.doc = pd.Doc
+            WHERE CAST(ps.Date AS DATE) >= @date 
+              AND ps.PackingDateTime IS NULL 
+              AND pd.Description NOT LIKE 'SV%'
               AND ps.type = 'sale'
-              AND p.Company IS NOT NULL AND p.Company <> '';
+              AND a.subsidary NOT LIKE '%counter%'
+              AND ps.isclaim = 0
+              AND (pd.Status IS NULL OR pd.Status <> 'INVOICE')
+              AND p.Company IS NOT NULL AND p.Company <> ''
+            GROUP BY p.Company, ps.prid
+            HAVING SUM(ISNULL(ps.Qty, 0) + ISNULL(ps.SchPc, 0)) > 0;
         `;
 
         const result = await request.query(query);

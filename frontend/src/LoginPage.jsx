@@ -40,6 +40,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ImageIcon from '@mui/icons-material/Image';
 import BookIcon from '@mui/icons-material/Book';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 const ALL_DASHBOARD_CARDS = [
   { key: "packing", title: "Packing", subtitle: "Pending", icon: InventoryIcon, color: "#ff3d07", path: "/pending" },
@@ -57,6 +58,7 @@ const ALL_DASHBOARD_CARDS = [
   { key: "imageviewer", title: "Images", subtitle: "Viewer", icon: ImageIcon, color: "#0288d1", path: "/image-viewer" },
   { key: "ledger", title: "Ledger", subtitle: "Statement", icon: BookIcon, color: "#7b1fa2", path: "/ledger" },
   { key: "pendingdemand", title: "Pending", subtitle: "Demand", icon: ListAltIcon, color: "#E91E63", path: "/pending-demand" },
+  { key: "attendance", title: "Attendance", subtitle: "Daily", icon: AccessTimeIcon, color: "#4caf50", path: "/attendance" },
   { key: "visibility", title: "Visibility", subtitle: "Manager", icon: AdminPanelSettingsIcon, color: "#6c63ff", path: "/admin/visibility", adminOnly: true },
 ];
 
@@ -76,6 +78,7 @@ const FALLBACK_VISIBILITY = {
   imageviewer: ["admin", "sm", "operator"],
   ledger: ["admin", "sm", "operator"],
   pendingdemand: ["admin", "sm", "operator"],
+  attendance: ["admin", "sm", "operator"],
 };
 
 const url = import.meta.env.VITE_API_URL;

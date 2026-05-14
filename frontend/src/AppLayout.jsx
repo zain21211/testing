@@ -26,6 +26,7 @@ import SalesHistory from "./SaleHistory.jsx";
 import AdminVisibilityPage from "./pages/AdminVisibilityPage.jsx";
 import ImageViewer from "./ImageViewer.jsx";
 import PendingDemand from "./PendingDemand.jsx";
+import AttendanceForm from "./components/attendance/AttendanceForm.jsx";
 
 const AppLayout = () => {
     // const theme = useTheme(); // (Still need useTheme if using styled/sx)
@@ -61,6 +62,7 @@ const AppLayout = () => {
                     <Route path="/admin/visibility" element={<AdminVisibilityPage />} />
                     <Route path="/image-viewer" element={<ImageViewer />} />
                     <Route path="/pending-demand" element={<PendingDemand />} />
+                    <Route path="/attendance" element={<AttendanceForm />} />
                 </Routes>
             </Box>
 

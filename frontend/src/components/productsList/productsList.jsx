@@ -20,22 +20,21 @@ const url = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function ProductsList() {
   const [products, setProducts] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [blackedOutRows, setBlackedOutRows] = useState(() => {
     try {
-      const saved = localStorage.getItem("blackedOutRows_products");
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      const saved = localStorage.getItem("blackedOutRows_products_v4");
+      return saved ? JSON.parse(saved) : {}; // Store as { key: quantity }
     } catch {
-      return new Set();
+      return {};
     }
   });
 
-  useEffect(() => {
-    getProductsHistory();
-  }, []);
-
-  const getProductsHistory = async () => {
+  const getProductsHistory = async (date) => {
     try {
-      const res = await axios.get(`${url}/products/history`);
+      const res = await axios.get(`${url}/products/history`, {
+        params: { date: date || selectedDate }
+      });
       const data = res.data.data;
       if (!isEqual(data, products)) {
         setProducts(data);
@@ -45,19 +44,35 @@ export default function ProductsList() {
     }
   };
 
-  const getRowKey = (product) => `${product.company}|${product.urduname}|${product.category}`;
+  useEffect(() => {
+    getProductsHistory();
+    const interval = setInterval(() => getProductsHistory(), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [selectedDate]);
+
+  const getRowKey = (product) => `${selectedDate}|${product.company}|${product.urduname}|${product.category}`;
 
   const toggleRow = (product) => {
     const key = getRowKey(product);
     setBlackedOutRows((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) newSet.delete(key);
-      else newSet.add(key);
-      
-      // Persist to localStorage
-      localStorage.setItem("blackedOutRows_products", JSON.stringify(Array.from(newSet)));
-      return newSet;
+      const newMap = { ...prev };
+      if (newMap.hasOwnProperty(key)) {
+        delete newMap[key];
+      } else {
+        newMap[key] = product.qty;
+      }
+      localStorage.setItem("blackedOutRows_products_v4", JSON.stringify(newMap));
+      return newMap;
     });
+  };
+
+  const formatDisplayDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = months[date.getMonth()];
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day}-${month}-${year}`;
   };
 
   return (
@@ -89,6 +104,60 @@ export default function ProductsList() {
           },
         }}
       >
+        {/* Sticky Date Filter */}
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
+            background: "rgba(30, 27, 75, 0.95)",
+            backdropFilter: "blur(10px)",
+            p: 2,
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 2,
+            "@media print": { display: "none" },
+          }}
+        >
+          <Typography sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 600, fontSize: "0.9rem" }}>
+            Viewing Data For:
+          </Typography>
+          <Box
+            sx={{
+              position: "relative",
+              background: "rgba(108, 99, 255, 0.2)",
+              borderRadius: "12px",
+              px: 3,
+              py: 1,
+              border: "1px solid rgba(108, 99, 255, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              "&:hover": { background: "rgba(108, 99, 255, 0.3)" }
+            }}
+          >
+            <Typography sx={{ color: "white", fontWeight: 900, fontSize: "1.1rem" }}>
+              {formatDisplayDate(selectedDate)}
+            </Typography>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                opacity: 0,
+                cursor: "pointer"
+              }}
+            />
+          </Box>
+        </Box>
+
         {/* Header */}
         <Box
           sx={{
@@ -102,10 +171,10 @@ export default function ProductsList() {
         >
           <Box>
             <Typography variant="h4" sx={{ color: "white", fontWeight: 900, letterSpacing: "-1px" }}>
-              Daily Product Load
+              Spot Sale Items
             </Typography>
             <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }}>
-              Today's summarized product distribution and quantities
+              Summarized product distribution for {formatDisplayDate(selectedDate)}
             </Typography>
           </Box>
           <Tooltip title="Print List">
@@ -128,13 +197,16 @@ export default function ProductsList() {
           <Stack spacing={2}>
             {products.length === 0 && (
               <Typography sx={{ color: "rgba(255,255,255,0.3)", textAlign: "center", py: 8 }}>
-                No products recorded for today yet.
+                No products recorded for {formatDisplayDate(selectedDate)}.
               </Typography>
             )}
             
             {products.map((product, index) => {
               const key = getRowKey(product);
-              const isBlackedOut = blackedOutRows.has(key);
+              const savedQty = blackedOutRows[key];
+              const isBlackedOut = savedQty !== undefined;
+              const isChanged = isBlackedOut && savedQty !== product.qty;
+
               return (
                 <Box
                   key={index}
@@ -142,18 +214,28 @@ export default function ProductsList() {
                     display: "flex",
                     alignItems: "center",
                     p: 2,
-                    background: isBlackedOut ? "#000" : "rgba(255, 255, 255, 0.03)",
-                    opacity: isBlackedOut ? 0.3 : 1,
+                    background: isChanged 
+                      ? "rgba(25, 118, 210, 0.4)" 
+                      : isBlackedOut 
+                        ? "#000" 
+                        : "rgba(255, 255, 255, 0.03)",
+                    opacity: isBlackedOut ? 0.6 : 1, 
                     borderRadius: "16px",
                     transition: "all 0.3s ease",
-                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    border: isChanged 
+                      ? "1px solid #1976d2" 
+                      : "1px solid rgba(255, 255, 255, 0.05)",
                     "&:hover": {
-                      background: isBlackedOut ? "#000" : "rgba(255, 255, 255, 0.07)",
+                      background: isChanged 
+                        ? "rgba(25, 118, 210, 0.6)"
+                        : isBlackedOut 
+                          ? "#000" 
+                          : "rgba(255, 255, 255, 0.07)",
                       transform: isBlackedOut ? "none" : "translateX(8px)",
                       borderColor: isBlackedOut ? "none" : "rgba(108, 99, 255, 0.3)",
                     },
                     "@media print": {
-                      display: isBlackedOut ? "none" : "flex", // Hide blacked out rows in print
+                      display: isBlackedOut ? "none" : "flex",
                       flexDirection: "row",
                       p: 1,
                       borderBottom: "1px dashed #ccc",
@@ -174,13 +256,23 @@ export default function ProductsList() {
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: isBlackedOut ? "#333" : "linear-gradient(135deg, #6c63ff 0%, #3f37c9 100%)",
+                      background: isChanged
+                        ? "#1976d2" 
+                        : isBlackedOut 
+                          ? "#333" 
+                          : "linear-gradient(135deg, #6c63ff 0%, #3f37c9 100%)",
                       borderRadius: "12px",
                       color: "white",
                       mr: 4,
                       cursor: "pointer",
                       boxShadow: isBlackedOut ? "none" : "0 4px 12px rgba(108, 99, 255, 0.4)",
                       flexShrink: 0,
+                      animation: isChanged ? "pulse 2s infinite" : "none",
+                      "@keyframes pulse": {
+                        "0%": { boxShadow: "0 0 0 0px rgba(25, 118, 210, 0.7)" },
+                        "70%": { boxShadow: "0 0 0 10px rgba(25, 118, 210, 0)" },
+                        "100%": { boxShadow: "0 0 0 0px rgba(25, 118, 210, 0)" },
+                      },
                       "&:hover": { transform: "scale(1.05)" },
                       "@media print": {
                         mr: 2,
@@ -196,7 +288,7 @@ export default function ProductsList() {
                     </Typography>
                   </Box>
 
-                  {/* 2. Unified Information String (Category UrduName Company) */}
+                  {/* 2. Unified Information String */}
                   <Box sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", display: "flex", justifyContent: "flex-end" }}>
                     <Typography
                       sx={{
@@ -223,7 +315,7 @@ export default function ProductsList() {
 
         {/* Footer info */}
         <Box sx={{ p: 3, textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: "0.75rem", "@media print": { color: "black", mt: 2 } }}>
-          Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
+          Generated for {formatDisplayDate(selectedDate)} on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
         </Box>
       </Box>
     </Box>

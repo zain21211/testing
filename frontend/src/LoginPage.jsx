@@ -51,7 +51,7 @@ const ALL_DASHBOARD_CARDS = [
   { key: "recovery", title: "Recovery", subtitle: "Dues", icon: ReceiptLongIcon, color: "#2e7d32", path: "/recovery", dynamicValue: "todayRecovery" },
   { key: "sales", title: "Sales", subtitle: "Daily", icon: TrendingUpIcon, color: "#009688", path: "/sales", dynamicValue: "todaySales" },
   { key: "neworder", title: "New Order", subtitle: "Invoice", icon: AddShoppingCartIcon, color: "#1976d2", path: "/order", dynamicValue: "todayPendingOrders" },
-  { key: "products", title: "Products", subtitle: "Stock", icon: ShoppingBagIcon, color: "#ff00ea", path: "/productslist" },
+  { key: "products", title: "Spot Sales", subtitle: "Stock", icon: ShoppingBagIcon, color: "#ff00ea", path: "/productslist" },
   { key: "routes", title: "Routes", subtitle: "Mapping", icon: RouteIcon, color: "#3f51b5", path: "/list" },
   { key: "delivery", title: "Delivery", subtitle: "Tracking", icon: DeliveryDiningIcon, color: "#a41260", path: "/delivery" },
   { key: "imageviewer", title: "Images", subtitle: "Viewer", icon: ImageIcon, color: "#0288d1", path: "/image-viewer" },

@@ -20,11 +20,10 @@ const productControllers = {
 
   // Controller: Get today's product history for a given username
   getProductsHistory: async (req, res) => {
-    // const { username } = req.params; // e.g., /api/history/danish
-    const username = "danish";
+    const { date } = req.query; // Expecting YYYY-MM-DD
+    const targetDate = date || new Date().toISOString().split('T')[0];
 
     try {
-      // Ensure DB is connected
       const pool = await dbConnection();
 
       const query = `
@@ -36,7 +35,7 @@ SELECT
 FROM psproduct ps
 JOIN products p ON p.id = ps.prid
 WHERE ps.EntryBy = 'danish'
-  AND ps.date = CAST(GETDATE() AS date)
+  AND ps.date = @targetDate
 GROUP BY 
     p.urduname,
     p.category,
@@ -46,6 +45,7 @@ ORDER BY Company, urduname, category;
 
       const result = await pool
         .request()
+        .input("targetDate", sql.Date, targetDate)
         .query(query);
 
       res.status(200).json({

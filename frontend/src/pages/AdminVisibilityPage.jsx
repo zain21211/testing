@@ -41,7 +41,7 @@ const INITIAL_FORM_KEYS = [
   { key: "recovery",       label: "Recovery",        emoji: "🧾" },
   { key: "sales",          label: "Sales",           emoji: "📈" },
   { key: "neworder",       label: "New Order",       emoji: "🛒" },
-  { key: "products",       label: "Products",        emoji: "🛍️" },
+  { key: "products",       label: "Spot Sales",      emoji: "🛍️" },
   { key: "routes",         label: "Routes",          emoji: "🗺️" },
   { key: "delivery",       label: "Delivery",        emoji: "🛵" },
   { key: "imageviewer",    label: "Image Viewer",    emoji: "🖼️" },

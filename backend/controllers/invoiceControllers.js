@@ -196,42 +196,26 @@ const invoiceControllers = {
     const transporter = isAdmin ? "" : username;
 
     let query = `
-WITH TodayPSDetail AS (
-    SELECT 
-        acid,
-        MAX(date) AS LastDate,
-        doc,
-        MAX(amount) AS LastAmount,
-        MAX(shopper) AS shopper,
-        MAX(vehicle) as vehicle
-    FROM psdetail
-    WHERE s_status = 'loaded' AND type = 'SALE' AND shopper IS NOT NULL
-    GROUP BY acid, doc
-)
-SELECT 
-    c.id AS ACID,
-    c.urduname AS UrduName,
-    c.route AS route,
-    p.doc as doc,
-    p.LastDate as date,
-    ISNULL(p.LastAmount, 0) AS amount,
-    p.shopper AS shopper,
-    p.vehicle
-FROM coa c
-INNER JOIN TodayPSDetail p
-    ON p.acid = c.id
-WHERE 
-    (@acid = '' OR c.id LIKE @acid + '%')
-    AND (@doc = '' OR p.doc LIKE '%' + @doc + '%')
-    AND (@route = '' OR c.route LIKE '%' + @route + '%')
+      SELECT 
+        CAST(pd.Date AS DATE) AS date,
+        pd.acid AS ACID,
+        a.route,
+        pd.doc,
+        a.urduname AS UrduName,
+        pd.amount,
+        pd.Description,
+        pd.s_status,
+        pd.vehicle,
+        pd.shopper
+      FROM PSDetail pd 
+      JOIN coa a ON pd.acid = a.Id
+      WHERE 
+        pd.s_status = 'loaded' 
+        AND pd.type = 'sale' 
+        AND (@vehicle = '' OR pd.vehicle = @vehicle)
+        AND (@route = '' OR a.route LIKE @route + '%')
+      ORDER BY pd.Date DESC, pd.doc DESC;
     `;
-
-    if (!isAdmin) {
-      query += `AND p.vehicle = @vehicle `;
-    }
-
-    query += `ORDER BY 
-    p.LastDate DESC, p.doc DESC;`;
 
     try {
       const pool = await dbConnection();

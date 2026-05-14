@@ -511,7 +511,7 @@ const DeliveryForm = () => {
         route: '', 
         acid: '', 
         doc: '', 
-        dateFilter: 'today',
+        dateFilter: 'all',
         customDate: new Date().toLocaleDateString('en-CA'),
         dateSort: 'DESC', 
         docSort: '' 
@@ -913,7 +913,7 @@ const DeliveryForm = () => {
                     onReset={() => fetchList()}
                     disableAutoSearch={true} 
                     routes={routes} 
-                    defaultDateFilter="today"
+                    defaultDateFilter="all"
                 />
             </Box>
 

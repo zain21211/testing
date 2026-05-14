@@ -1,242 +1,231 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
-    Avatar,
-    Box,
-    Divider,
-    List,
-    ListItem,
-    Stack,
-    Typography,
+  Box,
+  Typography,
+  Paper,
+  Divider,
+  Stack,
+  Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import { isEqual } from "lodash";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import PrintIcon from "@mui/icons-material/Print";
+import CategoryIcon from "@mui/icons-material/Category";
+import BusinessIcon from "@mui/icons-material/Business";
 
 const url = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function ProductsList() {
-    const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [blackedOutRows, setBlackedOutRows] = useState(() => {
+    try {
+      const saved = localStorage.getItem("blackedOutRows_products");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
-    useEffect(() => {
-        getProductsHistory();
-    }, []);
+  useEffect(() => {
+    getProductsHistory();
+  }, []);
 
-    const getProductsHistory = async () => {
-        const res = await axios.get(`${url}/products/history`);
-        const data = res.data.data;
+  const getProductsHistory = async () => {
+    try {
+      const res = await axios.get(`${url}/products/history`);
+      const data = res.data.data;
+      if (!isEqual(data, products)) {
+        setProducts(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch products:", err);
+    }
+  };
 
-        if (!isEqual(data, products)) {
-            setProducts(data);
-            console.log(data);
-        }
-    };
+  const getRowKey = (product) => `${product.company}|${product.urduname}|${product.category}`;
 
-    return (
+  const toggleRow = (product) => {
+    const key = getRowKey(product);
+    setBlackedOutRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
+      
+      // Persist to localStorage
+      localStorage.setItem("blackedOutRows_products", JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
+        py: 4,
+        px: { xs: 1, md: 3 },
+      }}
+    >
+      <Box
+        sx={{
+          maxWidth: "1000px",
+          margin: "auto",
+          background: "rgba(255, 255, 255, 0.03)",
+          backdropFilter: "blur(20px)",
+          borderRadius: "24px",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.8)",
+          overflow: "hidden",
+          "@media print": {
+            background: "white",
+            boxShadow: "none",
+            border: "none",
+            p: 0,
+            m: 0,
+            maxWidth: "none",
+          },
+        }}
+      >
+        {/* Header */}
         <Box
-            id="products-list"
-            sx={{
-                bgcolor: "#d9dbe0ff",
-                borderRadius: 2,
-                p: 2,
-                width: { xs: "90%", sm: "90%", md: "50%" },
-                m: "auto",
-                mt: 2,
-                "@media print": {
-                    width: "88mm",
-                    bgcolor: "white",
-                    m: 0,
-                    p: 1,
-                    borderRadius: 0,
-                },
-            }}
+          sx={{
+            p: 3,
+            background: "rgba(255, 255, 255, 0.05)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            "@media print": { display: "none" },
+          }}
         >
-            <List sx={{ width: "100%", p: 0 }}>
-                {products.map((person, index) => (
-                    <React.Fragment key={person.email || index}>
-                        <ListItem
-                            sx={{
-                                display: "flex",
-                                justifyContent: "flex-end",
-                                alignItems: "flex-end",
-                                py: 2,
-                                "@media print": {
-                                    display: "block",
-                                    py: 0.5,
-                                    alignItems: "flex-start",
-                                    justifyContent: "flex-start",
-                                    borderBottom:
-                                        index < products.length - 1
-                                            ? "1px dashed #000"
-                                            : "none",
-                                },
-                            }}
-                        >
-                            <Stack
-                                direction="row"
-                                spacing={1}
-                                sx={{
-                                    minWidth: 0,
-                                    "@media print": {
-                                        flexDirection: "column",
-                                        alignItems: "flex-end",
-                                        gap: 0,
-                                    },
-                                }}
-                            >
-                                <Stack
-                                    direction="row-reverse"
-                                    spacing={1.5}
-                                    sx={{
-                                        color: "pink",
-                                        minWidth: 0,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        "@media print": {
-                                            flexDirection: "column",
-                                            alignItems: "flex-end",
-                                            color: "black",
-                                            gap: 0,
-                                        },
-                                    }}
-                                >
-                                    {/* 👇 NEW PRINT LAYOUT GROUPING 👇 */}
-                                    <Box
-                                        sx={{
-                                            display: "flex",
-                                            flexDirection: "row-reverse",
-                                            color: 'black',
-                                            fontWeight: 'bold',
-                                            gap: 2,
-                                            "@media print": {
-                                                display: "flex",
-                                                flexDirection: "row-reverse",
-                                                justifyContent: "space-between",
-                                                width: "100%",
-                                                textAlign: "left",
-                                            },
-                                        }}
-                                    >
-                                        <Typography
-                                            sx={{
-                                                fontSize: "2rem",
-                                                fontFamily:
-                                                    "Jameel Noori Nastaleeq, serif",
-                                                fontWeight: "bold",
-                                                "@media print": {
-                                                    fontSize: "1.5rem",
-                                                    fontFamily:
-                                                        "Jameel Noori Nastaleeq, serif",
-                                                    fontWeight: "bold",
-                                                }
-                                            }}
-                                        >
-                                            {person.urduname ?? "—"}
-                                        </Typography>
-                                        {person.qty !== undefined && (
-                                            <Typography
-                                                sx={{
-                                                    m: 'auto',
-                                                    fontSize: "0.9rem",
-                                                    fontFamily: "monospace",
-                                                    fontWeight: "normal",
-                                                    border: 1,
-                                                    p: '.5px 1px',
-                                                }}
-                                            >
-                                                {person.qty}
-                                            </Typography>
-                                        )}
-                                    </Box>
-                                    {/* 👆 NEW PRINT LAYOUT GROUPING 👆 */}
-
-                                    {/* 👇 ORIGINAL FIELD RENDERING (for screen + print fallback) 👇 */}
-                                    {Object.entries(person)
-                                        .filter(
-                                            ([key]) =>
-                                                key !== "imageUrl" &&
-                                                key !== "qty" &&
-                                                key !== "urduname"
-                                        )
-                                        .map(([key, value]) => (
-                                            <Typography
-                                                key={key}
-                                                variant="body2"
-                                                sx={{
-                                                    color: "black",
-                                                    overflow: "hidden",
-                                                    fontWeight: "bold",
-                                                    whiteSpace: "nowrap",
-                                                    textOverflow: "ellipsis",
-                                                    fontSize:
-                                                        key === "urduname"
-                                                            ? "2rem"
-                                                            : "1.25rem",
-                                                    fontFamily:
-                                                        key === "urduname"
-                                                            ? "Jameel Noori nastaleeq, serif"
-                                                            : "Poppins, serif",
-                                                    "@media print": {
-                                                        fontSize:
-                                                            key === "urduname"
-                                                                ? "1.1rem"
-                                                                : "0.9rem",
-                                                        whiteSpace: "normal",
-                                                        wordBreak: "break-word",
-                                                        textAlign: "left",
-                                                        fontFamily:
-                                                            key === "urduname"
-                                                                ? "Jameel Noori Nastaleeq, serif"
-                                                                : "monospace",
-                                                        fontWeight:
-                                                            key === "urduname"
-                                                                ? "bold"
-                                                                : "normal",
-                                                        lineHeight: 1.3,
-                                                    },
-                                                }}
-                                            >
-                                                {typeof value === "number"
-                                                    ? value
-                                                    : String(value ?? "—")}
-                                            </Typography>
-                                        ))}
-                                </Stack>
-                            </Stack>
-                        </ListItem>
-
-                        {index < products?.length - 1 && (
-                            <Divider
-                                sx={{
-                                    borderColor: "rgba(16, 16, 16, 1)",
-                                    "@media print": { display: "none" },
-                                }}
-                            />
-                        )}
-                    </React.Fragment>
-                ))}
-            </List>
-
-            {/* Print button (hidden in print) */}
-            <Box
-                sx={{
-                    mt: 2,
-                    textAlign: "center",
-                    "@media print": { display: "none" },
-                }}
+          <Box>
+            <Typography variant="h4" sx={{ color: "white", fontWeight: 900, letterSpacing: "-1px" }}>
+              Daily Product Load
+            </Typography>
+            <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.5)" }}>
+              Today's summarized product distribution and quantities
+            </Typography>
+          </Box>
+          <Tooltip title="Print List">
+            <IconButton
+              onClick={() => window.print()}
+              sx={{
+                bgcolor: "#6c63ff",
+                color: "white",
+                "&:hover": { bgcolor: "#5b54d6" },
+                p: 2,
+              }}
             >
-                <button
-                    onClick={() => window.print()}
-                    style={{
-                        padding: "6px 12px",
-                        background: "#000",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                    }}
-                >
-                    Print
-                </button>
-            </Box>
+              <PrintIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
-    );
+
+        {/* List Content */}
+        <Box sx={{ p: { xs: 1, md: 3 } }}>
+          <Stack spacing={2}>
+            {products.length === 0 && (
+              <Typography sx={{ color: "rgba(255,255,255,0.3)", textAlign: "center", py: 8 }}>
+                No products recorded for today yet.
+              </Typography>
+            )}
+            
+            {products.map((product, index) => {
+              const key = getRowKey(product);
+              const isBlackedOut = blackedOutRows.has(key);
+              return (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    p: 2,
+                    background: isBlackedOut ? "#000" : "rgba(255, 255, 255, 0.03)",
+                    opacity: isBlackedOut ? 0.3 : 1,
+                    borderRadius: "16px",
+                    transition: "all 0.3s ease",
+                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    "&:hover": {
+                      background: isBlackedOut ? "#000" : "rgba(255, 255, 255, 0.07)",
+                      transform: isBlackedOut ? "none" : "translateX(8px)",
+                      borderColor: isBlackedOut ? "none" : "rgba(108, 99, 255, 0.3)",
+                    },
+                    "@media print": {
+                      display: isBlackedOut ? "none" : "flex", // Hide blacked out rows in print
+                      flexDirection: "row",
+                      p: 1,
+                      borderBottom: "1px dashed #ccc",
+                      borderRadius: 0,
+                      background: "none",
+                      transform: "none",
+                      color: "black",
+                    },
+                  }}
+                >
+                  {/* 1. Total Qty (Most Left) */}
+                  <Box
+                    onClick={() => toggleRow(product)}
+                    sx={{
+                      minWidth: { xs: "60px", md: "80px" },
+                      height: { xs: "50px", md: "60px" },
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: isBlackedOut ? "#333" : "linear-gradient(135deg, #6c63ff 0%, #3f37c9 100%)",
+                      borderRadius: "12px",
+                      color: "white",
+                      mr: 4,
+                      cursor: "pointer",
+                      boxShadow: isBlackedOut ? "none" : "0 4px 12px rgba(108, 99, 255, 0.4)",
+                      flexShrink: 0,
+                      "&:hover": { transform: "scale(1.05)" },
+                      "@media print": {
+                        mr: 2,
+                        background: "none",
+                        border: "2px solid black",
+                        color: "black",
+                        boxShadow: "none",
+                      },
+                    }}
+                  >
+                    <Typography variant="h5" sx={{ fontWeight: 900 }}>
+                      {product.qty}
+                    </Typography>
+                  </Box>
+
+                  {/* 2. Unified Information String (Category UrduName Company) */}
+                  <Box sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", display: "flex", justifyContent: "flex-end" }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: "1.4rem", md: "2.6rem" },
+                        fontFamily: "'Jameel Noori Nastaleeq', serif",
+                        color: "white",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        textShadow: isBlackedOut ? "none" : "0 2px 10px rgba(0,0,0,0.3)",
+                        "@media print": { color: "black", fontSize: "1.8rem", textShadow: "none" },
+                      }}
+                    >
+                      <span>{product.category || "General"}</span>
+                      <span dir="rtl" style={{ margin: '0 15px' }}>{product.urduname}</span>
+                      <span>{product.company || "N/A"}</span>
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Stack>
+        </Box>
+
+        {/* Footer info */}
+        <Box sx={{ p: 3, textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: "0.75rem", "@media print": { color: "black", mt: 2 } }}>
+          Generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
+        </Box>
+      </Box>
+    </Box>
+  );
 }

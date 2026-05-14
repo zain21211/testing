@@ -35,19 +35,17 @@ SELECT
     SUM(ps.qty) AS qty
 FROM psproduct ps
 JOIN products p ON p.id = ps.prid
-JOIN PSdetailHistory d ON d.doc = ps.doc
-WHERE d.username = @username
+WHERE ps.EntryBy = 'danish'
   AND ps.date = CAST(GETDATE() AS date)
 GROUP BY 
     p.urduname,
     p.category,
-    p.company;
-
+    p.company
+ORDER BY Company, urduname, category;
     `;
 
       const result = await pool
         .request()
-        .input("username", sql.VarChar, username)
         .query(query);
 
       res.status(200).json({

@@ -9,8 +9,24 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+
+// Dnd Kit Imports
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  TouchSensor,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const url = import.meta.env.VITE_API_URL;
 
@@ -45,6 +61,112 @@ const USER_TYPE_COLORS = {
   bilty:    "#c62828",
 };
 
+// ── Sortable Row Component ────────────────────────────────────────────────────
+const SortableRow = ({ 
+  form, 
+  idx, 
+  isLast, 
+  dynamicUserTypes, 
+  isVisible, 
+  isSaving, 
+  handleToggle, 
+  USER_TYPE_COLORS 
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: form.key });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    position: "relative",
+    background: isDragging ? "rgba(108,99,255,0.2)" : (idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.025)"),
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  const stickyBg = isDragging ? "#3a366a" : (idx % 2 === 0 ? "#2a264a" : "#2d294e");
+
+  return (
+    <tr ref={setNodeRef} style={style}>
+      {/* Frozen label cell */}
+      <td 
+        {...attributes}
+        {...listeners}
+        style={{
+          position: "sticky",
+          left: 0,
+          zIndex: 2,
+          background: stickyBg,
+          padding: "12px 10px",
+          borderBottom: !isLast ? "1px solid rgba(255,255,255,0.06)" : "none",
+          borderRight: "1px solid rgba(255,255,255,0.1)",
+          whiteSpace: "nowrap",
+          cursor: isDragging ? "grabbing" : "grab",
+          touchAction: "none", // Prevent page scroll during drag
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", color: "rgba(255,255,255,0.4)" }}>
+            <DragIndicatorIcon fontSize="small" />
+          </div>
+          <span style={{ fontSize: "1.4rem", lineHeight: 1 }}>{form.emoji}</span>
+          <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "1.1rem", letterSpacing: "0.5px" }}>
+            {form.label}
+          </span>
+        </div>
+      </td>
+
+      {/* Toggle cells */}
+      {dynamicUserTypes.map((ut) => {
+        const visible = isVisible(ut, form.key);
+        const saving = isSaving(ut, form.key);
+        const utColor = USER_TYPE_COLORS[ut] || "#555";
+        return (
+          <td key={ut} style={{
+            textAlign: "center", padding: "8px 6px",
+            borderBottom: !isLast ? "1px solid rgba(255,255,255,0.06)" : "none",
+            borderLeft: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            {saving ? (
+              <CircularProgress size={20} sx={{ color: utColor }} />
+            ) : (
+              <Tooltip title={`${visible ? "Hide" : "Show"} ${form.label} for ${ut}`} placement="top" arrow>
+                <Switch
+                  checked={visible}
+                  onChange={(e) => handleToggle(ut, form.key, e.target.checked)}
+                  size="small"
+                  sx={{
+                    "& .MuiSwitch-switchBase.Mui-checked": { color: utColor },
+                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: utColor + "88" },
+                  }}
+                />
+              </Tooltip>
+            )}
+          </td>
+        );
+      })}
+      
+      {/* Order Display (Optional indicator instead of arrows) */}
+      <td style={{
+        textAlign: "center", padding: "8px",
+        borderBottom: !isLast ? "1px solid rgba(255,255,255,0.06)" : "none",
+        borderLeft: "1px solid rgba(255,255,255,0.12)",
+        color: "rgba(255,255,255,0.3)",
+        fontSize: "0.8rem",
+        fontWeight: 700
+      }}>
+        #{idx + 1}
+      </td>
+    </tr>
+  );
+};
+
 // ── Main Component ───────────────────────────────────────────────────────────
 const AdminVisibilityPage = () => {
   const navigate = useNavigate();
@@ -69,6 +191,21 @@ const AdminVisibilityPage = () => {
   const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
   const [formKeys, setFormKeys] = useState(INITIAL_FORM_KEYS);
   const [dynamicUserTypes, setDynamicUserTypes] = useState([]);
+
+  // DND Sensors: Long press for touch, standard for pointer
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Allow small movement before dragging
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250, // Long press (250ms) for mobile reordering
+        tolerance: 5,
+      },
+    })
+  );
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchVisibility = useCallback(async () => {
@@ -139,16 +276,7 @@ const AdminVisibilityPage = () => {
     }
   };
 
-  const moveRow = async (index, direction) => {
-    const newKeys = [...formKeys];
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= newKeys.length) return;
-
-    // Swap elements in local state
-    [newKeys[index], newKeys[targetIndex]] = [newKeys[targetIndex], newKeys[index]];
-    setFormKeys(newKeys);
-
-    // Save ALL orders for ALL usertypes to backend in ONE BULK request
+  const saveNewOrder = async (newKeys) => {
     setLoading(true);
     try {
       const updates = [];
@@ -177,6 +305,17 @@ const AdminVisibilityPage = () => {
       setSnack({ open: true, msg: `❌ Failed to reorder: ${err.message}`, severity: "error" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = formKeys.findIndex((f) => f.key === active.id);
+      const newIndex = formKeys.findIndex((f) => f.key === over.id);
+      const newKeys = arrayMove(formKeys, oldIndex, newIndex);
+      setFormKeys(newKeys);
+      saveNewOrder(newKeys);
     }
   };
 
@@ -263,11 +402,17 @@ const AdminVisibilityPage = () => {
       {/* ── Matrix table ── */}
       <Box
         sx={{
-          overflowX: "auto",
+          maxHeight: "calc(100vh - 180px)", // Fixed height for vertical scroll
+          overflow: "auto", // Enable both X and Y scrolling
           borderRadius: "20px",
           border: "1px solid rgba(255,255,255,0.1)",
           background: "rgba(255,255,255,0.05)",
           backdropFilter: "blur(20px)",
+          // Custom scrollbar for better look
+          "&::-webkit-scrollbar": { width: "8px", height: "8px" },
+          "&::-webkit-scrollbar-track": { background: "rgba(255,255,255,0.05)" },
+          "&::-webkit-scrollbar-thumb": { background: "rgba(108,99,255,0.3)", borderRadius: "10px" },
+          "&::-webkit-scrollbar-thumb:hover": { background: "rgba(108,99,255,0.5)" },
         }}
       >
         <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560 }}>
@@ -282,7 +427,7 @@ const AdminVisibilityPage = () => {
                 borderRight: "1px solid rgba(255,255,255,0.15)",
                 minWidth: 180, width: 180, whiteSpace: "nowrap",
               }}>
-                <span style={{ color: "#ffffff", fontWeight: 900, fontSize: "0.85rem", letterSpacing: 1.5, textTransform: "uppercase" }}>
+                <span style={{ color: "#ffffff", fontWeight: 900, fontSize: "1.1rem", letterSpacing: 1.5, textTransform: "uppercase" }}>
                   Form / User Type
                 </span>
               </th>
@@ -298,13 +443,13 @@ const AdminVisibilityPage = () => {
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                     <span style={{
                       color: "#ffffff",
-                      fontWeight: 900, fontSize: "0.8rem",
+                      fontWeight: 900, fontSize: "1.1rem",
                       letterSpacing: 1.2,
                       textShadow: "0 2px 4px rgba(0,0,0,0.5)",
                     }}>
                       {ut.toUpperCase()}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.65rem", fontWeight: 700 }}>
+                    <span style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.85rem", fontWeight: 700 }}>
                       {countVisible(ut)}/{formKeys.length} Visible
                     </span>
                   </div>
@@ -317,7 +462,7 @@ const AdminVisibilityPage = () => {
                 borderBottom: "1px solid rgba(255,255,255,0.15)",
                 textAlign: "center", minWidth: 90,
               }}>
-                <span style={{ color: "rgba(255,255,255,0.85)", fontWeight: 800, fontSize: "0.7rem", letterSpacing: 1, textTransform: "uppercase" }}>
+                <span style={{ color: "rgba(255,255,255,0.85)", fontWeight: 800, fontSize: "0.9rem", letterSpacing: 1, textTransform: "uppercase" }}>
                   Order
                 </span>
               </th>
@@ -325,94 +470,32 @@ const AdminVisibilityPage = () => {
           </thead>
 
           {/* tbody */}
-          <tbody>
-            {formKeys.map((form, idx) => {
-              const rowBg = idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.025)";
-              const stickyBg = idx % 2 === 0 ? "#2a264a" : "#2d294e";
-              return (
-                <tr
-                  key={form.key}
-                  style={{ background: rowBg, transition: "background 0.2s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(108,99,255,0.07)"}
-                  onMouseLeave={e => e.currentTarget.style.background = rowBg}
-                >
-                  {/* Frozen label cell */}
-                  <td style={{
-                    position: "sticky",
-                    left: 0,
-                    zIndex: 2,
-                    background: stickyBg,
-                    padding: "10px 8px",
-                    borderBottom: idx < formKeys.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                    borderRight: "1px solid rgba(255,255,255,0.1)",
-                    whiteSpace: "nowrap",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{form.emoji}</span>
-                      <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.85rem", letterSpacing: "0.5px" }}>
-                        {form.label}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Toggle cells */}
-                  {dynamicUserTypes.map((ut) => {
-                    const visible = isVisible(ut, form.key);
-                    const saving = isSaving(ut, form.key);
-                    const utColor = USER_TYPE_COLORS[ut] || "#555";
-                    return (
-                      <td key={ut} style={{
-                        textAlign: "center", padding: "6px 4px",
-                        borderBottom: idx < formKeys.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                        borderLeft: "1px solid rgba(255,255,255,0.06)",
-                      }}>
-                        {saving ? (
-                          <CircularProgress size={18} sx={{ color: utColor }} />
-                        ) : (
-                          <Tooltip title={`${visible ? "Hide" : "Show"} ${form.label} for ${ut}`} placement="top" arrow>
-                            <Switch
-                              checked={visible}
-                              onChange={(e) => handleToggle(ut, form.key, e.target.checked)}
-                              size="small"
-                              sx={{
-                                "& .MuiSwitch-switchBase.Mui-checked": { color: utColor },
-                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: utColor + "88" },
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                      </td>
-                    );
-                  })}
-                  {/* Order controls cell */}
-                  <td style={{
-                    textAlign: "center", padding: "4px",
-                    borderBottom: idx < formKeys.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                    borderLeft: "1px solid rgba(255,255,255,0.12)",
-                  }}>
-                    <Box sx={{ display: "flex", justifyContent: "center", gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => moveRow(idx, -1)}
-                        disabled={idx === 0}
-                        sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#6c63ff" } }}
-                      >
-                        <ArrowUpwardIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => moveRow(idx, 1)}
-                        disabled={idx === formKeys.length - 1}
-                        sx={{ color: "rgba(255,255,255,0.6)", "&:hover": { color: "#6c63ff" } }}
-                      >
-                        <ArrowDownwardIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={formKeys.map((f) => f.key)}
+              strategy={verticalListSortingStrategy}
+            >
+              <tbody>
+                {formKeys.map((form, idx) => (
+                  <SortableRow
+                    key={form.key}
+                    form={form}
+                    idx={idx}
+                    isLast={idx === formKeys.length - 1}
+                    dynamicUserTypes={dynamicUserTypes}
+                    isVisible={isVisible}
+                    isSaving={isSaving}
+                    handleToggle={handleToggle}
+                    USER_TYPE_COLORS={USER_TYPE_COLORS}
+                  />
+                ))}
+              </tbody>
+            </SortableContext>
+          </DndContext>
         </table>
       </Box>
 

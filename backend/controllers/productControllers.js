@@ -64,6 +64,17 @@ GROUP BY
       });
     }
   },
+
+  getCompanies: async (req, res) => {
+    try {
+      const pool = await dbConnection();
+      const result = await pool.request().query("SELECT DISTINCT Company FROM Products WHERE Company IS NOT NULL AND Company <> '' ORDER BY Company");
+      res.json(result.recordset.map(row => row.Company));
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies.", error });
+    }
+  },
 };
 
 module.exports = productControllers;

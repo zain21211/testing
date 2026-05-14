@@ -87,6 +87,11 @@ let drawerMenuItems = [
     icon: ImageIcon,
     path: "/image-viewer",
   },
+  {
+    label: "Pending Demand",
+    icon: ListAltIcon,
+    path: "/pending-demand",
+  },
 ];
 
 // This URL seems to be where your app is served FROM for login, or an external logout target

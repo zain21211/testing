@@ -19,6 +19,7 @@ const ALL_FORM_KEYS = [
   "delivery",
   "imageviewer",
   "ledger",
+  "pendingdemand",
 ];
 
 const ALL_USER_TYPES = [
@@ -47,16 +48,14 @@ const DEFAULT_VISIBILITY = {
   delivery:       ["admin", "sm", "bilty"],
   imageviewer:    ["admin", "sm", "operator"],
   ledger:         ["admin", "sm", "operator"],
+  pendingdemand:  ["admin", "sm", "operator"],
 };
 
 // Ensure the FORM_VISIBILITY table exists and seed defaults if empty or missing keys
 const ensureTableAndSeed = async (pool) => {
-  // Create table if not exists
+  // 1. Create table and column if not exists
   await pool.request().query(`
-    IF NOT EXISTS (
-      SELECT * FROM INFORMATION_SCHEMA.TABLES
-      WHERE TABLE_NAME = 'FORM_VISIBILITY'
-    )
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FORM_VISIBILITY')
     BEGIN
       CREATE TABLE FORM_VISIBILITY (
         id        INT IDENTITY(1,1) PRIMARY KEY,
@@ -69,38 +68,39 @@ const ensureTableAndSeed = async (pool) => {
     END
     ELSE
     BEGIN
-      -- Add sort_order if it doesn't exist
-      IF NOT EXISTS (
-        SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'FORM_VISIBILITY' AND COLUMN_NAME = 'sort_order'
-      )
+      IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FORM_VISIBILITY' AND COLUMN_NAME = 'sort_order')
       BEGIN
         ALTER TABLE FORM_VISIBILITY ADD sort_order INT NOT NULL DEFAULT 0
       END
     END
   `);
 
-  // Check and add missing keys for each usertype
+  // 2. Optimized seeding: Check which entries are missing in one go
+  // Instead of 100+ separate queries, we'll only insert what's missing.
+  // We can't easily do a single INSERT for all, but we can reduce it significantly.
+  
+  // Get existing keys
+  const existing = await pool.request().query("SELECT usertype, form_key FROM FORM_VISIBILITY");
+  const existingSet = new Set(existing.recordset.map(r => `${r.usertype.toLowerCase()}|${r.form_key.toLowerCase()}`));
+
   for (const usertype of ALL_USER_TYPES) {
     let orderIndex = 0;
     for (const formKey of ALL_FORM_KEYS) {
-      const isVisible = DEFAULT_VISIBILITY[formKey]?.includes(usertype) ? 1 : 0;
-      await pool
-        .request()
-        .input("usertype", mssql.NVarChar, usertype)
-        .input("form_key", mssql.NVarChar, formKey)
-        .input("is_visible", mssql.Bit, isVisible)
-        .input("sort_order", mssql.Int, orderIndex++)
-        .query(`
-          IF NOT EXISTS (
-            SELECT 1 FROM FORM_VISIBILITY 
-            WHERE usertype = @usertype AND form_key = @form_key
-          )
-          BEGIN
+      const key = `${usertype.toLowerCase()}|${formKey.toLowerCase()}`;
+      if (!existingSet.has(key)) {
+        const isVisible = DEFAULT_VISIBILITY[formKey]?.includes(usertype) ? 1 : 0;
+        await pool
+          .request()
+          .input("usertype", mssql.NVarChar, usertype.toLowerCase())
+          .input("form_key", mssql.NVarChar, formKey.toLowerCase())
+          .input("is_visible", mssql.Bit, isVisible)
+          .input("sort_order", mssql.Int, orderIndex)
+          .query(`
             INSERT INTO FORM_VISIBILITY (usertype, form_key, is_visible, sort_order)
             VALUES (@usertype, @form_key, @is_visible, @sort_order)
-          END
-        `);
+          `);
+      }
+      orderIndex++;
     }
   }
 };

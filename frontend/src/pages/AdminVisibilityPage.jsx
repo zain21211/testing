@@ -30,6 +30,7 @@ const INITIAL_FORM_KEYS = [
   { key: "delivery",       label: "Delivery",        emoji: "🛵" },
   { key: "imageviewer",    label: "Image Viewer",    emoji: "🖼️" },
   { key: "ledger",         label: "Ledger",          emoji: "📖" },
+  { key: "pendingdemand",  label: "Pending Demand",  emoji: "📝" },
 ];
 
 const USER_TYPES = ["admin", "sm", "operator", "pack", "payment", "spo", "bilty"];

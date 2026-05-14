@@ -28,6 +28,7 @@ const coaRoutes = require("./routes/coaRoutes");
 const turnoverReport = require("./routes/turnOverReport");
 const formVisibilityRoutes = require("./routes/formVisibilityRoutes");
 const imageViewerRoutes = require("./routes/imageViewerRoutes");
+const pendingDemandRoutes = require("./routes/pendingDemandRoutes");
 
 // Import logging middleware
 const { createRequestLogger } = require("./logging/middleware/requestLogger");
@@ -133,6 +134,7 @@ app.use("/api/coa", coaRoutes);
 app.use("/api/turnover", turnoverReport);
 app.use("/api/form-visibility", formVisibilityRoutes);
 app.use("/api/image-viewer", imageViewerRoutes);
+app.use("/api/pending-demand", pendingDemandRoutes);
 
 // Logs management routes
 app.use("/api/logs", logsRoutes);

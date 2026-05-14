@@ -50,32 +50,19 @@ const PendingDemand = () => {
         { id: "code", label: "Code", minWidth: 100, align: "center" },
     ];
 
-    const fetchRoutes = async () => {
+    const fetchFilterOptions = async (date) => {
         try {
             const token = localStorage.getItem("authToken");
-            const res = await axios.get(`${url}/coa/routes`, {
+            const res = await axios.get(`${url}/pending-demand/filter-options`, {
+                params: { date: format(date, "yyyy-MM-dd") },
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data) {
-                const allRoutes = [...(res.data.kr || []), ...(res.data.sr || [])];
-                setRoutes(allRoutes);
+                setRoutes(res.data.routes || []);
+                setCompanies(res.data.companies || []);
             }
         } catch (err) {
-            console.error("Error fetching routes:", err);
-        }
-    };
-
-    const fetchCompanies = async () => {
-        try {
-            const token = localStorage.getItem("authToken");
-            const res = await axios.get(`${url}/products/companies`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data) {
-                setCompanies(res.data);
-            }
-        } catch (err) {
-            console.error("Error fetching companies:", err);
+            console.error("Error fetching filter options:", err);
         }
     };
 
@@ -106,9 +93,8 @@ const PendingDemand = () => {
     ).current;
 
     useEffect(() => {
-        fetchRoutes();
-        fetchCompanies();
-    }, []);
+        fetchFilterOptions(filters.date);
+    }, [filters.date]);
 
     useEffect(() => {
         debouncedFetch(filters);

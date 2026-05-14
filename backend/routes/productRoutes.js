@@ -5,5 +5,6 @@ const router = express.Router();
 router.get("/", productControllers.getProducts);
 router.get("/history", productControllers.getProductsHistory);
 router.get("/companies", productControllers.getCompanies);
+router.post("/actual", productControllers.saveSpotSaleActual);
 
 module.exports = router;

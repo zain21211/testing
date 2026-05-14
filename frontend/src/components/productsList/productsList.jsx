@@ -10,7 +10,6 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import { isEqual } from "lodash";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PrintIcon from "@mui/icons-material/Print";
 import CategoryIcon from "@mui/icons-material/Category";
@@ -21,26 +20,38 @@ const url = import.meta.env.VITE_API_URL || "http://localhost:3000";
 export default function ProductsList() {
   const [products, setProducts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [blackedOutRows, setBlackedOutRows] = useState(() => {
-    try {
-      const saved = localStorage.getItem("blackedOutRows_products_v4");
-      return saved ? JSON.parse(saved) : {}; // Store as { key: quantity }
-    } catch {
-      return {};
-    }
-  });
+  const [actualValues, setActualValues] = useState({}); // { key: value }
+  const [processedLoadValues, setProcessedLoadValues] = useState({}); // { key: value }
 
   const getProductsHistory = async (date) => {
     try {
       const res = await axios.get(`${url}/products/history`, {
         params: { date: date || selectedDate }
       });
-      const data = res.data.data;
-      if (!isEqual(data, products)) {
+      const data = res.data?.data;
+      if (data && Array.isArray(data) && JSON.stringify(data) !== JSON.stringify(products)) {
         setProducts(data);
+        
+        // Populate actual and processed load values from database
+        const actuals = {};
+        const loads = {};
+        data.forEach(p => {
+          const key = getRowKey(p);
+          if (p.actual_qty !== null && p.actual_qty !== undefined) {
+            actuals[key] = p.actual_qty;
+          }
+          if (p.processed_load_qty !== null && p.processed_load_qty !== undefined) {
+            loads[key] = p.processed_load_qty;
+          }
+        });
+        setActualValues(actuals);
+        setProcessedLoadValues(loads);
+      } else if (!data || !Array.isArray(data)) {
+        setProducts([]);
       }
     } catch (err) {
       console.error("Failed to fetch products:", err);
+      setProducts([]); 
     }
   };
 
@@ -52,18 +63,42 @@ export default function ProductsList() {
 
   const getRowKey = (product) => `${selectedDate}|${product.company}|${product.urduname}|${product.category}`;
 
+  const saveActualQty = async (product, qty, loadQty) => {
+    try {
+      await axios.post(`${url}/products/actual`, {
+        date: selectedDate,
+        company: product.company,
+        urduname: product.urduname,
+        category: product.category,
+        qty: qty || 0,
+        loadQty: loadQty || 0
+      });
+    } catch (err) {
+      console.error("Failed to save actual quantity:", err);
+    }
+  };
+
   const toggleRow = (product) => {
     const key = getRowKey(product);
-    setBlackedOutRows((prev) => {
-      const newMap = { ...prev };
-      if (newMap.hasOwnProperty(key)) {
-        delete newMap[key];
-      } else {
-        newMap[key] = product.qty;
-      }
-      localStorage.setItem("blackedOutRows_products_v4", JSON.stringify(newMap));
-      return newMap;
-    });
+    const currentActual = actualValues[key] || 0;
+    const isActivating = currentActual === 0;
+    
+    const newVal = isActivating ? product.qty : 0;
+    // When activating, we capture the CURRENT load quantity
+    const newLoadQty = isActivating ? product.qty : 0;
+
+    setActualValues(p => ({ ...p, [key]: newVal }));
+    setProcessedLoadValues(p => ({ ...p, [key]: newLoadQty }));
+    saveActualQty(product, newVal, newLoadQty);
+  };
+
+  const handleActualChange = (product, val) => {
+    const key = getRowKey(product);
+    const numVal = parseInt(val) || 0;
+    setActualValues(prev => ({ ...prev, [key]: val }));
+    // Manual typing also captures/updates the load quantity it was based on
+    setProcessedLoadValues(prev => ({ ...prev, [key]: product.qty }));
+    saveActualQty(product, numVal, product.qty);
   };
 
   const formatDisplayDate = (dateStr) => {
@@ -203,9 +238,13 @@ export default function ProductsList() {
             
             {products.map((product, index) => {
               const key = getRowKey(product);
-              const savedQty = blackedOutRows[key];
-              const isBlackedOut = savedQty !== undefined;
-              const isChanged = isBlackedOut && savedQty !== product.qty;
+              const actualVal = actualValues[key] || 0;
+              const processedLoadVal = processedLoadValues[key] || 0;
+              const isBlackedOut = actualVal > 0;
+              
+              // Blue Alert Logic: 
+              // If blacked out AND the database Load Qty is different from what was processed
+              const isChanged = isBlackedOut && processedLoadVal > 0 && Number(processedLoadVal) !== product.qty;
 
               return (
                 <Box
@@ -223,8 +262,9 @@ export default function ProductsList() {
                     borderRadius: "16px",
                     transition: "all 0.3s ease",
                     border: isChanged 
-                      ? "1px solid #1976d2" 
+                      ? "2px solid #1976d2" 
                       : "1px solid rgba(255, 255, 255, 0.05)",
+                    boxShadow: isChanged ? "0 0 15px rgba(25, 118, 210, 0.3)" : "none",
                     "&:hover": {
                       background: isChanged 
                         ? "rgba(25, 118, 210, 0.6)"
@@ -232,7 +272,7 @@ export default function ProductsList() {
                           ? "#000" 
                           : "rgba(255, 255, 255, 0.07)",
                       transform: isBlackedOut ? "none" : "translateX(8px)",
-                      borderColor: isBlackedOut ? "none" : "rgba(108, 99, 255, 0.3)",
+                      borderColor: isChanged ? "#1976d2" : isBlackedOut ? "none" : "rgba(108, 99, 255, 0.3)",
                     },
                     "@media print": {
                       display: isBlackedOut ? "none" : "flex",
@@ -246,7 +286,34 @@ export default function ProductsList() {
                     },
                   }}
                 >
-                  {/* 1. Total Qty (Most Left) */}
+                  {/* 0. Actual Qty Textbox */}
+                  <Box
+                    sx={{
+                      mr: 2,
+                      "@media print": { display: "none" }
+                    }}
+                  >
+                    <input
+                      type="number"
+                      value={actualVal || ""}
+                      onChange={(e) => handleActualChange(product, e.target.value)}
+                      placeholder="Qty"
+                      style={{
+                        width: "60px",
+                        height: "40px",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        borderRadius: "8px",
+                        color: "white",
+                        textAlign: "center",
+                        fontSize: "1.1rem",
+                        fontWeight: "bold",
+                        outline: "none",
+                      }}
+                    />
+                  </Box>
+
+                  {/* 1. Total Qty Badge */}
                   <Box
                     onClick={() => toggleRow(product)}
                     sx={{

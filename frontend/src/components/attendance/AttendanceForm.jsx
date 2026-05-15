@@ -12,12 +12,14 @@ import {
   CircularProgress,
   Avatar,
   InputAdornment,
+  IconButton,
 } from "@mui/material";
 
 // Standard Icons (Most likely to be available)
 import SearchIcon from "@mui/icons-material/Search";
 import SaveIcon from "@mui/icons-material/Save";
 import PersonIcon from "@mui/icons-material/Person";
+import ClearIcon from "@mui/icons-material/Clear";
 
 // Date Pickers
 import dayjs from "dayjs";
@@ -87,15 +89,24 @@ export default function AttendanceForm() {
       Array.isArray(prev) ? prev.map((row) => {
         if (row && row.employee_id === empId) {
           const updated = { ...row, [field]: value };
+          
+          // Auto-set times and status when Time In is filled
           if (field === "time_in" && value && !updated.time_out) {
             updated.time_out = "20:00";
-            if (!updated.status || updated.status === "Absent") {
+            if (!updated.status || updated.status === "Absent" || updated.status === "Leave") {
               if (typeof value === "string" && value.includes(":")) {
                 const [h, m] = value.split(":").map(Number);
                 updated.status = (h > 10 || (h === 10 && m > 0)) ? "Late" : "Present";
               }
             }
           }
+
+          // Auto-clear times when marked Absent or Leave
+          if (field === "status" && (value === "Absent" || value === "Leave")) {
+            updated.time_in = "";
+            updated.time_out = "";
+          }
+          
           return updated;
         }
         return row;
@@ -109,6 +120,7 @@ export default function AttendanceForm() {
     try {
       await axios.post(`${url}/attendance/save`, { ...row, date: selectedDate });
       updateLocalRow(row.employee_id, "attendance_id", row.attendance_id || Date.now());
+      setSearchTerm(""); // Automatically clear the filter after updating
     } catch (err) {
       console.error("Save error:", err);
     } finally {
@@ -164,6 +176,13 @@ export default function AttendanceForm() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   InputProps={{
                     startAdornment: <SearchIcon sx={{ color: "#1a237e", fontSize: { xs: "1.6rem", md: "2.5rem" } }} />,
+                    endAdornment: searchTerm ? (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setSearchTerm("")} edge="end">
+                          <ClearIcon sx={{ fontSize: "1.5rem" }} />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
                     sx: {
                       borderRadius: "12px",
                       background: "white",
@@ -202,20 +221,28 @@ export default function AttendanceForm() {
                     {/* Line 2: Status Selection */}
                     <Stack direction="row" spacing={1} justifyContent="flex-start" flexWrap="wrap">
                       {["Present", "Late", "Absent", "Leave"].map(s => (
-                        <Chip
+                        <Button
                           key={s}
-                          label={s}
+                          variant={row.status === s ? "contained" : "outlined"}
                           onClick={() => updateLocalRow(row.employee_id, "status", s)}
                           sx={{
                             flex: 1,
                             fontWeight: 900,
-                            height: "40px",
-                            fontSize: "0.8rem",
-                            bgcolor: row.status === s ? STATUS_COLORS[s] : "#f0f0f0",
-                            color: row.status === s ? "white" : "#444",
-                            border: row.status === s ? "none" : "1px solid #ccc"
+                            height: "46px",
+                            fontSize: "0.9rem",
+                            p: 0,
+                            minWidth: "0",
+                            bgcolor: row.status === s ? STATUS_COLORS[s] : "transparent",
+                            color: row.status === s ? "white" : "#666",
+                            borderColor: row.status === s ? "transparent" : "#ccc",
+                            boxShadow: row.status === s ? "0 4px 10px rgba(0,0,0,0.15)" : "none",
+                            "&:hover": {
+                              bgcolor: row.status === s ? STATUS_COLORS[s] : "#f0f0f0",
+                            }
                           }}
-                        />
+                        >
+                          {s}
+                        </Button>
                       ))}
                     </Stack>
 

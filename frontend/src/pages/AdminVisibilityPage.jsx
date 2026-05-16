@@ -28,29 +28,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { ALL_DASHBOARD_CARDS, FALLBACK_VISIBILITY, USER_TYPES } from "../dashboardConfig";
+
 const url = import.meta.env.VITE_API_URL;
-
-// ── Config ──────────────────────────────────────────────────────────────────
-const INITIAL_FORM_KEYS = [
-  { key: "packing",        label: "Packing",        emoji: "📦" },
-  { key: "load",           label: "Load",            emoji: "🚚" },
-  { key: "spo",            label: "SPO",             emoji: "📊" },
-  { key: "paymentvoucher", label: "Payment Voucher", emoji: "💳" },
-  { key: "saleshistory",   label: "History",         emoji: "🕐" },
-  { key: "accounts",       label: "Accounts",        emoji: "👥" },
-  { key: "recovery",       label: "Recovery",        emoji: "🧾" },
-  { key: "sales",          label: "Sales",           emoji: "📈" },
-  { key: "neworder",       label: "New Order",       emoji: "🛒" },
-  { key: "products",       label: "Spot Sales",      emoji: "🛍️" },
-  { key: "routes",         label: "Routes",          emoji: "🗺️" },
-  { key: "delivery",       label: "Delivery",        emoji: "🛵" },
-  { key: "imageviewer",    label: "Image Viewer",    emoji: "🖼️" },
-  { key: "ledger",         label: "Ledger",          emoji: "📖" },
-  { key: "pendingdemand",  label: "Pending Demand",  emoji: "📝" },
-  { key: "attendance",     label: "Attendance",      emoji: "🕒" },
-];
-
-const USER_TYPES = ["admin", "sm", "operator", "pack", "payment", "spo", "bilty"];
 
 const USER_TYPE_COLORS = {
   admin:    "#6c63ff",
@@ -190,7 +170,7 @@ const AdminVisibilityPage = () => {
   const [fetchError, setFetchError] = useState(null);
   const [saving, setSaving] = useState({}); 
   const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
-  const [formKeys, setFormKeys] = useState(INITIAL_FORM_KEYS);
+  const [formKeys, setFormKeys] = useState([]);
   const [dynamicUserTypes, setDynamicUserTypes] = useState([]);
 
   // DND Sensors: Long press for touch, standard for pointer
@@ -216,13 +196,39 @@ const AdminVisibilityPage = () => {
       const res = await axios.get(`${url}/form-visibility`);
       const map = {};
       const orderMap = {}; // key -> sortOrder
-      const utSet = new Set();
+      const utSet = new Set(USER_TYPES); // Always include standard user types
 
       res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
         map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
         orderMap[form_key] = sort_order;
         utSet.add(usertype);
       });
+
+      const missingUpdates = [];
+      let maxOrder = Object.values(orderMap).length > 0 ? Math.max(...Object.values(orderMap)) : 0;
+
+      // Auto-register any new forms not present in the database
+      ALL_DASHBOARD_CARDS.filter(c => !c.adminOnly).forEach(card => {
+        const hasAnyEntry = res.data.some(r => r.form_key === card.key);
+        if (!hasAnyEntry) {
+          maxOrder += 1;
+          orderMap[card.key] = maxOrder;
+          Array.from(utSet).forEach(ut => {
+            const isVis = FALLBACK_VISIBILITY[card.key]?.includes(ut) ?? false;
+            map[`${ut}|${card.key}`] = { isVisible: isVis, sortOrder: maxOrder };
+            missingUpdates.push({ usertype: ut, form_key: card.key, is_visible: isVis, sort_order: maxOrder });
+          });
+        }
+      });
+
+      if (missingUpdates.length > 0) {
+        try {
+          await axios.put(`${url}/form-visibility/bulk`, { updates: missingUpdates }, { headers: { Authorization: `Bearer ${token}` } });
+          setSnack({ open: true, msg: `✅ Registered new forms!`, severity: "info" });
+        } catch (e) {
+          console.error("Failed to auto-register new forms", e);
+        }
+      }
 
       setVisibility(map);
       
@@ -234,23 +240,27 @@ const AdminVisibilityPage = () => {
       });
       setDynamicUserTypes(uts);
 
-      // Re-sort the local formKeys based on the fetched sort_order
-      setFormKeys(prev => {
-        const sorted = [...prev].sort((a, b) => (orderMap[a.key] ?? 999) - (orderMap[b.key] ?? 999));
-        // Also check if there are keys in the data that are NOT in INITIAL_FORM_KEYS
-        const existingKeys = new Set(prev.map(f => f.key));
-        const newKeysFromData = Array.from(new Set(res.data.map(r => r.form_key)))
-          .filter(k => !existingKeys.has(k))
-          .map(k => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), emoji: "🔹" }));
-        
-        return [...sorted, ...newKeysFromData].sort((a, b) => (orderMap[a.key] ?? 999) - (orderMap[b.key] ?? 999));
-      });
+      // Create form keys from ALL_DASHBOARD_CARDS
+      const baseKeys = ALL_DASHBOARD_CARDS.filter(c => !c.adminOnly).map(c => ({
+        key: c.key,
+        label: c.title || (c.key.charAt(0).toUpperCase() + c.key.slice(1)),
+        emoji: c.emoji || "🔹"
+      }));
+
+      // Also include any forms that are in DB but NOT in ALL_DASHBOARD_CARDS
+      const existingKeys = new Set(baseKeys.map(f => f.key));
+      const extraKeysFromData = Array.from(new Set(res.data.map(r => r.form_key)))
+        .filter(k => !existingKeys.has(k))
+        .map(k => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1), emoji: "🔹" }));
+
+      const finalKeys = [...baseKeys, ...extraKeysFromData].sort((a, b) => (orderMap[a.key] ?? 999) - (orderMap[b.key] ?? 999));
+      setFormKeys(finalKeys);
     } catch (err) {
       setFetchError("Failed to load visibility settings. Is the backend running?");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => { fetchVisibility(); }, [fetchVisibility]);
 

@@ -41,45 +41,8 @@ import ImageIcon from '@mui/icons-material/Image';
 import BookIcon from '@mui/icons-material/Book';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { ALL_DASHBOARD_CARDS, FALLBACK_VISIBILITY } from './dashboardConfig';
 
-const ALL_DASHBOARD_CARDS = [
-  { key: "packing", title: "Packing", subtitle: "Pending", icon: InventoryIcon, color: "#ff3d07", path: "/pending" },
-  { key: "load", title: "Load", subtitle: "Shipping", icon: LocalShippingIcon, color: "#00a611", path: "/load" },
-  { key: "spo", title: "SPO", subtitle: "Working", icon: AssessmentIcon, color: "#FFC107", path: "/turnoverreport" },
-  { key: "paymentvoucher", title: "Payment", subtitle: "Voucher", icon: AccountBalanceWalletIcon, color: "#795548", path: "/paymentvoucher" },
-  { key: "saleshistory", title: "History", subtitle: "Sales", icon: HistoryIcon, color: "#009688", path: "/saleshistory" },
-  { key: "accounts", title: "Accounts", subtitle: "COA", icon: PeopleAltIcon, color: "#610051", path: "/coa" },
-  { key: "recovery", title: "Recovery", subtitle: "Dues", icon: ReceiptLongIcon, color: "#2e7d32", path: "/recovery", dynamicValue: "todayRecovery" },
-  { key: "sales", title: "Sales", subtitle: "Daily", icon: TrendingUpIcon, color: "#009688", path: "/sales", dynamicValue: "todaySales" },
-  { key: "neworder", title: "New Order", subtitle: "Invoice", icon: AddShoppingCartIcon, color: "#1976d2", path: "/order", dynamicValue: "todayPendingOrders" },
-  { key: "products", title: "Spot Sales", subtitle: "Stock", icon: ShoppingBagIcon, color: "#ff00ea", path: "/productslist" },
-  { key: "routes", title: "Routes", subtitle: "Mapping", icon: RouteIcon, color: "#3f51b5", path: "/list" },
-  { key: "delivery", title: "Delivery", subtitle: "Tracking", icon: DeliveryDiningIcon, color: "#a41260", path: "/delivery" },
-  { key: "imageviewer", title: "Images", subtitle: "Viewer", icon: ImageIcon, color: "#0288d1", path: "/image-viewer" },
-  { key: "ledger", title: "Ledger", subtitle: "Statement", icon: BookIcon, color: "#7b1fa2", path: "/ledger" },
-  { key: "pendingdemand", title: "Pending", subtitle: "Demand", icon: ListAltIcon, color: "#E91E63", path: "/pending-demand" },
-  { key: "attendance", title: "Attendance", subtitle: "Daily", icon: AccessTimeIcon, color: "#4caf50", path: "/attendance" },
-  { key: "visibility", title: "Visibility", subtitle: "Manager", icon: AdminPanelSettingsIcon, color: "#6c63ff", path: "/admin/visibility", adminOnly: true },
-];
-
-const FALLBACK_VISIBILITY = {
-  packing: ["admin", "pack", "operator"],
-  load: ["admin", "pack", "operator"],
-  spo: ["admin", "spo", "operator"],
-  paymentvoucher: ["admin", "payment"],
-  saleshistory: ["admin"],
-  accounts: ["admin", "operator"],
-  recovery: ["admin", "sm", "operator"],
-  sales: ["admin", "sm", "operator"],
-  neworder: ["admin", "sm", "operator"],
-  products: ["admin"],
-  routes: ["admin", "sm"],
-  delivery: ["admin", "sm", "bilty"],
-  imageviewer: ["admin", "sm", "operator"],
-  ledger: ["admin", "sm", "operator"],
-  pendingdemand: ["admin", "sm", "operator"],
-  attendance: ["admin", "sm", "operator"],
-};
 
 const url = import.meta.env.VITE_API_URL;
 

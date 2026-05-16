@@ -202,7 +202,7 @@ const Login = () => {
         if (Array.isArray(res.data)) {
           const map = {};
           res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
-            map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
+            map[`${usertype.trim()}|${form_key.trim()}`] = { isVisible: !!is_visible, sortOrder: sort_order };
           });
           setVisibilityConfig(map);
           localStorage.setItem(`visibilityConfig_${userData?.username}`, JSON.stringify(map));

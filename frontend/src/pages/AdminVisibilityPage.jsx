@@ -199,9 +199,11 @@ const AdminVisibilityPage = () => {
       const utSet = new Set(USER_TYPES); // Always include standard user types
 
       res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
-        map[`${usertype}|${form_key}`] = { isVisible: !!is_visible, sortOrder: sort_order };
-        orderMap[form_key] = sort_order;
-        utSet.add(usertype);
+        const ut = usertype.trim();
+        const fk = form_key.trim();
+        map[`${ut}|${fk}`] = { isVisible: !!is_visible, sortOrder: sort_order };
+        orderMap[fk] = sort_order;
+        utSet.add(ut);
       });
 
       const missingUpdates = [];

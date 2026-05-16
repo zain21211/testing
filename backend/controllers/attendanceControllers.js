@@ -5,22 +5,6 @@ const attendanceControllers = {
   // Initialize Tables if not exists
   initTables: async (pool) => {
     const query = `
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Employees' AND xtype='U')
-      BEGIN
-          CREATE TABLE Employees (
-              id INT IDENTITY(1,1) PRIMARY KEY,
-              name NVARCHAR(255) NOT NULL,
-              designation NVARCHAR(100),
-              is_active BIT DEFAULT 1
-          );
-          -- Seed data
-          INSERT INTO Employees (name) VALUES 
-          ('HAMZA'), ('HASSAN'), ('GULL REHMAN'), ('AHSEN'), 
-          ('SUBHAN'), ('SAIM'), ('ABDUL REHMAN'), ('ZAHID'), 
-          ('ZESHAN'), ('FAKHAR'), ('GOHAR'), ('GORAV'), 
-          ('ARIF'), ('SALMAN'), ('DANISH'), ('ASAD');
-      END
-
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Attendance' AND xtype='U')
       BEGIN
           CREATE TABLE Attendance (
@@ -36,6 +20,14 @@ const attendanceControllers = {
               entry_at DATETIME DEFAULT GETDATE()
           );
       END
+
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Holidays' AND xtype='U')
+      BEGIN
+          CREATE TABLE Holidays (
+              holiday_date DATE PRIMARY KEY,
+              description NVARCHAR(255)
+          );
+      END
     `;
     await pool.request().query(query);
   },
@@ -48,19 +40,13 @@ const attendanceControllers = {
       const pool = await dbConnection();
       await attendanceControllers.initTables(pool);
 
-      // Simple sync logic
-      const syncNames = ['HAMZA', 'HASSAN', 'GULL REHMAN', 'AHSEN', 'SUBHAN', 'SAIM', 'ABDUL REHMAN', 'ZAHID', 'ZESHAN', 'FAKHAR', 'GOHAR', 'GORAV', 'ARIF', 'SALMAN', 'DANISH', 'ASAD'];
-      for (const name of syncNames) {
-        await pool.request().input("n", sql.NVarChar, name).query("IF NOT EXISTS(SELECT 1 FROM Employees WHERE name=@n) INSERT INTO Employees(name) VALUES(@n)");
-      }
-
       const query = `
         SELECT 
             e.id AS employee_id, e.name, e.designation,
             a.id AS attendance_id, a.attendance_date, a.time_in, a.time_out, a.break_hours, a.net_hours, a.status
-        FROM Employees e
+        FROM employee e
         LEFT JOIN Attendance a ON a.employee_id = e.id AND a.attendance_date = @targetDate
-        WHERE e.is_active = 1
+        WHERE e.status = 'ACTIVE' OR e.status IS NULL
         ORDER BY e.id;
       `;
 
@@ -116,6 +102,104 @@ const attendanceControllers = {
       res.json({ success: true, message: "Attendance saved" });
     } catch (error) {
       console.error("Error saving attendance:", error);
+      res.status(500).json({ success: false, message: "Database error", error: error.message });
+    }
+  },
+
+  toggleHoliday: async (req, res) => {
+    const { date, description } = req.body;
+    if (!date) return res.status(400).json({ success: false, message: "Date is required" });
+
+    try {
+      const pool = await dbConnection();
+      await attendanceControllers.initTables(pool);
+
+      const checkQuery = `SELECT 1 FROM Holidays WHERE holiday_date = @date`;
+      const result = await pool.request().input("date", sql.Date, date).query(checkQuery);
+
+      if (result.recordset.length > 0) {
+        // Exists, remove it
+        await pool.request().input("date", sql.Date, date).query(`DELETE FROM Holidays WHERE holiday_date = @date`);
+        res.json({ success: true, message: "Holiday removed", isHoliday: false });
+      } else {
+        // Doesn't exist, add it
+        await pool.request()
+          .input("date", sql.Date, date)
+          .input("description", sql.NVarChar, description || "Global Holiday")
+          .query(`INSERT INTO Holidays (holiday_date, description) VALUES (@date, @description)`);
+        res.json({ success: true, message: "Holiday added", isHoliday: true });
+      }
+    } catch (error) {
+      console.error("Error toggling holiday:", error);
+      res.status(500).json({ success: false, message: "Database error", error: error.message });
+    }
+  },
+
+  checkHoliday: async (req, res) => {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ success: false, message: "Date is required" });
+
+    try {
+      const pool = await dbConnection();
+      await attendanceControllers.initTables(pool);
+      const checkQuery = `SELECT 1 FROM Holidays WHERE holiday_date = @date`;
+      const result = await pool.request().input("date", sql.Date, date).query(checkQuery);
+      res.json({ success: true, isHoliday: result.recordset.length > 0 });
+    } catch (error) {
+      console.error("Error checking holiday:", error);
+      res.status(500).json({ success: false, message: "Database error" });
+    }
+  },
+
+  getMonthlyAttendance: async (req, res) => {
+    const { month, year } = req.query; // e.g., month = 5, year = 2026
+
+    if (!month || !year) {
+      return res.status(400).json({ success: false, message: "Month and year are required." });
+    }
+
+    try {
+      const pool = await dbConnection();
+      await attendanceControllers.initTables(pool);
+
+      // 1. Get all active employees
+      const empResult = await pool.request().query("SELECT id, name, designation FROM employee WHERE status = 'ACTIVE' OR status IS NULL ORDER BY name ASC");
+      const employees = empResult.recordset;
+
+      // 2. Get all attendance records for the month
+      const attendanceQuery = `
+        SELECT employee_id, attendance_date, status, time_in, time_out
+        FROM Attendance
+        WHERE MONTH(attendance_date) = @month AND YEAR(attendance_date) = @year
+      `;
+      const attResult = await pool.request()
+        .input("month", sql.Int, month)
+        .input("year", sql.Int, year)
+        .query(attendanceQuery);
+      const records = attResult.recordset;
+
+      // 3. Get all holidays for the month
+      const holidayQuery = `
+        SELECT holiday_date, description 
+        FROM Holidays 
+        WHERE MONTH(holiday_date) = @month AND YEAR(holiday_date) = @year
+      `;
+      const holResult = await pool.request()
+        .input("month", sql.Int, month)
+        .input("year", sql.Int, year)
+        .query(holidayQuery);
+      const holidays = holResult.recordset;
+
+      res.json({
+        success: true,
+        data: {
+          employees,
+          records,
+          holidays
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching monthly attendance:", error);
       res.status(500).json({ success: false, message: "Database error", error: error.message });
     }
   }

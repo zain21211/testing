@@ -6,7 +6,7 @@
 //   API calls          → Network-only (never cache, offline handled in app)
 // ──────────────────────────────────────────────────────────────────────────
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v10';
 const CACHE_SHELL   = `shell-${CACHE_VERSION}`;
 const CACHE_ASSETS  = `assets-${CACHE_VERSION}`;
 const CACHE_IMAGES  = `images-${CACHE_VERSION}`;

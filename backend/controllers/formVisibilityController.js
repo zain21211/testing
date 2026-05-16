@@ -20,6 +20,7 @@ const ALL_FORM_KEYS = [
   "imageviewer",
   "ledger",
   "pendingdemand",
+  "attendance",
   "visibility",
 ];
 
@@ -50,6 +51,7 @@ const DEFAULT_VISIBILITY = {
   imageviewer:    ["admin", "sm", "operator"],
   ledger:         ["admin", "sm", "operator"],
   pendingdemand:  ["admin", "sm", "operator"],
+  attendance:     ["admin", "sm", "operator"],
 };
 
 // Ensure the FORM_VISIBILITY table exists and seed defaults if empty or missing keys

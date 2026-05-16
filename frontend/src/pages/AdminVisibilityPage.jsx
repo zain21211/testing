@@ -199,7 +199,7 @@ const AdminVisibilityPage = () => {
       const utSet = new Set(USER_TYPES); // Always include standard user types
 
       res.data.forEach(({ usertype, form_key, is_visible, sort_order }) => {
-        const ut = usertype.trim();
+        const ut = usertype.trim().toLowerCase();
         const fk = form_key.trim();
         map[`${ut}|${fk}`] = { isVisible: !!is_visible, sortOrder: sort_order };
         orderMap[fk] = sort_order;

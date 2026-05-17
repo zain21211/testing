@@ -145,6 +145,7 @@ const trackingController = {
             .input("lat", sql.Decimal(10, 7), parseFloat(latitude))
             .input("lng", sql.Decimal(10, 7), parseFloat(longitude))
             .input("locName", sql.NVarChar, initialLoc)
+            .input("pingType", sql.NVarChar, pingType)
             .query(`
               DECLARE @empId INT;
               SELECT @empId = id FROM employee WHERE LOWER(LTRIM(RTRIM(name))) = LOWER(LTRIM(RTRIM(@username)));

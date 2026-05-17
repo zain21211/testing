@@ -111,6 +111,37 @@ const isOlderThanOneMonth = (value) => {
     return date < oneMonthAgo;
 };
 
+// Helper to consistently format any time (24h "23:26" or 12h "11:26 pm") to standard 12h format ("11:26 PM")
+const formatTimeTo12Hour = (timeStr) => {
+    if (!timeStr) return "";
+    const cleaned = timeStr.trim().toUpperCase();
+    
+    // Check if it already contains AM/PM
+    if (cleaned.includes("AM") || cleaned.includes("PM")) {
+        const match = cleaned.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+        if (match) {
+            const hr = String(parseInt(match[1], 10)).padStart(2, '0');
+            const min = match[2];
+            const ampm = match[3];
+            return `${hr}:${min} ${ampm}`;
+        }
+        return cleaned;
+    }
+    
+    // Parse "HH:MM" (24-hour format)
+    const parts = cleaned.split(":");
+    if (parts.length >= 2) {
+        let hours = parseInt(parts[0], 10);
+        const minutes = parts[1].substring(0, 2);
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const hrStr = String(hours).padStart(2, '0');
+        return `${hrStr}:${minutes} ${ampm}`;
+    }
+    return timeStr;
+};
+
 // ─── Attendance Check-In Button ───────────────────────────────────────────────
 const AttendanceCheckIn = React.memo(({ user }) => {
     const [status, setStatus]   = useState("idle"); // idle | loading | done | error
@@ -132,11 +163,11 @@ const AttendanceCheckIn = React.memo(({ user }) => {
                     if (myAtt) {
                         if (myAtt.time_in) {
                             setCheckedIn(true);
-                            setCheckinTime(myAtt.time_in);
+                            setCheckinTime(formatTimeTo12Hour(myAtt.time_in));
                         }
                         if (myAtt.time_out) {
                             setCheckedOut(true);
-                            setCheckoutTime(myAtt.time_out);
+                            setCheckoutTime(formatTimeTo12Hour(myAtt.time_out));
                         }
                     }
                 }
@@ -162,12 +193,13 @@ const AttendanceCheckIn = React.memo(({ user }) => {
             });
             const data = await resp.json();
             if (data.success) {
-                const time = new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true });
+                const rawTime = new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true });
+                const formattedTime = formatTimeTo12Hour(rawTime);
                 if (type === "checkin") {
-                    setCheckinTime(time);
+                    setCheckinTime(formattedTime);
                     setCheckedIn(true);
                 } else if (type === "checkout") {
-                    setCheckoutTime(time);
+                    setCheckoutTime(formattedTime);
                     setCheckedOut(true);
                 }
                 setStatus("done");

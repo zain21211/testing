@@ -15,6 +15,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import BookIcon from '@mui/icons-material/Book';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 export const ALL_DASHBOARD_CARDS = [
   { key: "packing", title: "Packing", subtitle: "Pending", icon: InventoryIcon, color: "#ff3d07", path: "/pending", emoji: "📦" },
@@ -33,6 +34,7 @@ export const ALL_DASHBOARD_CARDS = [
   { key: "ledger", title: "Ledger", subtitle: "Statement", icon: BookIcon, color: "#7b1fa2", path: "/ledger", emoji: "📖" },
   { key: "pendingdemand", title: "Pending", subtitle: "Demand", icon: ListAltIcon, color: "#E91E63", path: "/pending-demand", emoji: "📝" },
   { key: "attendance", title: "Attendance", subtitle: "Daily", icon: AccessTimeIcon, color: "#4caf50", path: "/attendance", emoji: "🕒" },
+  { key: "tracking", title: "Tracking", subtitle: "Live GPS", icon: LocationOnIcon, color: "#e91e63", path: "/tracking", adminOnly: true, emoji: "📍" },
   { key: "visibility", title: "Visibility", subtitle: "Manager", icon: AdminPanelSettingsIcon, color: "#6c63ff", path: "/admin/visibility", adminOnly: true, emoji: "⚙️" },
 ];
 

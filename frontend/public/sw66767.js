@@ -117,3 +117,38 @@ self.addEventListener('fetch', event => {
     fetch(req).catch(() => caches.match(req))
   );
 });
+
+// ─── Location Tracking: Periodic Background Sync ────────────────────────────
+// Fires every ~15 min when the PWA is installed and the OS allows it.
+// Since geolocation is NOT available in SW, we relay the request to any open
+// client tab.  The React app's LocationTracker component listens for this
+// message and calls navigator.geolocation + posts the result back.
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'location-ping') {
+    event.waitUntil(requestLocationFromClients());
+  }
+});
+
+async function requestLocationFromClients() {
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  if (clients.length === 0) {
+    // No open tab – nothing we can do without geolocation in SW
+    return;
+  }
+  // Post to the first available client; LocationTracker will pick it up
+  clients[0].postMessage({ type: 'SW_LOCATION_PING_REQUEST' });
+}
+
+// Listen for replies from the React app carrying the location data
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'LOCATION_PING_RESPONSE') {
+    const { latitude, longitude, accuracy, username, userType, apiUrl } = event.data;
+    // Make the actual fetch from within the SW so it works even if the tab goes background
+    const body = JSON.stringify({ username, userType, latitude, longitude, accuracy, pingType: 'auto' });
+    fetch(`${apiUrl}/tracking/ping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).catch(() => { /* best-effort */ });
+  }
+});

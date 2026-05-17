@@ -30,6 +30,7 @@ const formVisibilityRoutes = require("./routes/formVisibilityRoutes");
 const imageViewerRoutes = require("./routes/imageViewerRoutes");
 const pendingDemandRoutes = require("./routes/pendingDemandRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
+const trackingRoutes = require("./routes/trackingRoutes");
 
 // Import logging middleware
 const { createRequestLogger } = require("./logging/middleware/requestLogger");
@@ -137,6 +138,7 @@ app.use("/api/form-visibility", formVisibilityRoutes);
 app.use("/api/image-viewer", imageViewerRoutes);
 app.use("/api/pending-demand", pendingDemandRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/tracking", trackingRoutes);
 
 // Logs management routes
 app.use("/api/logs", logsRoutes);

@@ -25,6 +25,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ImageIcon from '@mui/icons-material/Image';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 
@@ -157,6 +158,21 @@ const Header = () => {
         label: "Customer Route Order",
         icon: ListAltIcon,
         path: "/list",
+      },
+    ];
+  }
+
+  // Admin-only: Live Tracking
+  if (
+    userType === "admin" &&
+    !drawerMenuItems.some(item => item.path === "/tracking")
+  ) {
+    drawerMenuItems = [
+      ...drawerMenuItems,
+      {
+        label: "Live Tracking",
+        icon: LocationOnIcon,
+        path: "/tracking",
       },
     ];
   }

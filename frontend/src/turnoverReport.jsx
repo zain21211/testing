@@ -110,6 +110,97 @@ const isOlderThanOneMonth = (value) => {
     return date < oneMonthAgo;
 };
 
+// ─── Attendance Check-In Button ───────────────────────────────────────────────
+const AttendanceCheckIn = React.memo(({ user }) => {
+    const [status, setStatus]   = useState("idle"); // idle | loading | done | error
+    const [checkedIn, setCheckedIn] = useState(false);
+    const [locName, setLocName] = useState("");
+    const [checkinTime, setCheckinTime] = useState("");
+    const [errMsg, setErrMsg]   = useState("");
+
+    // Check if already checked in today (stored in sessionStorage)
+    useEffect(() => {
+        const key = `checkin_${user?.username}_${new Date().toISOString().split('T')[0]}`;
+        const saved = sessionStorage.getItem(key);
+        if (saved) {
+            const data = JSON.parse(saved);
+            setCheckedIn(true);
+            setLocName(data.locationName || "");
+            setCheckinTime(data.time || "");
+        }
+    }, [user?.username]);
+
+    const handleCheckIn = async () => {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+            const pos = await new Promise((res, rej) =>
+                navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000 })
+            );
+            const { latitude, longitude, accuracy } = pos.coords;
+            const resp = await fetch(`${API_URL}/tracking/ping`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: user.username, userType: user.userType, latitude, longitude, accuracy, pingType: "checkin" }),
+            });
+            const data = await resp.json();
+            if (data.success) {
+                const time = new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true });
+                const key = `checkin_${user?.username}_${new Date().toISOString().split('T')[0]}`;
+                sessionStorage.setItem(key, JSON.stringify({ locationName: data.locationName, time }));
+                setLocName(data.locationName || "");
+                setCheckinTime(time);
+                setCheckedIn(true);
+                setStatus("done");
+            } else {
+                throw new Error(data.message || "Failed");
+            }
+        } catch (err) {
+            let msg = err.message;
+            if (err.code === 1) msg = "Location permission denied. Please allow location access.";
+            else if (err.code === 2) msg = "GPS/Location is turned off. Please turn it on and try again.";
+            else if (err.code === 3) msg = "Location request timed out. Please try again.";
+            
+            setErrMsg(msg);
+            setStatus("error");
+        }
+    };
+
+    if (checkedIn) {
+        return (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 3, py: 2, borderRadius: 3, bgcolor: "#e8f5e9", border: "2px solid #a5d6a7", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                <span style={{ fontSize: "1.8rem" }}>✅</span>
+                <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ fontWeight: 900, color: "#2e7d32", fontSize: "1.2rem", lineHeight: 1.2 }}>Attendance marked at {checkinTime}</Typography>
+                </Box>
+            </Box>
+        );
+    }
+
+    return (
+        <Box>
+            <Button
+                variant="contained"
+                onClick={handleCheckIn}
+                disabled={status === "loading"}
+                sx={{
+                    background: status === "error" ? "#c62828" : "linear-gradient(135deg,#1a237e,#283593)",
+                    color: "white", fontWeight: 900, borderRadius: 3, px: 5, py: 2.5,
+                    fontSize: "1.3rem", textTransform: "none", boxShadow: "0 8px 24px rgba(26,35,126,.4)",
+                    width: { xs: "100%", sm: "auto" },
+                    "&:hover": { background: "linear-gradient(135deg,#283593,#3949ab)", transform: "translateY(-2px)" },
+                    "&:disabled": { background: "#ccc" },
+                    transition: "all 0.2s"
+                }}
+            >
+                {status === "loading" ? "📡 Locating..." : "📍 Mark Attendance"}
+            </Button>
+            {errMsg && <Typography sx={{ color: "#c62828", fontSize: "0.85rem", mt: 1, fontWeight: 700 }}>{errMsg}</Typography>}
+        </Box>
+    );
+});
+
+
 //================================================================================
 // 2. HELPER COMPONENTS (Single Responsibility)
 //================================================================================
@@ -296,7 +387,7 @@ export const RemarkDialog = React.memo(
 
 
 const SummaryBar = React.memo(
-    ({ summary, userRoles, onParamsChange, onFetch, isLoading }) => {
+    ({ summary, userRoles, onParamsChange, onFetch, isLoading, spoUser }) => {
         const [showBox, setShowBox] = useState(true);
         const { isAdmin, isZain } = userRoles;
 
@@ -340,6 +431,12 @@ const SummaryBar = React.memo(
                             }
                             gap={2}
                         >
+                            {/* Check-in button for SPO/SM field users */}
+                            {!isAdmin && !isZain && spoUser && (
+                                <Box sx={{ gridColumn: "span 3" }}>
+                                    <AttendanceCheckIn user={spoUser} />
+                                </Box>
+                            )}
                             {(isAdmin || isZain) && (
                                 <DateInput
                                     onDateChange={(val) => onParamsChange("date", val)}
@@ -829,6 +926,7 @@ const TurnoverReport = () => {
                 onParamsChange={handleParamsChange}
                 onFetch={fetchReport}
                 isLoading={isLoading}
+                spoUser={user}
             />
             <Box sx={{ display: "grid", gap: 3, mb: "10rem" }}>
                 {filteredData.map((trader) => (

@@ -23,6 +23,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
 } from "@mui/material";
 
 import ListAltIcon from "@mui/icons-material/ListAlt";
@@ -54,17 +55,56 @@ const STATUS_COLORS = {
 
 export default function AttendanceForm() {
   const [attendance, setAttendance] = useState([]);
+  const todayStr = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(() => {
     try {
-      return new Date().toISOString().split("T")[0];
+      return todayStr;
     } catch {
       return "2026-05-14";
     }
   });
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState(null);
+  
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+  const isAdmin = user?.userType?.toLowerCase().includes("admin") || false;
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilters, setStatusFilters] = useState(() => {
+    return isAdmin ? ["Late", "Absent", "Leave"] : ["Unmark"];
+  });
   const [showList, setShowList] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const sortedListData = React.useMemo(() => {
+    let sortableItems = [...(Array.isArray(attendance) ? attendance : [])];
+    sortableItems.sort((a, b) => {
+      let valA = a[sortConfig.key] || "";
+      let valB = b[sortConfig.key] || "";
+      if (sortConfig.key === "status") {
+        valA = a.status || "Unmark";
+        valB = b.status || "Unmark";
+      }
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sortableItems;
+  }, [attendance, sortConfig]);
+
   const [isHoliday, setIsHoliday] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
   const [monthlyMonth, setMonthlyMonth] = useState(new Date().getMonth() + 1);
@@ -159,7 +199,7 @@ export default function AttendanceForm() {
     setAttendance((prev) =>
       Array.isArray(prev) ? prev.map((row) => {
         if (row && row.employee_id === empId) {
-          const updated = { ...row, [field]: value };
+          const updated = { ...row, [field]: value, is_dirty: true };
           
           if (field === "time_in" || field === "time_out") {
             // Auto-set time out if empty
@@ -170,17 +210,22 @@ export default function AttendanceForm() {
             const tIn = field === "time_in" ? value : updated.time_in;
             const tOut = field === "time_out" ? value : updated.time_out;
             
-            if (tIn && tOut && (!updated.status || ["Present", "Late", "Half Day", "Absent", "Leave"].includes(updated.status))) {
+            if (tIn && (!updated.status || ["Present", "Late", "Half Day", "Absent", "Leave"].includes(updated.status))) {
               const [inH, inM] = tIn.split(":").map(Number);
-              const [outH, outM] = tOut.split(":").map(Number);
               const inMinutes = inH * 60 + inM;
-              const outMinutes = outH * 60 + outM;
+              
+              let outMinutes = 20 * 60; // default 20:00
+              const hasValidOut = tOut && !tOut.startsWith("00:00");
+              if (hasValidOut) {
+                const [outH, outM] = tOut.split(":").map(Number);
+                outMinutes = outH * 60 + outM;
+              }
 
               const lateThreshold = 10 * 60 + 30; // 10:30
               const halfDayInThreshold = 11 * 60 + 30; // 11:30
               const outThreshold = 17 * 60 + 30; // 17:30
 
-              if (inMinutes > halfDayInThreshold || outMinutes < outThreshold) {
+              if (inMinutes > halfDayInThreshold || (hasValidOut && outMinutes < outThreshold)) {
                 updated.status = "Half Day";
               } else if (inMinutes > lateThreshold) {
                 updated.status = "Late";
@@ -207,8 +252,9 @@ export default function AttendanceForm() {
     if (!row?.employee_id) return;
     setSavingId(row.employee_id);
     try {
-      await axios.post(`${url}/attendance/save`, { ...row, date: selectedDate });
-      updateLocalRow(row.employee_id, "attendance_id", row.attendance_id || Date.now());
+      const res = await axios.post(`${url}/attendance/save`, { ...row, date: selectedDate });
+      const newAttendanceId = res.data?.attendance_id || row.attendance_id || Date.now();
+      setAttendance(prev => prev.map(r => r.employee_id === row.employee_id ? { ...r, attendance_id: newAttendanceId, is_dirty: false } : r));
       setSearchTerm(""); // Automatically clear the filter after updating
     } catch (err) {
       console.error("Save error:", err);
@@ -217,18 +263,21 @@ export default function AttendanceForm() {
     }
   };
 
-  const filteredData = Array.isArray(attendance) ? attendance.filter(e =>
-    (e?.name || "").toLowerCase().includes((searchTerm || "").toLowerCase())
-  ) : [];
+  const filteredData = Array.isArray(attendance) ? attendance.filter(e => {
+    const matchesSearch = (e?.name || "").toLowerCase().includes((searchTerm || "").toLowerCase());
+    const eStatus = e.status || "Unmark";
+    const matchesStatus = statusFilters.includes(eStatus);
+    return matchesSearch && matchesStatus;
+  }) : [];
 
   const summary = (Array.isArray(attendance) ? attendance : []).reduce((acc, row) => {
     if (row.status) {
       acc[row.status] = (acc[row.status] || 0) + 1;
     } else {
-      acc.Unmarked = (acc.Unmarked || 0) + 1;
+      acc.Unmark = (acc.Unmark || 0) + 1;
     }
     return acc;
-  }, { Present: 0, Late: 0, "Half Day": 0, Absent: 0, Leave: 0, Unmarked: 0 });
+  }, { Present: 0, Late: 0, "Half Day": 0, Absent: 0, Leave: 0, Unmark: 0 });
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -240,26 +289,56 @@ export default function AttendanceForm() {
             <Grid item xs={12} md={5}>
               <Typography variant="h4" sx={{ fontWeight: 900 }}>Attendance Log</Typography>
               <Typography variant="body2" sx={{ opacity: 0.8, mb: 1.5 }}>Shift: 10:00 AM — 08:00 PM</Typography>
-              <Stack direction="row" flexWrap="wrap" gap={0.8} sx={{ mb: 1.5 }}>
+              <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mb: 1.5, alignItems: "center" }}>
+                <Chip
+                  label={statusFilters.length > 0 ? "Clear All" : "All On"}
+                  size="small"
+                  onClick={() => {
+                    if (statusFilters.length > 0) {
+                      setStatusFilters([]);
+                    } else {
+                      setStatusFilters(Object.keys(summary));
+                    }
+                  }}
+                  sx={{
+                    fontWeight: 900,
+                    fontSize: "0.95rem",
+                    padding: "2px 4px",
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    color: "white",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.3)" }
+                  }}
+                />
                 {Object.entries(summary).map(([key, value]) => {
-                  if (value === 0 && key !== "Unmarked") return null;
+                  const isActive = statusFilters.includes(key);
                   return (
                     <Chip 
                       key={key} 
                       label={`${key}: ${value}`} 
                       size="small"
+                      onClick={() => {
+                        setStatusFilters(prev => 
+                          prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+                        );
+                      }}
                       sx={{ 
-                        fontWeight: 800, 
-                        fontSize: "0.75rem",
-                        bgcolor: STATUS_COLORS[key] || "rgba(255,255,255,0.2)", 
-                        color: "white",
-                        border: key === "Unmarked" ? "1px solid rgba(255,255,255,0.5)" : "none"
+                        fontWeight: 900, 
+                        fontSize: "0.95rem",
+                        padding: "2px 4px",
+                        bgcolor: isActive ? (STATUS_COLORS[key] || "rgba(255,255,255,0.4)") : "rgba(0,0,0,0.2)", 
+                        color: isActive ? "white" : "rgba(255,255,255,0.5)",
+                        border: key === "Unmark" && isActive ? "1px solid rgba(255,255,255,0.5)" : "1px solid transparent",
+                        cursor: "pointer",
+                        "&:hover": {
+                          bgcolor: isActive ? (STATUS_COLORS[key] || "rgba(255,255,255,0.5)") : "rgba(255,255,255,0.3)"
+                        }
                       }} 
                     />
                   );
                 })}
               </Stack>
-              <Stack direction="row" flexWrap="wrap" gap={1}>
+              <Stack direction="row" flexWrap="nowrap" gap={1} sx={{ overflowX: "auto", pb: 0.5 }}>
                 <Button
                   variant="outlined"
                   startIcon={<ListAltIcon />}
@@ -269,10 +348,11 @@ export default function AttendanceForm() {
                     borderColor: "rgba(255,255,255,0.5)",
                     borderRadius: "8px",
                     fontWeight: 700,
+                    whiteSpace: "nowrap",
                     "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" }
                   }}
                 >
-                  View Status List
+                  Status List
                 </Button>
                 <Button
                   variant="outlined"
@@ -283,6 +363,7 @@ export default function AttendanceForm() {
                     borderColor: "rgba(255,255,255,0.5)",
                     borderRadius: "8px",
                     fontWeight: 700,
+                    whiteSpace: "nowrap",
                     "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" }
                   }}
                 >
@@ -298,13 +379,14 @@ export default function AttendanceForm() {
                     borderColor: isHoliday ? "#ff1744" : "rgba(255,255,255,0.5)",
                     borderRadius: "8px",
                     fontWeight: 700,
+                    whiteSpace: "nowrap",
                     "&:hover": { 
                       bgcolor: isHoliday ? "#d50000" : "rgba(255,255,255,0.1)",
                       borderColor: isHoliday ? "#d50000" : "white" 
                     }
                   }}
                 >
-                  {isHoliday ? "Unmark Holiday" : "Mark as Holiday"}
+                  {isHoliday ? "Unmark Holiday" : "Mark Holiday"}
                 </Button>
               </Stack>
             </Grid>
@@ -326,11 +408,11 @@ export default function AttendanceForm() {
                         borderRadius: "12px",
                         background: "white",
                         fontWeight: 900,
-                        fontSize: { xs: "1.3rem", md: "1.5rem" },
-                        height: "64px"
+                        fontSize: { xs: "1.1rem", md: "1.3rem" },
+                        height: "52px"
                       }
                     }}
-                    InputLabelProps={{ shrink: true, sx: { fontWeight: 900, fontSize: "1.1rem" } }}
+                    InputLabelProps={{ shrink: true, sx: { fontWeight: 900, fontSize: "1rem" } }}
                   />
                   <input id="at-date-pk" type="date" style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: 0, left: 0, width: "100%", height: "100%" }} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                 </Box>
@@ -340,7 +422,7 @@ export default function AttendanceForm() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   InputProps={{
-                    startAdornment: <SearchIcon sx={{ color: "#1a237e", fontSize: { xs: "1.6rem", md: "2.5rem" } }} />,
+                    startAdornment: <SearchIcon sx={{ color: "#1a237e", fontSize: { xs: "1.6rem", md: "2rem" } }} />,
                     endAdornment: searchTerm ? (
                       <InputAdornment position="end">
                         <IconButton onClick={() => setSearchTerm("")} edge="end">
@@ -352,9 +434,9 @@ export default function AttendanceForm() {
                       borderRadius: "12px",
                       background: "white",
                       width: "100%",
-                      height: "64px",
+                      height: "52px",
                       fontWeight: 900,
-                      fontSize: { xs: "1.3rem", md: "1.5rem" }
+                      fontSize: { xs: "1.1rem", md: "1.3rem" }
                     }
                   }}
                   sx={{ width: { xs: "58%", md: "350px" } }}
@@ -369,7 +451,9 @@ export default function AttendanceForm() {
         ) : (
           <Box sx={{ p: { xs: 1, md: 3 } }}>
             <Stack spacing={2}>
-              {filteredData.map((row) => (
+              {filteredData.map((row) => {
+                const isLocked = !isAdmin && (selectedDate !== todayStr || !!row.attendance_id);
+                return (
                 <Paper key={row?.employee_id || Math.random()} sx={{ p: 2, borderRadius: "20px", border: "1px solid #ddd", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
                   <Stack spacing={2}>
                     {/* Line 1: Employee Name */}
@@ -388,6 +472,7 @@ export default function AttendanceForm() {
                       {["Present", "Late", "Half Day", "Absent", "Leave"].map(s => (
                         <Button
                           key={s}
+                          disabled={isLocked}
                           variant={row.status === s ? "contained" : "outlined"}
                           onClick={() => updateLocalRow(row.employee_id, "status", s)}
                           sx={{
@@ -414,23 +499,24 @@ export default function AttendanceForm() {
                     {/* Line 3: Times & Save */}
                     <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ width: "100%" }}>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mb: 0.5, position: "relative", height: "28px" }}>
-                          <Typography variant="caption" sx={{ position: "absolute", left: 4, fontWeight: 900, color: "#999", fontSize: "0.75rem" }}>TIME IN</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5, height: "32px" }}>
+                          <Typography variant="caption" sx={{ fontWeight: 900, color: "#999", fontSize: "0.75rem", pl: 0.5 }}>TIME IN</Typography>
                           <Button 
                             size="small" 
+                            disabled={isLocked}
                             onClick={(e) => {
                               const now = new Date();
                               const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                               updateLocalRow(row.employee_id, "time_in", time);
                             }}
                             sx={{ 
-                              minWidth: "70px", 
-                              p: "2px 8px", 
+                              minWidth: "80px", 
+                              p: "4px 12px", 
                               fontWeight: 900, 
                               color: "#1a237e", 
                               bgcolor: "#e8eaf6", 
                               borderRadius: "8px",
-                              fontSize: "0.85rem", 
+                              fontSize: "0.95rem", 
                               lineHeight: 1.2 
                             }}
                           >
@@ -438,6 +524,7 @@ export default function AttendanceForm() {
                           </Button>
                         </Box>
                         <MobileTimePicker
+                          disabled={isLocked}
                           value={row.time_in ? dayjs(`2024-01-01T${row.time_in}`) : null}
                           onChange={(newValue) => {
                             if (newValue) updateLocalRow(row.employee_id, "time_in", newValue.format("HH:mm"));
@@ -454,23 +541,24 @@ export default function AttendanceForm() {
                         />
                       </Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mb: 0.5, position: "relative", height: "28px" }}>
-                          <Typography variant="caption" sx={{ position: "absolute", left: 4, fontWeight: 900, color: "#999", fontSize: "0.75rem" }}>TIME OUT</Typography>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5, height: "32px" }}>
+                          <Typography variant="caption" sx={{ fontWeight: 900, color: "#999", fontSize: "0.75rem", pl: 0.5 }}>TIME OUT</Typography>
                           <Button 
                             size="small" 
+                            disabled={isLocked}
                             onClick={(e) => {
                               const now = new Date();
                               const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                               updateLocalRow(row.employee_id, "time_out", time);
                             }}
                             sx={{ 
-                              minWidth: "70px", 
-                              p: "2px 8px", 
+                              minWidth: "80px", 
+                              p: "4px 12px", 
                               fontWeight: 900, 
                               color: "#1a237e", 
                               bgcolor: "#e8eaf6", 
                               borderRadius: "8px",
-                              fontSize: "0.85rem", 
+                              fontSize: "0.95rem", 
                               lineHeight: 1.2 
                             }}
                           >
@@ -478,6 +566,7 @@ export default function AttendanceForm() {
                           </Button>
                         </Box>
                         <MobileTimePicker
+                          disabled={isLocked}
                           value={row.time_out ? dayjs(`2024-01-01T${row.time_out}`) : null}
                           onChange={(newValue) => {
                             if (newValue) updateLocalRow(row.employee_id, "time_out", newValue.format("HH:mm"));
@@ -498,7 +587,7 @@ export default function AttendanceForm() {
                           fullWidth
                           variant="contained"
                           onClick={() => saveRow(row)}
-                          disabled={savingId === row.employee_id}
+                          disabled={isLocked || savingId === row.employee_id}
                           sx={{ 
                             borderRadius: "12px", 
                             height: "52px", 
@@ -506,52 +595,64 @@ export default function AttendanceForm() {
                             fontSize: "0.9rem",
                             minWidth: "0",      
                             px: 1,              
-                            bgcolor: row.attendance_id ? "#2e7d32" : "#1a237e" 
+                            bgcolor: (row.attendance_id && !row.is_dirty) ? "#2e7d32" : "#1a237e" 
                           }}
                         >
-                          {savingId === row.employee_id ? "..." : (row.attendance_id ? "OK" : "SAVE")}
+                          {savingId === row.employee_id ? <CircularProgress size={24} color="inherit" /> : ((row.attendance_id && !row.is_dirty) ? "OK" : "SAVE")}
                         </Button>
                       </Box>
                     </Stack>
                   </Stack>
                 </Paper>
-              ))}
+              )})}
             </Stack>
           </Box>
         )}
       </Paper>
 
       {/* Summary List Dialog */}
-      <Dialog open={showList} onClose={() => setShowList(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 900, bgcolor: "#1a237e", color: "white" }}>
-          Attendance List - {formatDisplayDate(selectedDate)}
+      <Dialog open={showList} onClose={() => setShowList(false)} maxWidth="xl" fullWidth PaperProps={{ sx: { maxHeight: "95vh", margin: 1, width: "100%", maxWidth: "98vw" } }}>
+        <DialogTitle sx={{ fontWeight: 900, bgcolor: "#1a237e", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Attendance List - {formatDisplayDate(selectedDate)}</span>
+          <IconButton onClick={() => setShowList(false)} sx={{ color: "white", p: 0.5 }}>
+            <ClearIcon />
+          </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
-          <TableContainer>
+          <TableContainer sx={{ height: "100%", overflowY: "auto" }}>
             <Table size="small">
               <TableHead sx={{ bgcolor: "#f5f5f5" }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 900, fontSize: "1.1rem" }}>Employee Name</TableCell>
-                  <TableCell sx={{ fontWeight: 900, fontSize: "1.1rem", whiteSpace: "nowrap" }}>Time In</TableCell>
-                  <TableCell sx={{ fontWeight: 900, fontSize: "1.1rem", whiteSpace: "nowrap" }}>Time Out</TableCell>
-                  <TableCell sx={{ fontWeight: 900, fontSize: "1.1rem" }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 900, fontSize: "1.1rem", width: "35%", px: 1 }}>
+                    <TableSortLabel active={sortConfig.key === 'name'} direction={sortConfig.key === 'name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('name')}>Employee</TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 900, fontSize: "0.85rem", whiteSpace: "nowrap", width: "20%", px: 1 }}>
+                    <TableSortLabel active={sortConfig.key === 'time_in'} direction={sortConfig.key === 'time_in' ? sortConfig.direction : 'asc'} onClick={() => handleSort('time_in')}>IN</TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 900, fontSize: "0.85rem", whiteSpace: "nowrap", width: "25%", px: 1 }}>
+                    <TableSortLabel active={sortConfig.key === 'time_out'} direction={sortConfig.key === 'time_out' ? sortConfig.direction : 'asc'} onClick={() => handleSort('time_out')}>OUT</TableSortLabel>
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 900, fontSize: "1.1rem", width: "20%", px: 1 }}>
+                    <TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')}>Status</TableSortLabel>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {[...(Array.isArray(attendance) ? attendance : [])].sort((a,b) => (a.name||"").localeCompare(b.name||"")).map((row) => (
+                {sortedListData.map((row) => (
                   <TableRow key={row.employee_id} hover>
-                    <TableCell sx={{ fontWeight: 800, fontSize: "1rem" }}>{row.name}</TableCell>
-                    <TableCell sx={{ fontSize: "1.1rem", fontWeight: 700, whiteSpace: "nowrap" }}>{row.time_in || "-"}</TableCell>
-                    <TableCell sx={{ fontSize: "1.1rem", fontWeight: 700, whiteSpace: "nowrap" }}>{row.time_out || "-"}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: "1rem", px: 1 }}>{row.name}</TableCell>
+                    <TableCell sx={{ fontSize: "0.95rem", fontWeight: 700, whiteSpace: "nowrap", px: 1 }}>{row.time_in || "-"}</TableCell>
+                    <TableCell sx={{ fontSize: "0.95rem", fontWeight: 700, whiteSpace: "nowrap", px: 1 }}>{row.time_out || "-"}</TableCell>
+                    <TableCell align="center" sx={{ px: 1 }}>
                       <Chip
-                        label={row.status || "Unmarked"}
+                        label={row.status || "Unmark"}
                         sx={{
                           fontWeight: 800,
-                          fontSize: "0.95rem",
+                          fontSize: "0.9rem",
                           bgcolor: row.status ? (STATUS_COLORS[row.status] || "#9e9e9e") : "transparent",
                           color: row.status ? "white" : "#666",
-                          border: row.status ? "none" : "1px solid #ccc"
+                          border: row.status ? "none" : "1px solid #ccc",
+                          minWidth: "85px"
                         }}
                       />
                     </TableCell>
@@ -561,11 +662,6 @@ export default function AttendanceForm() {
             </Table>
           </TableContainer>
         </DialogContent>
-        <DialogActions sx={{ p: 2, bgcolor: "#f5f5f5" }}>
-          <Button onClick={() => setShowList(false)} variant="contained" sx={{ bgcolor: "#1a237e", fontWeight: 700 }}>
-            Close
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Monthly Report Dialog */}

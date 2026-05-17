@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material';
 import { formatCurrency } from '../../utils/formatCurrency';
 
-export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne }) => {
+export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne, onOpenPdf }) => {
     if (orders.length === 0) {
         return (
             <Box sx={{ mt: 4, p: 3, textAlign: 'center', border: '1px dashed #ccc', borderRadius: 2 }}>
@@ -42,11 +42,17 @@ export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne }) =
                     return (
                         <React.Fragment key={order.transactionID || index}>
                             <ListItem 
-                                onClick={() => !isSynced && onSyncOne(order)}
+                                onClick={() => {
+                                    if (isSynced) {
+                                        onOpenPdf && onOpenPdf(order);
+                                    } else {
+                                        onSyncOne && onSyncOne(order);
+                                    }
+                                }}
                                 sx={{ 
                                     py: 1.5, 
                                     px: 2,
-                                    cursor: isSynced ? 'default' : 'pointer',
+                                    cursor: 'pointer',
                                     bgcolor: isSynced ? '#e8f5e9' : '#fffde7', // light green for synced, yellow for pending
                                     '&:hover': { bgcolor: isSynced ? '#c8e6c9' : '#fff9c4' },
                                     display: 'flex',
@@ -77,9 +83,25 @@ export const OrderEntriesList = ({ orders = [], pendingCount = 0, onSyncOne }) =
                                     </Typography>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, direction: 'ltr' }}>
                                         {order.doc && (
-                                            <Typography sx={{ bgcolor: '#e0e0e0', px: 1, borderRadius: 1, fontSize: '1rem', fontWeight: 'bold', color: 'black' }}>
-                                                {order.doc}
-                                            </Typography>
+                                            <IconButton 
+                                                size="small" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onOpenPdf && onOpenPdf(order);
+                                                }}
+                                                sx={{ 
+                                                    bgcolor: '#1976d2', 
+                                                    color: 'white', 
+                                                    p: 0.5,
+                                                    borderRadius: '4px',
+                                                    '&:hover': { bgcolor: '#115293' } 
+                                                }}
+                                            >
+                                                <ReceiptLong fontSize="small" />
+                                                <Typography sx={{ ml: 0.5, fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                                    {order.doc}
+                                                </Typography>
+                                            </IconButton>
                                         )}
                                         <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.85rem' }}>
                                             {order.orderDate?.split('T')[0]}

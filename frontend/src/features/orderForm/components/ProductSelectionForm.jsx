@@ -122,9 +122,9 @@ export default function OrderPage({
     const debouncedSetCompanyFilter = (val) => setCompanyFilter(val);
     const debouncedSetCategoryFilter = (val) => setCategoryFilter(val);
     const handleEnterkey = (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            handleAddProductClick()
+        e.preventDefault();
+        if (e.type === "submit" || e.key === "Enter" || e.code === "NumpadEnter") {
+            handleAddProductClick();
         }
     };
 
@@ -142,7 +142,38 @@ export default function OrderPage({
 
     const handleAddProductClick = () => {
         console.log("Adding product:", selectedProduct);
+        const finalDiscount1 = Number(discount1) || 0;
+        let finalDiscount2 = Number(discount2) || 0;
+        const finalQty = Number(orderQuantity) || 0;
+        const sugPriceVal = Number(suggestedPrice) || 0;
+        const purchaseRate = Number(selectedProduct?.PurchaseRate) || 0;
 
+        const isPrivileged = user?.userType?.toLowerCase().includes("admin") || 
+                             user?.userType?.toLowerCase() === "sm-kr" || 
+                             user?.username?.toLowerCase() === "zain";
+
+        let appliedRate = Number(selectedProduct?.SaleRate) || 0;
+        if (isPrivileged) {
+            if (sugPriceVal >= purchaseRate) {
+                appliedRate = sugPriceVal;
+            }
+        }
+
+        const gross = finalQty * appliedRate;
+        const totalDiscount = (finalDiscount1 + finalDiscount2) / 100;
+        let finalAmount = gross - gross * totalDiscount;
+
+        if (selectedProduct?.Name?.toLowerCase().includes('publicity') && finalQty < 10) {
+            finalDiscount2 = 100;
+            finalAmount = 0;
+        }
+
+        const totalQty = Boolean(Sch) ? Number(quantity) || 0 : finalQty;
+        const costValue = cost?.cost || 0;
+        let finalProfit = 0;
+        if (costValue && totalQty) {
+            finalProfit = Math.round(((finalAmount || 0) / (totalQty || 0) - costValue) * (totalQty || 0));
+        }
 
         const newItem = {
             status: selectedProduct?.Status || "active", // Use product status, default to 'active'
@@ -150,18 +181,18 @@ export default function OrderPage({
             name: selectedProduct.Name,
             company: selectedProduct.Company,
             model: selectedProduct.Category,
-            orderQuantity: Number(orderQuantity), // The quantity the user entered
+            orderQuantity: finalQty, // The quantity the user entered
             schPc: Number(schPc) || 0, // Calculated scheme pieces
-            quantity: Number(quantity) || 0, // Total quantity (order + scheme)
-            rate: Number(selectedProduct?.SaleRate) ?? 0, // Product's sale rate
-            suggestedPrice: Number(suggestedPrice) || 0, // User's suggested price
-            vest: Number(vest) || 0, // Calculated vest
-            discount1: Number(discount1) || 0, // Discount 1 percentage
-            discount2: Number(discount2) || 0, // Discount 2 percentage
-            amount: Number(calculatedAmount) || 0, // Final calculated numeric amount for the item
+            quantity: totalQty, // Total quantity (order + scheme)
+            rate: appliedRate, // Product's sale rate or suggested rate (if allowed)
+            suggestedPrice: sugPriceVal, // User's suggested price
+            vest: gross, // Calculated vest using appliedRate
+            discount1: finalDiscount1, // Discount 1 percentage
+            discount2: finalDiscount2, // Discount 2 percentage
+            amount: Number(finalAmount) || 0, // Final calculated numeric amount for the item
             isClaim: isClaim,
             Sch: Sch,
-            profit: profit,
+            profit: finalProfit,
             remakes: productRemakes.trim(), // Add remakes
         };
 
@@ -240,18 +271,30 @@ export default function OrderPage({
     });
 
     // scheme
-    const { schText, schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading } =
-        useScheme(selectedProduct, orderQuantity, true)
+    const { schText, schPc, schOn, quantity, setSchPc, setSchOn, setQuantity, loading, perPieceAmount } =
+        useScheme(selectedProduct, orderQuantity, Sch) // Use Sch checkbox instead of hardcoded true!
 
     // discount
     const { discount1, setDiscount1, discount2, setDiscount2 } = useDiscount(selectedCustomer, selectedProduct);
 
+    // Calculate appliedRate based on user type & PurchaseRate check
+    const isPrivilegedUser = user?.userType?.toLowerCase().includes("admin") || 
+                             user?.userType?.toLowerCase() === "sm-kr" || 
+                             user?.username?.toLowerCase() === "zain";
+    const selectedProdPurchaseRate = Number(selectedProduct?.PurchaseRate) || 0;
+    const suggestedPriceVal = Number(suggestedPrice) || 0;
 
+    let currentAppliedRate = Number(selectedProduct?.SaleRate) || 0;
+    if (isPrivilegedUser) {
+        if (suggestedPriceVal >= selectedProdPurchaseRate) {
+            currentAppliedRate = suggestedPriceVal;
+        }
+    }
 
     // for totalamount per item
     const { vest, calculatedAmount, setCalculatedAmount } = useCalculateAmount(
         orderQuantity,
-        suggestedPrice,
+        currentAppliedRate,
         discount1,
         discount2
     );
@@ -316,6 +359,7 @@ export default function OrderPage({
             schOn={schOn}
             schText={schText}
             setSchOn={setSchOn}
+            perPieceAmount={perPieceAmount}
             price={price}
             setPrice={setPrice}
             suggestedPrice={suggestedPrice}

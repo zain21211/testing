@@ -159,7 +159,7 @@ export default function LocationTracker({ user }) {
 
   // ── Service Worker message relay ─────────────────────────────────────────
   useEffect(() => {
-    if (!username) return;
+    if (!username || !("serviceWorker" in navigator)) return;
 
     const handleSwMessage = async (event) => {
       if (event.data?.type !== "SW_LOCATION_PING_REQUEST") return;
@@ -170,7 +170,7 @@ export default function LocationTracker({ user }) {
         const { latitude, longitude, accuracy } = pos.coords;
 
         // Reply to SW so it can post the data even if the tab goes to background
-        if (navigator.serviceWorker.controller) {
+        if (navigator.serviceWorker?.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: "LOCATION_PING_RESPONSE",
             username,

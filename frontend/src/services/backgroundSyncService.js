@@ -2,17 +2,18 @@ import axios from "axios";
 import localforage from "localforage";
 
 const API_URL = import.meta.env.VITE_API_URL;
+let _syncingInvoices = false;
 
 export const backgroundSyncService = {
   // --- INVOICES (ORDERS) ---
   syncInvoices: async () => {
     if (!navigator.onLine) return;
-    if (this._syncingInvoices) return;
-    this._syncingInvoices = true;
+    if (_syncingInvoices) return;
+    _syncingInvoices = true;
     
     const token = localStorage.getItem("authToken");
     if (!token) {
-        this._syncingInvoices = false;
+        _syncingInvoices = false;
         return;
     }
 
@@ -20,7 +21,7 @@ export const backgroundSyncService = {
     const pendingOrders = dailyOrders.filter(o => !o.synced);
     
     if (pendingOrders.length === 0) {
-        this._syncingInvoices = false;
+        _syncingInvoices = false;
         return;
     }
 
@@ -70,7 +71,7 @@ export const backgroundSyncService = {
         }
       }
     }
-    this._syncingInvoices = false;
+    _syncingInvoices = false;
   },
 
   syncOneInvoice: async (transactionID) => {

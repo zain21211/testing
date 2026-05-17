@@ -318,7 +318,8 @@ const orderControllers = {
           [Amount],
           [GrossProfit],
           [DueDate],
-          [PBalance]
+          [PBalance],
+          [Status]
         )
         VALUES
         (
@@ -330,7 +331,8 @@ const orderControllers = {
           @totalAmount,
           ISNULL((SELECT SUM(profit) FROM PsProduct WHERE Doc = @nextDoc), 0),
           @dueDate,
-          @PBalance
+          @PBalance,
+          @status
         )
       `);
       } catch (e) {

@@ -31,6 +31,13 @@ const initTrackingTable = async (pool) => {
         ALTER TABLE Attendance ADD checkin_lng DECIMAL(10,7);
         ALTER TABLE Attendance ADD checkin_location NVARCHAR(500);
     END
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                   WHERE TABLE_NAME='Attendance' AND COLUMN_NAME='checkout_lat')
+    BEGIN
+        ALTER TABLE Attendance ADD checkout_lat DECIMAL(10,7);
+        ALTER TABLE Attendance ADD checkout_lng DECIMAL(10,7);
+        ALTER TABLE Attendance ADD checkout_location NVARCHAR(500);
+    END
   `;
   await pool.request().query(query);
 };
@@ -143,21 +150,33 @@ const trackingController = {
               SELECT @empId = id FROM employee WHERE name = @username;
               IF @empId IS NOT NULL
               BEGIN
-                  IF EXISTS (SELECT 1 FROM Attendance WHERE employee_id = @empId AND attendance_date = @today)
+                  IF @pingType = 'checkout'
                   BEGIN
                       UPDATE Attendance SET
-                        checkin_lat = COALESCE(checkin_lat, @lat),
-                        checkin_lng = COALESCE(checkin_lng, @lng),
-                        checkin_location = COALESCE(checkin_location, @locName),
-                        time_in = COALESCE(time_in, CONVERT(VARCHAR(5), GETDATE(), 108)),
-                        status = COALESCE(status, 'Present'),
-                        entry_by = COALESCE(entry_by, @username)
+                        checkout_lat = @lat,
+                        checkout_lng = @lng,
+                        checkout_location = @locName,
+                        time_out = CONVERT(VARCHAR(5), GETDATE(), 108)
                       WHERE employee_id = @empId AND attendance_date = @today;
                   END
                   ELSE
                   BEGIN
-                      INSERT INTO Attendance (employee_id, attendance_date, time_in, status, entry_by, checkin_lat, checkin_lng, checkin_location)
-                      VALUES (@empId, @today, CONVERT(VARCHAR(5), GETDATE(), 108), 'Present', @username, @lat, @lng, @locName);
+                      IF EXISTS (SELECT 1 FROM Attendance WHERE employee_id = @empId AND attendance_date = @today)
+                      BEGIN
+                          UPDATE Attendance SET
+                            checkin_lat = COALESCE(checkin_lat, @lat),
+                            checkin_lng = COALESCE(checkin_lng, @lng),
+                            checkin_location = COALESCE(checkin_location, @locName),
+                            time_in = COALESCE(time_in, CONVERT(VARCHAR(5), GETDATE(), 108)),
+                            status = COALESCE(status, 'Present'),
+                            entry_by = COALESCE(entry_by, @username)
+                          WHERE employee_id = @empId AND attendance_date = @today;
+                      END
+                      ELSE
+                      BEGIN
+                          INSERT INTO Attendance (employee_id, attendance_date, time_in, status, entry_by, checkin_lat, checkin_lng, checkin_location)
+                          VALUES (@empId, @today, CONVERT(VARCHAR(5), GETDATE(), 108), 'Present', @username, @lat, @lng, @locName);
+                      END
                   END
               END
             `);
@@ -176,10 +195,20 @@ const trackingController = {
                 .input("username", sql.NVarChar, username)
                 .input("today", sql.Date, today)
                 .input("loc", sql.NVarChar, realLocation)
+                .input("pingType", sql.NVarChar, pingType)
                 .query(`
-                  UPDATE a SET a.checkin_location = @loc
-                  FROM Attendance a INNER JOIN employee e ON e.id = a.employee_id
-                  WHERE e.name = @username AND a.attendance_date = @today
+                  IF @pingType = 'checkout'
+                  BEGIN
+                      UPDATE a SET a.checkout_location = @loc
+                      FROM Attendance a INNER JOIN employee e ON e.id = a.employee_id
+                      WHERE e.name = @username AND a.attendance_date = @today
+                  END
+                  ELSE
+                  BEGIN
+                      UPDATE a SET a.checkin_location = @loc
+                      FROM Attendance a INNER JOIN employee e ON e.id = a.employee_id
+                      WHERE e.name = @username AND a.attendance_date = @today
+                  END
                 `);
           }
         } catch (bgErr) {

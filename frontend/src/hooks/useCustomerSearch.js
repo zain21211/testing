@@ -198,10 +198,10 @@ export const useCustomerSearch = ({
   useEffect(() => {
     if (!ID || localCustomerList?.length === 0) return;
 
-    if (selectedCustomer?.acid !== Number(ID)) {
+    if (String(selectedCustomer?.acid) !== String(ID)) {
       // Search the FULL list, not just the filtered one
       const customerToSelect = localCustomerList?.find(
-        (c) => c.acid === Number(ID)
+        (c) => String(c.acid) === String(ID)
       );
       if (customerToSelect) {
         handleSelect(customerToSelect);
@@ -269,7 +269,7 @@ export const useCustomerSearch = ({
       debounce((value, key) => {
         console.log("setting id...");
         dispatch(setIDWithKey({ key, value }));
-      }, 1000),
+      }, 1200), // Comfortable 1.2s delay to finish typing multi-digit IDs
     [dispatch]
   );
 

@@ -25,8 +25,9 @@ import {
     Autocomplete,
     IconButton,
     Collapse,
+    Drawer,
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { Visibility, VisibilityOff, FilterList, Close } from "@mui/icons-material";
 
 // Local Component Imports (assuming they are in the same directory or configured path)
 import DataTable from "./table";
@@ -114,23 +115,39 @@ const isOlderThanOneMonth = (value) => {
 const AttendanceCheckIn = React.memo(({ user }) => {
     const [status, setStatus]   = useState("idle"); // idle | loading | done | error
     const [checkedIn, setCheckedIn] = useState(false);
-    const [locName, setLocName] = useState("");
+    const [checkedOut, setCheckedOut] = useState(false);
     const [checkinTime, setCheckinTime] = useState("");
+    const [checkoutTime, setCheckoutTime] = useState("");
     const [errMsg, setErrMsg]   = useState("");
 
-    // Check if already checked in today (stored in sessionStorage)
+    // On form loading check attendance table
     useEffect(() => {
-        const key = `checkin_${user?.username}_${new Date().toISOString().split('T')[0]}`;
-        const saved = sessionStorage.getItem(key);
-        if (saved) {
-            const data = JSON.parse(saved);
-            setCheckedIn(true);
-            setLocName(data.locationName || "");
-            setCheckinTime(data.time || "");
-        }
+        const fetchAttendance = async () => {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const res = await fetch(`${API_URL}/attendance/data?date=${today}`);
+                const json = await res.json();
+                if (json.success && json.data) {
+                    const myAtt = json.data.find(e => e.name === user?.username);
+                    if (myAtt) {
+                        if (myAtt.time_in) {
+                            setCheckedIn(true);
+                            setCheckinTime(myAtt.time_in);
+                        }
+                        if (myAtt.time_out) {
+                            setCheckedOut(true);
+                            setCheckoutTime(myAtt.time_out);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching attendance:", err);
+            }
+        };
+        fetchAttendance();
     }, [user?.username]);
 
-    const handleCheckIn = async () => {
+    const handlePing = async (type) => {
         setStatus("loading");
         setErrMsg("");
         try {
@@ -141,16 +158,18 @@ const AttendanceCheckIn = React.memo(({ user }) => {
             const resp = await fetch(`${API_URL}/tracking/ping`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: user.username, userType: user.userType, latitude, longitude, accuracy, pingType: "checkin" }),
+                body: JSON.stringify({ username: user.username, userType: user.userType, latitude, longitude, accuracy, pingType: type }),
             });
             const data = await resp.json();
             if (data.success) {
                 const time = new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true });
-                const key = `checkin_${user?.username}_${new Date().toISOString().split('T')[0]}`;
-                sessionStorage.setItem(key, JSON.stringify({ locationName: data.locationName, time }));
-                setLocName(data.locationName || "");
-                setCheckinTime(time);
-                setCheckedIn(true);
+                if (type === "checkin") {
+                    setCheckinTime(time);
+                    setCheckedIn(true);
+                } else if (type === "checkout") {
+                    setCheckoutTime(time);
+                    setCheckedOut(true);
+                }
                 setStatus("done");
             } else {
                 throw new Error(data.message || "Failed");
@@ -166,13 +185,71 @@ const AttendanceCheckIn = React.memo(({ user }) => {
         }
     };
 
-    if (checkedIn) {
+    if (checkedIn && checkedOut) {
         return (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 3, py: 2, borderRadius: 3, bgcolor: "#e8f5e9", border: "2px solid #a5d6a7", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-                <span style={{ fontSize: "1.8rem" }}>✅</span>
-                <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ fontWeight: 900, color: "#2e7d32", fontSize: "1.2rem", lineHeight: 1.2 }}>Attendance marked at {checkinTime}</Typography>
+            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 1.5, alignItems: { xs: "stretch", sm: "center" } }}>
+                <Box sx={{ 
+                    display: "flex", alignItems: "center", gap: 1.5, px: 2.5, py: 1.25, borderRadius: 2.5, 
+                    bgcolor: "#e8f5e9", border: "1.5px solid #a5d6a7", 
+                    boxShadow: "0 2px 8px rgba(46,125,50,0.08)", flex: 1,
+                    transition: "all 0.2s"
+                }}>
+                    <span style={{ fontSize: "1.4rem" }}>✅</span>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontWeight: 800, color: "#2e7d32", fontSize: "1.05rem", lineHeight: 1.2 }}>Attendance marked at {checkinTime}</Typography>
+                    </Box>
                 </Box>
+                <Box sx={{ 
+                    display: "flex", alignItems: "center", gap: 1.5, px: 2.5, py: 1.25, borderRadius: 2.5, 
+                    bgcolor: "#fff3e0", border: "1.5px solid #ffcc80", 
+                    boxShadow: "0 2px 8px rgba(230,81,0,0.08)", flex: 1,
+                    transition: "all 0.2s"
+                }}>
+                    <span style={{ fontSize: "1.4rem" }}>🛑</span>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontWeight: 800, color: "#e65100", fontSize: "1.05rem", lineHeight: 1.2 }}>Time Out marked at {checkoutTime}</Typography>
+                    </Box>
+                </Box>
+            </Box>
+        );
+    }
+
+    if (checkedIn && !checkedOut) {
+        return (
+            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 1.5, alignItems: { xs: "stretch", sm: "center" } }}>
+                <Box sx={{ 
+                    display: "flex", alignItems: "center", gap: 1.5, px: 2.5, py: 1.25, borderRadius: 2.5, 
+                    bgcolor: "#e8f5e9", border: "1.5px solid #a5d6a7", 
+                    boxShadow: "0 2px 8px rgba(46,125,50,0.08)", flex: 1
+                }}>
+                    <span style={{ fontSize: "1.4rem" }}>✅</span>
+                    <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontWeight: 800, color: "#2e7d32", fontSize: "1.05rem", lineHeight: 1.2 }}>Attendance marked at {checkinTime}</Typography>
+                    </Box>
+                </Box>
+                <Button
+                    variant="contained"
+                    onClick={() => handlePing("checkout")}
+                    disabled={status === "loading"}
+                    sx={{
+                        background: status === "error" ? "#c62828" : "linear-gradient(135deg, #ff6f00, #e65100)",
+                        color: "white", fontWeight: 800, borderRadius: 2.5, px: 4, py: 1.5,
+                        fontSize: "1.05rem", textTransform: "none", 
+                        boxShadow: "0 4px 14px rgba(230,81,0,0.3)",
+                        width: { xs: "100%", sm: "auto" },
+                        "&:hover": { 
+                            background: "linear-gradient(135deg, #ff8f00, #ef6c00)", 
+                            transform: "translateY(-2px)",
+                            boxShadow: "0 6px 20px rgba(230,81,0,0.4)"
+                        },
+                        "&:active": { transform: "translateY(0)" },
+                        "&:disabled": { background: "#ccc" },
+                        transition: "all 0.2s ease-in-out"
+                    }}
+                >
+                    {status === "loading" ? "📡 Locating..." : "🛑 Time Out"}
+                </Button>
+                {errMsg && <Typography sx={{ color: "#c62828", fontSize: "0.85rem", mt: 1, fontWeight: 700, width: "100%" }}>{errMsg}</Typography>}
             </Box>
         );
     }
@@ -181,16 +258,22 @@ const AttendanceCheckIn = React.memo(({ user }) => {
         <Box>
             <Button
                 variant="contained"
-                onClick={handleCheckIn}
+                onClick={() => handlePing("checkin")}
                 disabled={status === "loading"}
                 sx={{
-                    background: status === "error" ? "#c62828" : "linear-gradient(135deg,#1a237e,#283593)",
-                    color: "white", fontWeight: 900, borderRadius: 3, px: 5, py: 2.5,
-                    fontSize: "1.3rem", textTransform: "none", boxShadow: "0 8px 24px rgba(26,35,126,.4)",
+                    background: status === "error" ? "#c62828" : "linear-gradient(135deg, #1e3c72, #2a5298)",
+                    color: "white", fontWeight: 800, borderRadius: 2.5, px: 4, py: 1.5,
+                    fontSize: "1.05rem", textTransform: "none",
+                    boxShadow: "0 4px 14px rgba(30,60,114,0.3)",
                     width: { xs: "100%", sm: "auto" },
-                    "&:hover": { background: "linear-gradient(135deg,#283593,#3949ab)", transform: "translateY(-2px)" },
+                    "&:hover": { 
+                        background: "linear-gradient(135deg, #2a5298, #3b76e1)", 
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 6px 20px rgba(30,60,114,0.4)"
+                    },
+                    "&:active": { transform: "translateY(0)" },
                     "&:disabled": { background: "#ccc" },
-                    transition: "all 0.2s"
+                    transition: "all 0.2s ease-in-out"
                 }}
             >
                 {status === "loading" ? "📡 Locating..." : "📍 Mark Attendance"}
@@ -388,7 +471,7 @@ export const RemarkDialog = React.memo(
 
 const SummaryBar = React.memo(
     ({ summary, userRoles, onParamsChange, onFetch, isLoading, spoUser }) => {
-        const [showBox, setShowBox] = useState(true);
+        const [drawerOpen, setDrawerOpen] = useState(false);
         const { isAdmin, isZain } = userRoles;
 
         return (
@@ -398,72 +481,72 @@ const SummaryBar = React.memo(
                     top: 55,
                     zIndex: 1000,
                     background: "transparent",
-                    mb: 3,
+                    mb: 2,
                 }}
             >
-                {(isAdmin || isZain) && (
-                    <Box display="flex" justifyContent="flex-end" mb={1}>
-                        <IconButton
-                            onClick={() => setShowBox((p) => !p)}
-                            sx={{ backgroundColor: "white", p: 1 }}
+                <Box
+                    sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: "white",
+                        boxShadow: 3,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1.5,
+                    }}
+                >
+                    {/* Attendance marked on main SPO working form */}
+                    {!isAdmin && !isZain && spoUser && (
+                        <Box sx={{ width: "100%" }}>
+                            <AttendanceCheckIn user={spoUser} />
+                        </Box>
+                    )}
+
+                    {/* PRIMARY UI */}
+                    <Box sx={{ flex: 1, display: "flex", gap: 1, width: "100%", alignItems: "center" }}>
+                        <TextField
+                            label="Route"
+                            size="small"
+                            onChange={(e) => onParamsChange("route", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            sx={{ 
+                                width: { xs: "80px", sm: "120px" },
+                                "& input": { textTransform: "uppercase" } 
+                            }}
+                        />
+                        <Autocomplete
+                            freeSolo
+                            options={summary.allData}
+                            getOptionLabel={(option) => option.Subsidary || option.name || ""}
+                            onInputChange={(e, val) => onParamsChange("nameFilter", val)}
+                            renderInput={(params) => <TextField {...params} variant="outlined" placeholder="Search by Name" size="small" />}
+                            sx={{ flex: 1 }}
+                        />
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<FilterList />}
+                            onClick={() => setDrawerOpen(true)}
                         >
-                            {showBox ? <Visibility /> : <VisibilityOff />}
-                        </IconButton>
+                            Filters
+                        </Button>
                     </Box>
-                )}
-                <Collapse in={showBox}>
-                    <Box
-                        sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            bgcolor: "white",
-                            boxShadow: 3,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 2,
-                        }}
-                    >
-                        {/* --- INPUTS --- */}
-                        <Box
-                            display="grid"
-                            gridTemplateColumns={
-                                isAdmin || isZain ? "repeat(4, 1fr)" : "repeat(3, 1fr)"
-                            }
-                            gap={2}
-                        >
-                            {/* Check-in button for SPO/SM field users */}
-                            {!isAdmin && !isZain && spoUser && (
-                                <Box sx={{ gridColumn: "span 3" }}>
-                                    <AttendanceCheckIn user={spoUser} />
-                                </Box>
-                            )}
+                </Box>
+
+                <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+                    <Box sx={{ width: { xs: '85vw', sm: 400 }, p: 3, display: 'flex', flexDirection: 'column', gap: 2.5, height: '100%', overflowY: 'auto' }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="h6" fontWeight="bold">Filters & Totals</Typography>
+                            <IconButton onClick={() => setDrawerOpen(false)}>
+                                <Close />
+                            </IconButton>
+                        </Box>
+                        
+                        {/* Dates / Inputs */}
+                        <Box display="flex" flexDirection="column" gap={2}>
                             {(isAdmin || isZain) && (
-                                <DateInput
-                                    onDateChange={(val) => onParamsChange("date", val)}
-                                />
+                                <DateInput onDateChange={(val) => onParamsChange("date", val)} />
                             )}
-                            <Autocomplete
-                                freeSolo
-                                options={summary.allData}
-                                getOptionLabel={(option) =>
-                                    option.Subsidary || option.name || ""
-                                }
-                                onInputChange={(e, val) => onParamsChange("nameFilter", val)}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        variant="outlined"
-                                        placeholder="Search by Name"
-                                    />
-                                )}
-                                sx={{ gridColumn: isAdmin || isZain ? "span 3" : "span 3" }}
-                            />
-                            <TextField
-                                label="Route"
-                                onChange={(e) => onParamsChange("route", e.target.value)}
-                                onFocus={(e) => e.target.select()}
-                                sx={{ "& input": { textTransform: "uppercase" } }}
-                            />
                             {(isAdmin || isZain) && (
                                 <TextField
                                     label="SPO"
@@ -471,87 +554,39 @@ const SummaryBar = React.memo(
                                     onFocus={(e) => e.target.select()}
                                 />
                             )}
-                            <Button
-                                variant="contained"
-                                onClick={onFetch}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? "Loading..." : "GET"}
+                            <StatusFilter onFilterChange={(val) => onParamsChange("statusFilter", val)} />
+                            <Button variant="contained" onClick={() => { onFetch(); setDrawerOpen(false); }} disabled={isLoading} size="large">
+                                {isLoading ? "Loading..." : "GET DATA"}
                             </Button>
-                            <StatusFilter
-                                onFilterChange={(val) => onParamsChange("statusFilter", val)}
-                            />
                         </Box>
 
-                        {/* --- METRICS --- */}
-                        <Box
-                            display="grid"
-                            gridTemplateColumns={{
-                                xs: "repeat(3, 1fr)",
-                                md: "repeat(6, 1fr)",
-                            }}
-                            sx={{
-                                border: "2px solid black",
-                                "& > div": {
-                                    border: "1px solid #ccc",
-                                    textAlign: "center",
-                                    p: 1,
-                                },
-                            }}
-                        >
+                        {/* Metrics Grid optimized for Drawer space */}
+                        <Box sx={{ 
+                            border: "1px solid #ddd", 
+                            borderRadius: 2,
+                            overflow: "hidden",
+                            display: "grid", 
+                            gridTemplateColumns: "repeat(2, 1fr)",
+                            gap: 0.5,
+                            bgcolor: "#f5f5f5",
+                            p: 0.5
+                        }}>
                             {[
-                                {
-                                    label: "Customers",
-                                    value: `${summary.actions} / ${summary.totalCount}`,
-                                    bgColor: "#e0e0e0",
-                                    color: "black",
-                                },
-                                {
-                                    label: "Overdue",
-                                    value: formatCurrency(summary.totalOverdue),
-                                    bgColor: "red",
-                                    color: "white",
-                                },
-                                {
-                                    label: "Recovery",
-                                    value: formatCurrency(summary.totalPayment),
-                                    bgColor: "green",
-                                    color: "white",
-                                },
-                                {
-                                    label: "FIT",
-                                    value: formatCurrency(summary.totalFit),
-                                    bgColor: "#ff6f00ff",
-                                    color: "white",
-                                },
-                                {
-                                    label: "Local",
-                                    value: formatCurrency(summary.totalOther),
-                                    bgColor: "#c8ff00bc",
-                                    color: "black",
-                                },
-                                {
-                                    label: "Sales",
-                                    value: formatCurrency(summary.totalFit + summary.totalOther),
-                                    bgColor: "#1976d2",
-                                    color: "white",
-                                },
+                                { label: "Customers", value: `${summary.actions} / ${summary.totalCount}`, bgColor: "#e0e0e0", color: "black" },
+                                { label: "Overdue", value: formatCurrency(summary.totalOverdue), bgColor: "red", color: "white" },
+                                { label: "Recovery", value: formatCurrency(summary.totalPayment), bgColor: "green", color: "white" },
+                                { label: "FIT", value: formatCurrency(summary.totalFit), bgColor: "#ff6f00ff", color: "white" },
+                                { label: "Local", value: formatCurrency(summary.totalOther), bgColor: "#c8ff00bc", color: "black" },
+                                { label: "Sales", value: formatCurrency(summary.totalFit + summary.totalOther), bgColor: "#1976d2", color: "white" },
                             ].map((metric) => (
-                                <Box
-                                    key={metric.label}
-                                    sx={{ backgroundColor: metric.bgColor, color: metric.color }}
-                                >
-                                    <Typography variant="h6" fontWeight="bold">
-                                        {metric.label}
-                                    </Typography>
-                                    <Typography fontSize="1.5rem" fontWeight="bold">
-                                        {metric.value}
-                                    </Typography>
+                                <Box key={metric.label} sx={{ backgroundColor: metric.bgColor, color: metric.color, textAlign: "center", p: 1, borderRadius: 1 }}>
+                                    <Typography variant="caption" fontWeight="bold" display="block">{metric.label}</Typography>
+                                    <Typography fontSize="1rem" fontWeight="900">{metric.value}</Typography>
                                 </Box>
                             ))}
                         </Box>
                     </Box>
-                </Collapse>
+                </Drawer>
             </Box>
         );
     }

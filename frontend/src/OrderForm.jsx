@@ -140,8 +140,8 @@ const OrderForm = () => {
   const [token] = useState(localStorage.getItem("authToken"));
   const [overDue, setOverDue] = useState(null);
   const [balance, setBalance] = useState(null);
-  const [open, setOpen] = useState(true);
   const user = JSON.parse(localStorage.getItem("user"));
+  const [open, setOpen] = useState(!user?.userType?.toLowerCase().includes("sm"));
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
@@ -236,7 +236,6 @@ const OrderForm = () => {
     }
 
     const fetchInitialData = async () => {
-      //setInitialDataLoading(true);
       setError(null);
 
       // If offline, use cached products already loaded by useIndexedDBState
@@ -254,7 +253,7 @@ const OrderForm = () => {
         console.log(products)
         const prodResponse = await axios.get(`${API_BASE_URL}/products`, {
           headers,
-          timeout: 5000,
+          timeout: 1500, // Fast 1.5s timeout to fail quickly and fallback to IndexedDB
         });
         console.log(prodResponse.data)
         const allProducts = prodResponse.data || products;
@@ -293,6 +292,10 @@ const OrderForm = () => {
       setCategories(
         [...new Set(products.map((p) => p.Category).filter(Boolean))].sort(),
       );
+      // Instantly allow user to compile orders if we have cached products!
+      if (products.length > 0) {
+        setInitialDataLoading(false);
+      }
       fetchInitialData();
     }
   }, [token, productsLoaded, setProducts]);
@@ -650,6 +653,21 @@ const OrderForm = () => {
         setLoading(false);
         // After manual sync, check if there are others to sync
         backgroundSyncService.syncInvoices().catch(console.error);
+    }
+  };
+
+  const handleOpenPdf = async (order) => {
+    if (!order.doc) return;
+    try {
+      await downloadInvoice({
+        docNum: order.doc,
+        acid: order.customerAcid || order.customerID,
+        name: order.customerName,
+        userData: user
+      });
+    } catch (pdfErr) {
+      console.error("Manual PDF download failed:", pdfErr);
+      setError("Failed to generate or download PDF. Please try again.");
     }
   };
 
@@ -1091,6 +1109,7 @@ const OrderForm = () => {
           orders={myDailyOrders.slice().reverse()} 
           pendingCount={myDailyOrders.filter(o => !o.synced).length}
           onSyncOne={handleSyncOneOrder}
+          onOpenPdf={handleOpenPdf}
         />
       </Paper>
     </Container>

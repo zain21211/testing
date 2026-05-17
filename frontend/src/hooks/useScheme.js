@@ -14,18 +14,17 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
     const [schText, setSchText] = useState("0+0");  // "Buy X+Y"
     const [perPieceAmount, setPerPieceAmount] = useState(price);
 
-    // fetch scheme whenever product changes (NOT when quantity changes)
-    // Note: We still call this hook even if isScheme is false to maintain hook order
+    // fetch scheme whenever product changes (always fetch scheme to show the textbox details!)
     const { data: serverData, isLoading, error } = useFetch(
         "scheme",
         fetchScheme,
         [
             selectedProduct?.code,
-            isScheme,
+            true, // Always fetch scheme to preserve details
             new Date().toISOString().split("T")[0],
         ],
         {
-            enabled: !!selectedProduct?.code && isScheme,
+            enabled: !!selectedProduct?.code,
         }
     );
 
@@ -33,17 +32,17 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
 
     useEffect(() => {
         const loadLocal = async () => {
-            if (selectedProduct?.code && isScheme) {
+            if (selectedProduct?.code) {
                 const cached = await offlineService.getLocalScheme(selectedProduct.code);
                 setLocalData(cached);
             }
         };
         loadLocal();
-    }, [selectedProduct?.code, isScheme]);
+    }, [selectedProduct?.code]);
 
     const data = serverData || localData;
 
-    // When product changes: update price and reset scheme
+    // When product changes: update price
     useEffect(() => {
         if (!selectedProduct) {
             setPrice(0);
@@ -57,24 +56,11 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
             return;
         }
 
-        // Update price from selected product
         setPrice(selectedProduct?.SaleRate || 0);
     }, [selectedProduct, orderQuantity]);
 
-    // When scheme data arrives: calculate price and scheme text
+    // When scheme data arrives or price/orderQuantity/isScheme changes:
     useEffect(() => {
-        // Skip scheme calculations if scheme is not enabled
-        if (!isScheme) {
-            setSchText("0+0");
-            setPerPieceAmount(price);
-            setBaseSchOn(0);
-            setBaseSchPc(0);
-            setSchOn(0);
-            setSchPc(0);
-            setQuantity(orderQuantity);
-            return;
-        }
-
         if (!data) {
             setSchText("0+0");
             setPerPieceAmount(price);
@@ -82,6 +68,7 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
             setBaseSchPc(0);
             setSchOn(0);
             setSchPc(0);
+            setQuantity(orderQuantity);
             return;
         }
 
@@ -92,22 +79,16 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
         setBaseSchPc(SchPc);
         setSchOn(SchOn);
 
-        // Calculate per-piece amount for display (using current orderQuantity or default)
-        const currentOrderQty = Number(orderQuantity) || (SchOn + SchPc);
-        const freePcsForCalc = SchOn > 0 && currentOrderQty >= SchOn
-            ? Math.floor(currentOrderQty / SchOn) * SchPc
-            : 0;
-        const totalQty = currentOrderQty + freePcsForCalc;
-
-        const per = totalQty > 0 ? (price * currentOrderQty) / totalQty : price;
+        // Calculate per-piece amount for display (strictly using static scheme formula)
+        const per = (SchOn + SchPc) > 0 ? (price * SchOn) / (SchOn + SchPc) : price;
         setPerPieceAmount(per);
 
-        // Set scheme text
-        const text = `${SchOn}+${SchPc}(${per.toFixed(2)})`;
+        // Set scheme text (STILL set it even if isScheme is false!)
+        const text = `${SchOn}+${SchPc}`;
         setSchText(text);
 
-        // Calculate initial free pieces based on current orderQuantity
-        const initialFreePcs = SchOn > 0 && orderQuantity >= SchOn
+        // Calculate free pieces based on isScheme
+        const initialFreePcs = isScheme && SchOn > 0 && orderQuantity >= SchOn
             ? Math.floor(orderQuantity / SchOn) * SchPc
             : 0;
         setSchPc(initialFreePcs);
@@ -115,35 +96,27 @@ export function useScheme(selectedProduct, orderQuantity = 0, isScheme = false) 
 
     }, [data, price, orderQuantity, isScheme]);
 
-    // When ONLY orderQuantity changes: recalculate free pieces (don't touch price)
+    // When ONLY orderQuantity or isScheme changes: recalculate free pieces (don't touch price)
     useEffect(() => {
-        // Skip if scheme is not enabled
-        if (!isScheme) {
-            setSchPc(0);
-            setQuantity(orderQuantity);
-            return;
-        }
-
         if (!baseSchOn) {
             setSchPc(0);
             setQuantity(orderQuantity);
             return;
         }
 
-        // Only update free pieces based on the scheme
-        const freePcs = baseSchOn > 0 && orderQuantity >= baseSchOn
+        // Only update free pieces based on the scheme if isScheme is true
+        const freePcs = isScheme && baseSchOn > 0 && orderQuantity >= baseSchOn
             ? Math.floor(orderQuantity / baseSchOn) * baseSchPc
             : 0;
 
-        console.log('Order Qty Changed:', orderQuantity, 'Free PCs:', freePcs);
         setSchPc(freePcs);
         setQuantity(orderQuantity + freePcs);
 
     }, [orderQuantity, baseSchOn, baseSchPc, isScheme]);
 
     useEffect(() => {
-        console.log('sch and qty: ', quantity, isScheme)
-    }, [quantity, isScheme])
+        console.log('sch and qty: ', quantity, isScheme);
+    }, [quantity, isScheme]);
 
     return {
         schPc,

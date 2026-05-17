@@ -134,8 +134,8 @@ const OrderForm = () => {
   const [token] = useState(localStorage.getItem("authToken"));
   const [overDue, setOverDue] = useState(null);
   const [balance, setBalance] = useState(null);
-  const [open, setOpen] = useState(true);
   const user = JSON.parse(localStorage.getItem("user"));
+  const [open, setOpen] = useState(!user?.userType?.toLowerCase().includes("sm"));
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 

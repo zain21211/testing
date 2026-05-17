@@ -147,7 +147,7 @@ const trackingController = {
             .input("locName", sql.NVarChar, initialLoc)
             .query(`
               DECLARE @empId INT;
-              SELECT @empId = id FROM employee WHERE name = @username;
+              SELECT @empId = id FROM employee WHERE LOWER(LTRIM(RTRIM(name))) = LOWER(LTRIM(RTRIM(@username)));
               IF @empId IS NOT NULL
               BEGIN
                   IF @pingType = 'checkout'
@@ -201,13 +201,13 @@ const trackingController = {
                   BEGIN
                       UPDATE a SET a.checkout_location = @loc
                       FROM Attendance a INNER JOIN employee e ON e.id = a.employee_id
-                      WHERE e.name = @username AND a.attendance_date = @today
+                      WHERE LOWER(LTRIM(RTRIM(e.name))) = LOWER(LTRIM(RTRIM(@username))) AND a.attendance_date = @today
                   END
                   ELSE
                   BEGIN
                       UPDATE a SET a.checkin_location = @loc
                       FROM Attendance a INNER JOIN employee e ON e.id = a.employee_id
-                      WHERE e.name = @username AND a.attendance_date = @today
+                      WHERE LOWER(LTRIM(RTRIM(e.name))) = LOWER(LTRIM(RTRIM(@username))) AND a.attendance_date = @today
                   END
                 `);
           }
@@ -268,14 +268,18 @@ const trackingController = {
       const pool = await dbConnection();
       await initTrackingTable(pool);
 
-      const result = await pool.request().query(`
+      const today = new Date().toISOString().split("T")[0];
+
+      const result = await pool.request()
+        .input("today", sql.Date, today)
+        .query(`
         SELECT t.username, t.user_type, t.latitude, t.longitude,
                t.location_name, t.accuracy, t.recorded_at
         FROM LocationTracking t
         INNER JOIN (
           SELECT username, MAX(recorded_at) AS max_time
           FROM LocationTracking
-          WHERE CONVERT(DATE, recorded_at) = CONVERT(DATE, GETDATE())
+          WHERE CONVERT(DATE, recorded_at) = @today
           GROUP BY username
         ) latest ON t.username = latest.username AND t.recorded_at = latest.max_time
         ORDER BY t.recorded_at DESC

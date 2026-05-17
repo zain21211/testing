@@ -37,7 +37,7 @@ const AppLayout = () => {
     })();
     const userType = currentUser?.userType?.toLowerCase() || "";
     // Track SPO (marketing) and SM- (sales) users
-    const isOutdoorUser = userType.startsWith("spo") || userType.startsWith("sm-");
+    const isOutdoorUser = userType.includes("spo") || userType.includes("sm");
 
     return (
 

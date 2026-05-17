@@ -243,9 +243,15 @@ export default function LiveTrackingPage() {
     liveData.forEach(u => {
       const color = statusColor(u.recorded_at);
       const icon = minsAgo(u.recorded_at) < 10 ? makePulseIcon(L, color) : makeIcon(L, color);
+      const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${u.latitude},${u.longitude}`;
       const m = L.marker([u.latitude, u.longitude], { icon })
         .addTo(map)
-        .bindPopup(`<b>${u.username}</b><br/>📍 ${u.location_name || "—"}<br/>🕐 ${fmt(u.recorded_at)}`);
+        .bindPopup(`
+          <b>${u.username}</b><br/>
+          📍 ${u.location_name || "—"}<br/>
+          🕐 ${fmt(u.recorded_at)}<br/>
+          <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; font-weight: bold; display: inline-block; margin-top: 5px;">Get Directions</a>
+        `);
       markersRef.current.push(m);
       bounds.push([u.latitude, u.longitude]);
     });
@@ -274,8 +280,13 @@ export default function LiveTrackingPage() {
       const isLast = i === upToIndex;
       const color = isLast ? "#60a5fa" : "#a78bfa";
       const icon = isLast ? makePulseIcon(L, color) : makeIcon(L, "#a78bfa55");
+      const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`;
       const m = L.marker([p.latitude, p.longitude], { icon }).addTo(map)
-        .bindPopup(`<b>${fmt(p.recorded_at)}</b><br/>📍 ${p.location_name || "—"}`);
+        .bindPopup(`
+          <b>${fmt(p.recorded_at)}</b><br/>
+          📍 ${p.location_name || "—"}<br/>
+          <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; text-decoration: underline; font-weight: bold; display: inline-block; margin-top: 5px;">Get Directions</a>
+        `);
       if (isLast) m.openPopup();
       markersRef.current.push(m);
     });
@@ -405,6 +416,7 @@ export default function LiveTrackingPage() {
                 {liveData.map(u => {
                   const color = statusColor(u.recorded_at);
                   const active = selCard === u.username;
+                  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${u.latitude},${u.longitude}`;
                   return (
                     <div key={u.username} style={S.card(active)} onClick={() => focusUser(u)}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -412,9 +424,20 @@ export default function LiveTrackingPage() {
                         <span style={{ fontWeight: 800, fontSize: "0.9rem", flex: 1 }}>{u.username}</span>
                         <span style={S.badge(color)}>{statusLabel(u.recorded_at)}</span>
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,.45)", paddingLeft: 20 }}>
-                        <div>🕐 {fmt(u.recorded_at)}</div>
-                        <div style={{ marginTop: 2, fontSize: "0.7rem", opacity: 0.8 }}>📍 {(u.location_name || "—").slice(0, 50)}...</div>
+                      <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,.45)", paddingLeft: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div>🕐 {fmt(u.recorded_at)}</div>
+                          <div style={{ marginTop: 2, fontSize: "0.7rem", opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {u.location_name || "—"}</div>
+                        </div>
+                        <a 
+                          href={directionsUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          onClick={(e) => e.stopPropagation()} 
+                          style={{ color: "#60a5fa", textDecoration: "none", fontWeight: 700, fontSize: "0.75rem", background: "rgba(96,165,250,0.15)", padding: "4px 8px", borderRadius: "6px", marginLeft: 8, whiteSpace: "nowrap" }}
+                        >
+                          Directions
+                        </a>
                       </div>
                     </div>
                   );
@@ -452,20 +475,32 @@ export default function LiveTrackingPage() {
                   )}
                 </div>
 
-                {history.length > 0 && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                    {history.map((p, i) => (
-                      <div key={p.id} onClick={() => { setPlayStep(i); drawRoute(history, i); }}
-                        style={{ ...S.card(playStep === i), display: "flex", gap: 10, alignItems: "flex-start" }}>
-                        <div style={{ ...S.dot(i === 0 ? "#00c853" : i === history.length - 1 ? "#60a5fa" : "#a78bfa88"), marginTop: 4, flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>{fmt(p.recorded_at)}</div>
-                          <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,.45)", marginTop: 2 }}>{(p.location_name || "—").slice(0, 45)}...</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                 {history.length > 0 && (
+                   <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+                     {history.map((p, i) => {
+                       const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`;
+                       return (
+                         <div key={p.id} onClick={() => { setPlayStep(i); drawRoute(history, i); }}
+                           style={{ ...S.card(playStep === i), display: "flex", gap: 10, alignItems: "center" }}>
+                           <div style={{ ...S.dot(i === 0 ? "#00c853" : i === history.length - 1 ? "#60a5fa" : "#a78bfa88"), flexShrink: 0 }} />
+                           <div style={{ flex: 1, minWidth: 0 }}>
+                             <div style={{ fontWeight: 700, fontSize: "0.8rem" }}>{fmt(p.recorded_at)}</div>
+                             <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,.45)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.location_name || "—"}</div>
+                           </div>
+                           <a 
+                             href={directionsUrl} 
+                             target="_blank" 
+                             rel="noopener noreferrer" 
+                             onClick={(e) => e.stopPropagation()} 
+                             style={{ color: "#a78bfa", textDecoration: "none", fontWeight: 700, fontSize: "0.7rem", background: "rgba(167,139,250,0.15)", padding: "3px 6px", borderRadius: "4px", whiteSpace: "nowrap" }}
+                           >
+                             Directions
+                           </a>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 )}
               </>
             )}
           </div>

@@ -14,6 +14,42 @@ const PING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const WORK_START_HOUR  = 10;             // 10:00
 const WORK_END_HOUR    = 20;             // 20:00 (8 PM)
 const API_URL          = import.meta.env.VITE_API_URL || "/api";
+const PING_CACHE_KEY   = "offline_tracking_pings";
+
+// ─── Offline Support ─────────────────────────────────────────────────────────
+
+function getCachedPings() {
+  try { return JSON.parse(localStorage.getItem(PING_CACHE_KEY)) || []; }
+  catch { return []; }
+}
+
+function addCachedPing(ping) {
+  const pings = getCachedPings();
+  pings.push(ping);
+  localStorage.setItem(PING_CACHE_KEY, JSON.stringify(pings));
+}
+
+function clearCachedPings() {
+  localStorage.removeItem(PING_CACHE_KEY);
+}
+
+async function syncOfflinePings() {
+  const pings = getCachedPings();
+  if (pings.length === 0) return;
+  
+  try {
+    for (const ping of pings) {
+      await fetch(`${API_URL}/tracking/ping`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ping),
+      });
+    }
+    clearCachedPings();
+  } catch (err) {
+    // Silently fail
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,14 +79,25 @@ function getCurrentPosition(options = {}) {
 }
 
 /** POST location ping to backend */
-async function postPing({ username, userType, latitude, longitude, accuracy }) {
-  const resp = await fetch(`${API_URL}/tracking/ping`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, userType, latitude, longitude, accuracy }),
-    keepalive: true, // fires even if the page is being unloaded
-  });
-  return resp.json();
+async function postPing({ username, userType, latitude, longitude, accuracy, timestamp = Date.now() }) {
+  const payload = { username, userType, latitude, longitude, accuracy, timestamp };
+  try {
+    const resp = await fetch(`${API_URL}/tracking/ping`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true, // fires even if the page is being unloaded
+    });
+    if (!resp.ok) throw new Error("Network response was not ok");
+    
+    // Attempt to sync any cached offline pings
+    syncOfflinePings();
+    
+    return await resp.json();
+  } catch (err) {
+    addCachedPing(payload);
+    throw err;
+  }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -71,9 +118,9 @@ export default function LocationTracker({ user }) {
       const pos = await getCurrentPosition();
       const { latitude, longitude, accuracy } = pos.coords;
       await postPing({ username, userType, latitude, longitude, accuracy });
-      console.log(`📍 Location ping sent: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+      localStorage.setItem("lastTrackingPing", Date.now().toString());
     } catch (err) {
-      console.warn("Location ping failed:", err.message);
+      // Silently fail
     } finally {
       isRunning.current = false;
     }
@@ -89,8 +136,24 @@ export default function LocationTracker({ user }) {
     // Schedule recurring pings
     timerRef.current = setInterval(doPing, PING_INTERVAL_MS);
 
+    // Also trigger immediately on app foregrounding if enough time passed
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncOfflinePings(); // Try syncing when app comes back online
+        const lastPing = parseInt(localStorage.getItem("lastTrackingPing") || "0", 10);
+        if (Date.now() - lastPing >= PING_INTERVAL_MS) {
+          doPing();
+        }
+      }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("online", syncOfflinePings);
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("online", syncOfflinePings);
     };
   }, [username, doPing]);
 
@@ -122,7 +185,7 @@ export default function LocationTracker({ user }) {
           await postPing({ username, userType, latitude, longitude, accuracy });
         }
       } catch (err) {
-        console.warn("SW-triggered ping failed:", err.message);
+        // Silently fail
       }
     };
 
@@ -144,11 +207,10 @@ export default function LocationTracker({ user }) {
             await reg.periodicSync.register("location-ping", {
               minInterval: PING_INTERVAL_MS,
             });
-            console.log("✅ Periodic background sync registered");
           }
         }
       } catch (err) {
-        console.log("Periodic sync not available:", err.message);
+        // Silently fail
       }
     };
 

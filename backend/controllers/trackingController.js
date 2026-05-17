@@ -92,7 +92,7 @@ const trackingController = {
    * Saves a location ping.  On the first ping of the day also updates Attendance.
    */
   locationPing: async (req, res) => {
-    const { username, userType, latitude, longitude, accuracy, pingType = "auto" } = req.body;
+    const { username, userType, latitude, longitude, accuracy, pingType = "auto", timestamp } = req.body;
 
     if (!username || latitude == null || longitude == null) {
       return res.status(400).json({ success: false, message: "username, latitude, longitude required" });
@@ -122,10 +122,11 @@ const trackingController = {
             .input("locName", sql.NVarChar, initialLoc)
             .input("accuracy", sql.Decimal(8, 2), parseFloat(accuracy) || null)
             .input("pingType", sql.NVarChar, pingType)
+            .input("recordedAt", sql.DateTime, timestamp ? new Date(timestamp) : new Date())
             .query(`
-              INSERT INTO LocationTracking (username, user_type, latitude, longitude, location_name, accuracy, ping_type)
+              INSERT INTO LocationTracking (username, user_type, latitude, longitude, location_name, accuracy, ping_type, recorded_at)
               OUTPUT INSERTED.id
-              VALUES (@username, @userType, @lat, @lng, @locName, @accuracy, @pingType)
+              VALUES (@username, @userType, @lat, @lng, @locName, @accuracy, @pingType, @recordedAt)
             `);
           
           const pingId = insertRes.recordset[0].id;
